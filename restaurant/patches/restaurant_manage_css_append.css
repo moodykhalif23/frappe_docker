@@ -1,0 +1,7 @@
+/* rm-no-card-hover: the food cards reuse frappe's workspace "shortcut" widget
+   classes, inheriting its hover treatment (dark border + shadow pop) meant for
+   desk shortcuts. Neutralize it so POS menu cards hover quietly. */
+.widget.shortcut-widget-box:has(.small-box.item):hover {
+	border-color: var(--border-color);
+	box-shadow: none;
+}

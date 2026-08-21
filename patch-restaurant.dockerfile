@@ -9,6 +9,14 @@ RUN sed -i 's/single_column: true$/single_column: true,\n    hide_sidebar: true/
 RUN grep -q 'Object.assign(window, { TRANSFER' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  || sed -i 's/^const \[TRANSFER/Object.assign(window, { TRANSFER: "Transfer", UPDATE: "Update", DELETE: "Delete", INVOICED: "Invoiced", ADD: "Add", QUEUE: "queue", SPLIT: "Split", DOUBLE_CLICK_DELAY: "double_click" });\nconst [TRANSFER/' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+# food cards: item.description is often null — don't render the literal "null"
+RUN sed -i 's/\${description}/\${description || ""}/' apps/restaurant_management/restaurant_management/public/restaurant/js/menu-manage-class.js apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/menu-manage-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
+# food cards inherit frappe's desk-shortcut hover (dark border) — neutralize it
+COPY restaurant/patches/restaurant_manage_css_append.css /tmp/rm_css_append.css
+RUN grep -q 'rm-no-card-hover' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css \
+ || cat /tmp/rm_css_append.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
 COPY restaurant/patches/restaurant_booking_append.py /tmp/rb_append.py
 RUN sed -i '/^\tdef before_insert/,/self.customer = customer.name$/d' apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py \
  ; grep -q "_ensure_walkin_customer" apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py \
