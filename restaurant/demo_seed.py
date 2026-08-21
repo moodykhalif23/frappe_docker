@@ -120,6 +120,10 @@ def pos_profile():
         "doctype": "POS Profile", "name": "Restaurant",
         "company": company(), "warehouse": warehouse(),
         "currency": currency(), "update_stock": 1,
+        "write_off_account": frappe.db.get_value("Company", company(), "write_off_account")
+            or frappe.db.get_value("Account", {"company": company(), "account_name": "Write Off"}),
+        "write_off_cost_center": frappe.db.get_value("Company", company(), "cost_center")
+            or frappe.db.get_value("Cost Center", {"company": company(), "is_group": 0}),
         "customer": _ensure_customer("Walk-in Guest"),
         "selling_price_list": frappe.db.get_value("Price List", {"enabled": 1, "selling": 1}),
         "payments": [{"mode_of_payment": "Cash", "default": 1}],
