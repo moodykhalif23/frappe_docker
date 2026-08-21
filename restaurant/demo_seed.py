@@ -48,6 +48,10 @@ MENU = [
 
 RATES = {name: rate for name, _, rate in MENU}
 
+# the order pad's Veg/Non-Veg tabs filter on Item.item_type (app custom field)
+NON_VEG = {"Samosa Platter", "Chicken Wings", "Nyama Choma Platter",
+           "Grilled Tilapia", "Chicken Biryani", "Beef Burger & Fries"}
+
 CUSTOMERS = [
     "Walk-in Guest", "Amina Hassan", "John Kamau", "Grace Wanjiru",
     "David Ochieng", "Sarah Njeri", "Peter Otieno", "Mary Akinyi",
@@ -289,6 +293,15 @@ def seed():
     if "M-Pesa" not in [p.mode_of_payment for p in prof.payments]:
         prof.append("payments", {"mode_of_payment": "M-Pesa"})
         prof.save(ignore_permissions=True)
+
+    # the order pad's catalog comes from POS Profile.restaurant_menu — without
+    # this link the order screen shows an empty menu
+    if not frappe.db.get_value("POS Profile", prof_name, "restaurant_menu"):
+        frappe.db.set_value("POS Profile", prof_name, "restaurant_menu", menu_name)
+
+    for name in RATES:
+        frappe.db.set_value("Item", name, "item_type",
+                            "Non-Veg" if name in NON_VEG else "Veg")
 
     if not frappe.db.exists("POS Opening Entry", {"pos_profile": prof_name, "status": "Open"}):
         op = frappe.get_doc({
