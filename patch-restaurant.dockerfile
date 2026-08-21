@@ -9,6 +9,10 @@ RUN sed -i 's/single_column: true$/single_column: true,\n    hide_sidebar: true/
 RUN grep -q 'Object.assign(window, { TRANSFER' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  || sed -i 's/^const \[TRANSFER/Object.assign(window, { TRANSFER: "Transfer", UPDATE: "Update", DELETE: "Delete", INVOICED: "Invoiced", ADD: "Add", QUEUE: "queue", SPLIT: "Split", DOUBLE_CLICK_DELAY: "double_click" });\nconst [TRANSFER/' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+# make_reservation() fires before template() creates reservation_wrapper — guard it (TypeError: reading 'JQ')
+RUN grep -q 'this.reservation_wrapper && Reservation.render' apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js \
+ || sed -i 's|Reservation.render(this.table.data.name, this.reservation_wrapper.JQ());|this.reservation_wrapper \&\& Reservation.render(this.table.data.name, this.reservation_wrapper.JQ());|' apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
 # v16 renamed get_item_details' kwarg args->ctx — without this every add-to-cart 500s and the cart stays empty
 RUN grep -q 'args: { ctx: item }' apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js \
  || sed -i 's|args: { args: item }|args: { ctx: item }|' apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js \
