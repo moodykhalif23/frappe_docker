@@ -13,6 +13,9 @@ RUN grep -q 'Object.assign(window, { TRANSFER' apps/restaurant_management/restau
 RUN grep -q 'this.reservation_wrapper && Reservation.render' apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js \
  || sed -i 's|Reservation.render(this.table.data.name, this.reservation_wrapper.JQ());|this.reservation_wrapper \&\& Reservation.render(this.table.data.name, this.reservation_wrapper.JQ());|' apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
+# order header: unguarded ${this.table.data.customer} renders "null" when no customer is checked in
+RUN sed -i 's|${this.table.data.description}) ${this.table.data.customer}`|${this.table.data.description}) ${this.table.data.customer \|\| ""}`|' apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
 # v16 renamed get_item_details' kwarg args->ctx — without this every add-to-cart 500s and the cart stays empty
 RUN grep -q 'args: { ctx: item }' apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js \
  || sed -i 's|args: { args: item }|args: { ctx: item }|' apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js \
