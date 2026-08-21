@@ -28,6 +28,17 @@ RUN sed -i 's/\${description}/\${description || ""}/' apps/restaurant_management
 COPY restaurant/patches/restaurant_manage_css_append.css /tmp/rm_css_append.css
 RUN grep -q 'rm-no-card-hover' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css \
  || cat /tmp/rm_css_append.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
+# restaurant-kit features: guest order tracker + in-POS menu item editor (writes stay on frappe doctypes)
+COPY restaurant/patches/api_append.py /tmp/api_append.py
+RUN grep -q 'def upsert_menu_item' apps/restaurant_management/restaurant_management/api.py \
+ || cat /tmp/api_append.py >> apps/restaurant_management/restaurant_management/api.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/api.py').read())"
+COPY restaurant/patches/order-status.html apps/restaurant_management/restaurant_management/public/order-status.html
+COPY restaurant/patches/menu-item-editor.js apps/restaurant_management/restaurant_management/public/restaurant/js/menu-item-editor.js
+RUN grep -q 'menu-item-editor.js' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ || sed -i "s|'js/items-tree-class.js',|'js/items-tree-class.js',\n      'js/menu-item-editor.js',|" apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/menu-item-editor.js
 COPY restaurant/patches/restaurant_booking_append.py /tmp/rb_append.py
 RUN sed -i '/^\tdef before_insert/,/self.customer = customer.name$/d' apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py \
  ; grep -q "_ensure_walkin_customer" apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py \

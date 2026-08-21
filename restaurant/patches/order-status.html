@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- Customer-facing order tracker. Served as a static asset:
+     /assets/restaurant_management/order-status.html?order=OR-2026-00018
+     Polls the guest API restaurant_management.api.order_status every 5s. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order status</title>
+<style>
+  :root {
+    --bg: #f6f6f4; --card: #ffffff; --ink: #1c1c1a; --muted: #77776f;
+    --line: #e7e7e2; --accent: #2e844e; --pending: #c9c9c2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161614; --card: #211f1c; --ink: #f0efea; --muted: #97968c;
+            --line: #34322e; --accent: #43b06b; --pending: #4a4842; }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--bg); color: var(--ink);
+         font: 16px/1.45 -apple-system, "Segoe UI", Roboto, sans-serif;
+         max-width: 560px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { text-align: center; margin-bottom: 20px; }
+  header .num { font-size: 40px; font-weight: 700; letter-spacing: 1px; }
+  header .sub { color: var(--muted); font-size: 14px; }
+  .item { background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+          padding: 14px 16px; margin-bottom: 12px; }
+  .item .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .item .name { font-weight: 600; }
+  .item .qty { color: var(--muted); font-size: 14px; white-space: nowrap; }
+  .item .state { font-size: 14px; color: var(--accent); margin-top: 2px; }
+  .steps { display: flex; gap: 6px; margin-top: 10px; }
+  .steps span { flex: 1; height: 6px; border-radius: 3px; background: var(--pending); }
+  .steps span.on { background: var(--accent); }
+  .placing .state { color: var(--muted); }
+  #note { text-align: center; color: var(--muted); font-size: 13px; margin-top: 24px; }
+  #err { text-align: center; color: var(--muted); margin-top: 40vh; transform: translateY(-50%); }
+</style>
+</head>
+<body>
+<div id="app" hidden>
+  <header>
+    <div class="sub">Your order</div>
+    <div class="num" id="num"></div>
+  </header>
+  <div id="items"></div>
+  <div id="note">Updates automatically &middot; Sent &rarr; Preparing &rarr; Ready &rarr; Served</div>
+</div>
+<div id="err" hidden>Order not found.<br>Please check the link with your waiter.</div>
+<script>
+(function () {
+  var order = new URLSearchParams(location.search).get("order");
+  var errEl = document.getElementById("err");
+  if (!order) { errEl.hidden = false; return; }
+
+  function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : s; return d.innerHTML; }
+
+  function render(data) {
+    if (!data || !data.found) { errEl.hidden = false; document.getElementById("app").hidden = true; return; }
+    errEl.hidden = true;
+    document.getElementById("app").hidden = false;
+    document.getElementById("num").textContent = "#" + data.short_name;
+    document.getElementById("items").innerHTML = data.items.map(function (i) {
+      var bars = "";
+      for (var s = 1; s <= data.steps; s++) bars += '<span class="' + (i.step >= s ? "on" : "") + '"></span>';
+      return '<div class="item ' + (i.step === 0 ? "placing" : "") + '">' +
+        '<div class="row"><span class="name">' + esc(i.item_name) + '</span>' +
+        '<span class="qty">&times;' + esc(i.qty) + '</span></div>' +
+        '<div class="state">' + esc(i.label) + '</div>' +
+        '<div class="steps">' + bars + "</div></div>";
+    }).join("") || '<div class="item"><div class="state">Nothing ordered yet</div></div>';
+  }
+
+  function poll() {
+    fetch("/api/method/restaurant_management.api.order_status?order=" + encodeURIComponent(order), {
+      headers: { "X-Frappe-Site-Name": location.hostname }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (r) { render(r.message); })
+      .catch(function () { /* keep last state; retry on next tick */ });
+  }
+  poll();
+  setInterval(poll, 5000);
+})();
+</script>
+</body>
+</html>
