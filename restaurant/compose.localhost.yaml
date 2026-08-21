@@ -1,0 +1,24 @@
+# Local-only override for *.localhost sites (added to COMPOSE_FILE by deploy.sh).
+#
+# The websocket service authenticates every socket.io connection by fetching
+# <Origin>/api/method/frappe.realtime.get_user_info — and nginx rewrites Origin
+# to "http://<site name>" (no port). On a public deployment that URL resolves
+# via real DNS; on a *.localhost site it resolves nowhere inside the websocket
+# container, so every realtime subscription dies with "Unauthorized: fetch
+# failed" and the floor never live-updates (new tables/rooms only appear in the
+# DB). Fix: alias the frontend as the site name on the compose network and make
+# nginx also listen on :80 so that portless URL lands on it.
+#
+# Never add this override on a public deployment: the alias would shadow the
+# real DNS name and break the (https) auth fetch instead.
+services:
+  frontend:
+    networks:
+      default:
+        aliases:
+          - ${FRAPPE_SITE_NAME_HEADER:-pos.localhost}
+    volumes:
+      - ./restaurant/nginx-localhost-template.conf:/templates/nginx/frappe.conf.template:ro
+
+networks:
+  default:

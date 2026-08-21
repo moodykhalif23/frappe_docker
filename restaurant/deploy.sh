@@ -25,6 +25,10 @@ log() { echo "==> $*"; }
 
 [ -f .env ] || { cp example.env .env; echo "FRAPPE_SITE_NAME_HEADER=${SITE}" >> .env; }
 grep -q '^COMPOSE_FILE=' .env || echo 'COMPOSE_FILE=compose.yaml:overrides/compose.redis.yaml:overrides/compose.mariadb.yaml:overrides/compose.noproxy.yaml' >> .env
+# *.localhost sites need the realtime-auth override (see restaurant/compose.localhost.yaml)
+case "$SITE" in *.localhost)
+  grep -q 'compose\.localhost\.yaml' .env || sed -i 's|^COMPOSE_FILE=.*|&:restaurant/compose.localhost.yaml|' .env ;;
+esac
 sed -i "s/^FRAPPE_SITE_NAME_HEADER=.*/FRAPPE_SITE_NAME_HEADER=${SITE}/" .env
 grep -q "^FRAPPE_SITE_NAME_HEADER=" .env || echo "FRAPPE_SITE_NAME_HEADER=${SITE}" >> .env
 grep -q "^CUSTOM_IMAGE=" .env || cat >> .env <<EOF
