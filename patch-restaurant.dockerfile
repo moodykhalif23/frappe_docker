@@ -9,6 +9,10 @@ RUN sed -i 's/single_column: true$/single_column: true,\n    hide_sidebar: true/
 RUN grep -q 'Object.assign(window, { TRANSFER' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  || sed -i 's/^const \[TRANSFER/Object.assign(window, { TRANSFER: "Transfer", UPDATE: "Update", DELETE: "Delete", INVOICED: "Invoiced", ADD: "Add", QUEUE: "queue", SPLIT: "Split", DOUBLE_CLICK_DELAY: "double_click" });\nconst [TRANSFER/' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+# v16 renamed get_item_details' kwarg args->ctx — without this every add-to-cart 500s and the cart stays empty
+RUN grep -q 'args: { ctx: item }' apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js \
+ || sed -i 's|args: { args: item }|args: { ctx: item }|' apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
 # food cards: item.description is often null — don't render the literal "null"
 RUN sed -i 's/\${description}/\${description || ""}/' apps/restaurant_management/restaurant_management/public/restaurant/js/menu-manage-class.js apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/menu-manage-class.js \
