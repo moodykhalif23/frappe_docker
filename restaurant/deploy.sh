@@ -79,7 +79,7 @@ if [ "${SIMULATE:-0}" = "1" ]; then SEED_DEMO=1; fi
 if [ "${SEED_DEMO:-0}" = "1" ]; then
   log "seeding demo restaurant"
   docker cp restaurant/demo_seed.py "$(docker compose ps -q backend)":/home/frappe/frappe-bench/apps/restaurant_management/restaurant_management/demo_seed.py
-  SEED_CALLS="seed(); seed_inventory()"
+  SEED_CALLS="bootstrap(); seed(); seed_inventory()"
   [ "${SIMULATE:-0}" = "1" ] && SEED_CALLS="$SEED_CALLS; simulate(); backflush()"
   docker compose exec -T backend bench --site "$SITE" console <<PY
 exec(open("/home/frappe/frappe-bench/apps/restaurant_management/restaurant_management/demo_seed.py").read(), globals())
