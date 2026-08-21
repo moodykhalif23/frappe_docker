@@ -31,6 +31,14 @@ This file is the working knowledge for developing and debugging it.
 - `Restaurant Booking`/`Table Order` grant only `Restaurant Manager`/`Restaurant User` roles — System Manager alone gets Permission Error, which also aborts the floor/order-pad JS init. `seed()` grants the roles to staff users.
 - `TableOrder.send` is a **@property** — attribute access fires kitchen dispatch; calling it throws `'dict' object is not callable` (a sync payload also lands on the instance as `.send`).
 - POS Settings must be in "POS Invoice" mode (v16 defaults to Sales Invoice mode, blocking the app's billing); UOM `Nos` allows fractions for by-the-glass recipes (production: use a dedicated fractional UOM instead).
+- The order pad's catalog comes from **`POS Profile.restaurant_menu`** (app custom field) — unset means an empty menu no matter what the Restaurant Menu contains. The Veg/Non-Veg tabs filter on `Item.item_type`. `seed()` sets both.
+- v16 renamed `get_item_details`' kwarg `args`→`ctx` — unpatched, every add-to-cart 500s and the cart silently stays at 0.
+- Kitchen/Bar production-center boards are **empty until an order is dispatched** — and dispatching is a **double-click** on the pad's green Order button (single click does nothing by design).
+
+## Kit features (added by this fork, shipped via the patch layer)
+
+- **Guest order tracker**: `/assets/restaurant_management/order-status.html?order=<Table Order name>` — no login; polls `restaurant_management.api.order_status` (allow_guest) every 5s and shows per-item progress (Sent → Preparing → Ready → Served). Exposes item names/qty/status only. Order names are sequential — treat links as semi-private; add a token before offering it publicly.
+- **Menu item editor**: Menu Management screen has a "New Item" button and tapping a card's price pill opens an edit dialog (name, category, price, Veg/Non-Veg, photo). Backed by `restaurant_management.api.upsert_menu_item`/`get_menu_item` (appended via `restaurant/patches/api_append.py`); writes land on Item / Item Price / Restaurant Menu, so frappe stays the system of record.
 
 ## Working on it
 
