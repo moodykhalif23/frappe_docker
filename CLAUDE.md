@@ -37,7 +37,8 @@ This file is the working knowledge for developing and debugging it.
 - Run seed functions via console (NOT `bench execute` — the module doesn't resolve there, and piped multi-line IPython mangles indentation):
   `echo 'exec(open("apps/restaurant_management/restaurant_management/demo_seed.py").read(), globals()); seed()' | docker compose exec -T backend bench --site <site> console`
   The script lives in the container only after `deploy.sh` copies it — re-copy after container recreation.
-- The floor layout is data: each `Restaurant Object` carries `data_style` JSON (x/y/z/width/height). `layout_floor()` re-grids everything; origin starts at x=340 to clear v16's fixed desk sidebar.
+- The floor layout is data: each `Restaurant Object` carries `data_style` JSON (x/y/z/width/height). `layout_floor()` re-grids everything; origin starts at x=60 — the desk sidebar no longer overlaps the page (see below).
+- Full-POS look: `restaurant-manage` passes `hide_sidebar: true` to `make_app_page` (v16 built-in; the container auto-restores the sidebar on route change). The footer "Close" link navigates back to `/app`; the accounting shift-close (POS Closing Entry) stays in the page menu, Shift+Ctrl+C.
 - Inventory model: dishes are non-stock; 20 stocked ingredients + a BOM per dish; `backflush()` posts one Material Issue covering all un-flushed POS Invoices (tracked via a `RESTAURANT-BACKFLUSH:` tag in Stock Entry remarks). Run at day end or via cron.
 - DB access: `docker compose exec -T backend bench --site <site> mariadb < file.sql`. MariaDB root password defaults to `123` (compose default) unless `DB_PASSWORD` is set.
 
