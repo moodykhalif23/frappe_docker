@@ -52,6 +52,19 @@ how a real restaurant runs, and which of those rules the app still breaks.
 - Inventory model: dishes are non-stock; 20 stocked ingredients + a BOM per dish; `backflush()` posts one Material Issue covering all un-flushed POS Invoices (tracked via a `RESTAURANT-BACKFLUSH:` tag in Stock Entry remarks). Run at day end or via cron.
 - DB access: `docker compose exec -T backend bench --site <site> mariadb < file.sql`. MariaDB root password defaults to `123` (compose default) unless `DB_PASSWORD` is set.
 
+## Redeploying
+
+`restaurant/redeploy.sh` — pull, rebake, roll, migrate, clear caches. Nobody is
+logged out: sessions live in the database, and `clear-cache` only drops
+redis-held page scripts, styles and boot info.
+
+Browser caching is the part that bites. `/assets` is served with `ETag` and
+`Last-Modified` but **no `Cache-Control`**, so browsers heuristically hold the
+floor's class files stale for hours after a redeploy. Every bake therefore
+stamps `window.RM_BUILD` and appends `?v=<id>` to those asset URLs, which is
+why the stamp step is the **last** layer in the patch dockerfile — anything
+that re-runs above it cascades into a fresh id.
+
 ## Live deployment
 
 One production instance runs at frappe.ikobriq.com (site named exactly that) on a VPS shared with other services; Caddy fronts it → 127.0.0.1:8080. Its server-side clone of this repo tracks `origin/main`. Credentials are not in this repo — ask the owner.
