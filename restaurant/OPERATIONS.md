@@ -33,9 +33,9 @@ chain, and that side is broadly right. FOH is where the gaps are.
 
 | Rule | Status |
 |---|---|
-| A walk-in is seated by **name only** — no customer database search | ✗ `check-in` Desk Form makes `customer` a required Link |
-| Seating records **covers** and picks a table that **fits** | ~ `dinners` and `no_of_seats`/`minimum_seating` exist, unused for matching |
-| Seating leads **straight into the order** | ✗ no bridge from check-in to the order pad |
+| A walk-in is seated by **name only** — no customer database search | ✓ host stand: name in, Customer created behind it |
+| Seating records **covers** and picks a table that **fits** | ✓ `free_tables(covers)`, tightest fit first, occupied and seated tables excluded |
+| Seating leads **straight into the order** | ✓ Seat & open order routes to the table's pad |
 | **One server owns a table**, visible on the floor tile | ✗ no waiter field; `Restaurant Object.current_user` is a mutex, not attribution |
 | Every check is attributable: **sales by server** | ✗ nothing lands on Table Order or the invoice |
 | The floor **never blocks** on shift bookkeeping | ✓ fixed — see below |
@@ -55,9 +55,12 @@ chain, and that side is broadly right. FOH is where the gaps are.
    shift whatever user opened it; `restaurant_manage.js` uses it instead of
    erpnext's session-user check, which stranded every other waiter behind a
    "POS Opening Entry Exists" dialog that could never submit.
-2. **Host stand.** Walk-in check-in by guest name (auto-creates the customer),
-   table picker filtered to free tables that seat the party, "Seat & open
-   order" straight into the pad.
+2. ✅ **Host stand.** "Seat guest" on the floor toolbar: guest name, covers,
+   and a table list filtered to what is free and fits (tightest first, tables
+   with no capacity recorded offered last and labelled). Seating creates the
+   Customer and the booking, then routes to that table's order pad. A seated
+   table is excluded immediately — the floor only counts a table busy once
+   items are on the order, which would otherwise let the host double-seat it.
 3. **Waiter attribution.** Waiter record + PIN, stamped on Table Order and
    copied to the POS Invoice, initials on the floor tile, Sales-by-Waiter
    report (covers, checks, average spend, turn time).
