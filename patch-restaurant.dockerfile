@@ -62,3 +62,12 @@ RUN grep -q 'RM_host_stand' apps/restaurant_management/restaurant_management/res
 RUN grep -q 'RM_host_stand.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  || sed -i "s|() => this.page.set_title(__('Restaurant Manage')),|() => { this.page.set_title(__('Restaurant Manage')); window.RM_host_stand \&\& RM_host_stand.mount(this); },|" apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+
+# waiter attribution: a Restaurant Waiter record with a PIN, stamped down the chain
+COPY --chown=frappe:frappe restaurant/patches/doctype/restaurant_waiter apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_waiter
+COPY restaurant/patches/table_order_waiter.py /tmp/table_order_waiter.py
+RUN grep -q 'to_doc.waiter' apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
+ || sed -i 's|        to_doc.table = self.table|        to_doc.table = self.table\n        to_doc.waiter = self.get("waiter")|' apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py
+RUN grep -q '_stamp_waiter' apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
+ || cat /tmp/table_order_waiter.py >> apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"

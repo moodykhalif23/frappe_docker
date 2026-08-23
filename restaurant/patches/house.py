@@ -139,3 +139,70 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None):
 	booking.insert(ignore_permissions=True)
 
 	return {"booking": booking.name, "customer": booking.customer, "table": obj.name, "room": obj.room}
+
+
+WAITER_FIELD = {"fieldname": "waiter", "fieldtype": "Link", "options": "Restaurant Waiter", "label": "Waiter"}
+
+
+def ensure_custom_fields():
+	"""Idempotent: hangs the waiter link on the table, its orders and its invoices."""
+	from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
+
+	create_custom_fields({
+		"Restaurant Object": [dict(WAITER_FIELD, insert_after="current_user")],
+		"Table Order": [dict(WAITER_FIELD, insert_after="customer")],
+		"POS Invoice": [dict(WAITER_FIELD, insert_after="customer", read_only=1)],
+	}, ignore_validate=True)
+	frappe.db.commit()
+	return "ok"
+
+
+def _initials(name):
+	parts = [p for p in (name or "").split() if p]
+	if len(parts) > 1:
+		return (parts[0][0] + parts[-1][0]).upper()
+	return (parts[0][:2].upper() if parts else "?")
+
+
+@frappe.whitelist()
+def waiters():
+	"""The active waiters, for the terminal's name pad. Never returns PINs."""
+	rows = frappe.get_all(
+		"Restaurant Waiter",
+		filters={"active": 1},
+		fields=["name", "waiter_name", "colour"],
+		order_by="waiter_name",
+	)
+	for r in rows:
+		r["initials"] = _initials(r["waiter_name"])
+	return rows
+
+
+@frappe.whitelist()
+def claim_table(table, waiter, pin):
+	"""A waiter takes a table by tapping their name and PIN on the shared terminal."""
+	import hmac
+
+	from frappe.utils.password import get_decrypted_password
+
+	row = frappe.db.get_value("Restaurant Waiter", waiter, ["name", "waiter_name", "active"], as_dict=True)
+	if not row:
+		frappe.throw(frappe._("Unknown waiter"))
+	if not row.active:
+		frappe.throw(frappe._("{0} is not on the active list").format(row.waiter_name))
+
+	stored = get_decrypted_password("Restaurant Waiter", waiter, "pin", raise_exception=False)
+	if not stored or not hmac.compare_digest(str(pin).strip(), str(stored)):
+		frappe.throw(frappe._("Wrong PIN"))
+
+	if not frappe.db.exists("Restaurant Object", table):
+		frappe.throw(frappe._("Unknown table"))
+
+	frappe.db.set_value("Restaurant Object", table, "waiter", waiter)
+	for order in frappe.get_all(
+		"Table Order", filters={"table": table, "status": ["not in", ["Cancelled", "Invoiced"]]}
+	):
+		frappe.db.set_value("Table Order", order.name, "waiter", waiter)
+	frappe.db.commit()
+
+	return {"waiter": waiter, "waiter_name": row.waiter_name, "initials": _initials(row.waiter_name)}

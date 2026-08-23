@@ -1,0 +1,35 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:waiter_name",
+ "creation": "2026-08-23 12:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": ["waiter_name", "pin", "column_break_1", "active", "colour", "user"],
+ "fields": [
+  {"fieldname": "waiter_name", "fieldtype": "Data", "label": "Waiter Name", "reqd": 1, "unique": 1, "in_list_view": 1},
+  {"fieldname": "pin", "fieldtype": "Password", "label": "PIN", "reqd": 1, "description": "Four digits. Tapped on the shared terminal to claim a table."},
+  {"fieldname": "column_break_1", "fieldtype": "Column Break"},
+  {"fieldname": "active", "fieldtype": "Check", "label": "Active", "default": "1", "in_list_view": 1},
+  {"fieldname": "colour", "fieldtype": "Color", "label": "Badge Colour"},
+  {"fieldname": "user", "fieldtype": "Link", "label": "Frappe User", "options": "User", "description": "Optional. Only if this waiter also logs in."}
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2026-08-23 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Restaurant Management",
+ "name": "Restaurant Waiter",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {"create": 1, "delete": 1, "email": 1, "print": 1, "read": 1, "report": 1, "role": "Restaurant Manager", "share": 1, "write": 1},
+  {"create": 1, "delete": 1, "email": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+  {"read": 1, "role": "Restaurant User"}
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
