@@ -64,12 +64,12 @@ PY
 # so the stock per-user lookup stranded every waiter who did not open the shift
 COPY --chown=frappe:frappe restaurant/patches/house.py apps/restaurant_management/restaurant_management/house.py
 COPY restaurant/patches/house_shift_override.js /tmp/house_shift_override.js
-RUN cat /tmp/house_shift_override.js >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+RUN { echo ';'; cat /tmp/house_shift_override.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/house.py').read())"
 
 # host stand: seat a walk-in by name onto a table that fits, then straight to the pad
 COPY restaurant/patches/host_stand.js /tmp/host_stand.js
-RUN cat /tmp/host_stand.js >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+RUN { echo ';'; cat /tmp/host_stand.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 RUN grep -q 'RM_host_stand.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  || sed -i "s|() => this.page.set_title(__('Restaurant Manage')),|() => { this.page.set_title(__('Restaurant Manage')); window.RM_host_stand \&\& RM_host_stand.mount(this); },|" apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
@@ -89,7 +89,7 @@ RUN grep -q 'RM_waiter_badge(this.data.waiter)' apps/restaurant_management/resta
  || sed -i 's|            \${this.description.html()}|            \${this.description.html()}\n            \${window.RM_waiter_badge ? RM_waiter_badge(this.data.waiter) : ""}|' apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
 COPY restaurant/patches/waiter_pad.js /tmp/waiter_pad.js
-RUN cat /tmp/waiter_pad.js >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+RUN { echo ';'; cat /tmp/waiter_pad.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 RUN grep -q 'RM_waiter.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  || sed -i 's|RM_host_stand.mount(this);|RM_host_stand.mount(this); window.RM_waiter \&\& RM_waiter.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
@@ -101,7 +101,7 @@ COPY --chown=frappe:frappe restaurant/patches/report/sales_by_waiter apps/restau
 # cache busting: every rebake stamps a new build id onto the floor's asset URLs, so
 # a redeploy reaches browsers without anyone being logged out
 COPY restaurant/patches/build_stamp.js /tmp/build_stamp.js
-RUN cat /tmp/build_stamp.js >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+RUN { echo ';'; cat /tmp/build_stamp.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && sed -i "s|__RM_BUILD__|$(date -u +%Y%m%d%H%M%S)|" apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 RUN python3 - <<'PY'
