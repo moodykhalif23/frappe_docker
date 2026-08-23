@@ -236,6 +236,45 @@ def _ensure_pc(label, groups):
     _configure_pc(name, groups)
 
 
+def open_shift(user=None, opening=5000):
+    """Give `user` an open POS shift dated today.
+
+    Shifts are per (user, POS Profile): every cashier opens and closes their own
+    drawer, and ERPNext refuses to write orders against an opening entry from an
+    earlier day ("POS Opening Entry ... is outdated"). A demo site seeded
+    yesterday is therefore write-blocked until its shift moves to today, so roll
+    it forward — demo convenience; in production you close the shift properly
+    (POS Closing Entry) and open a fresh one.
+    """
+    user = user or frappe.session.user
+    prof_name = pos_profile()
+    today = frappe.utils.today()
+    existing = frappe.get_all("POS Opening Entry",
+                              filters={"pos_profile": prof_name, "user": user, "status": "Open"},
+                              fields=["name", "period_start_date"])
+    for op in existing:
+        if str(op.period_start_date)[:10] == today:
+            return op.name
+        frappe.db.set_value("POS Opening Entry", op.name, {
+            "period_start_date": frappe.utils.now_datetime(), "posting_date": today,
+        }, update_modified=False)
+        frappe.db.commit()
+        print(f"SHIFT rolled forward to {today} for {user}: {op.name}")
+        return op.name
+
+    doc = frappe.get_doc({
+        "doctype": "POS Opening Entry", "company": company(),
+        "pos_profile": prof_name, "user": user,
+        "period_start_date": frappe.utils.now_datetime(), "posting_date": today,
+        "balance_details": [{"mode_of_payment": "Cash", "opening_amount": opening}],
+    })
+    doc.insert(ignore_permissions=True)
+    doc.submit()
+    frappe.db.commit()
+    print(f"SHIFT opened for {user}: {doc.name}")
+    return doc.name
+
+
 def seed():
     frappe.set_user(USER)
 
@@ -303,16 +342,7 @@ def seed():
         frappe.db.set_value("Item", name, "item_type",
                             "Non-Veg" if name in NON_VEG else "Veg")
 
-    if not frappe.db.exists("POS Opening Entry", {"pos_profile": prof_name, "status": "Open"}):
-        op = frappe.get_doc({
-            "doctype": "POS Opening Entry", "company": company(),
-            "pos_profile": prof_name, "user": frappe.session.user,
-            "period_start_date": frappe.utils.now_datetime(),
-            "posting_date": frappe.utils.today(),
-            "balance_details": [{"mode_of_payment": "Cash", "opening_amount": 5000}],
-        })
-        op.insert(ignore_permissions=True)
-        op.submit()
+    open_shift()
 
     frappe.db.commit()
     layout_floor()
