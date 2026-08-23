@@ -5,6 +5,8 @@ Fork of frappe/frappe_docker carrying a one-click restaurant POS deploy
 specific to this fork lives in `restaurant/` — start with
 [restaurant/README.md](restaurant/README.md) for the user-facing story.
 This file is the working knowledge for developing and debugging it.
+[restaurant/OPERATIONS.md](restaurant/OPERATIONS.md) is the behavioural spec —
+how a real restaurant runs, and which of those rules the app still breaks.
 
 ## Layout
 
