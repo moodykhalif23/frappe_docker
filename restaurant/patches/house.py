@@ -178,9 +178,7 @@ def waiters():
 	return rows
 
 
-@frappe.whitelist()
-def claim_table(table, waiter, pin):
-	"""A waiter takes a table by tapping their name and PIN on the shared terminal."""
+def _verify_pin(waiter, pin):
 	import hmac
 
 	from frappe.utils.password import get_decrypted_password
@@ -194,6 +192,41 @@ def claim_table(table, waiter, pin):
 	stored = get_decrypted_password("Restaurant Waiter", waiter, "pin", raise_exception=False)
 	if not stored or not hmac.compare_digest(str(pin).strip(), str(stored)):
 		frappe.throw(frappe._("Wrong PIN"))
+	return row
+
+
+def _token_key(waiter):
+	return "rm_waiter_token:{0}:{1}".format(frappe.session.user, waiter)
+
+
+def _authorised(waiter, pin=None, token=None):
+	# A PIN is tapped once per shift on the terminal; the token stands in for it
+	# afterwards so claiming a table is one tap, not a PIN every time.
+	if pin:
+		return _verify_pin(waiter, pin)
+	if token and frappe.cache().get_value(_token_key(waiter)) == token:
+		return frappe.db.get_value("Restaurant Waiter", waiter, ["name", "waiter_name", "active"], as_dict=True)
+	frappe.throw(frappe._("Tap your PIN to sign in first"))
+
+
+@frappe.whitelist()
+def waiter_sign_in(waiter, pin):
+	"""Sign a waiter on to this terminal for the shift."""
+	row = _verify_pin(waiter, pin)
+	token = frappe.generate_hash(length=32)
+	frappe.cache().set_value(_token_key(waiter), token, expires_in_sec=12 * 60 * 60)
+	return {
+		"waiter": row.name,
+		"waiter_name": row.waiter_name,
+		"initials": _initials(row.waiter_name),
+		"token": token,
+	}
+
+
+@frappe.whitelist()
+def claim_table(table, waiter, pin=None, token=None):
+	"""Give a table to a waiter — Toast's 'change server', one owner per table."""
+	row = _authorised(waiter, pin, token)
 
 	if not frappe.db.exists("Restaurant Object", table):
 		frappe.throw(frappe._("Unknown table"))
@@ -206,3 +239,14 @@ def claim_table(table, waiter, pin):
 	frappe.db.commit()
 
 	return {"waiter": waiter, "waiter_name": row.waiter_name, "initials": _initials(row.waiter_name)}
+
+
+@frappe.whitelist()
+def floor_waiters():
+	"""Which waiter holds which table, for the floor's badges."""
+	rows = frappe.get_all("Restaurant Object", filters={"type": "Table"}, fields=["name", "waiter"])
+	colours = {w.name: w.colour for w in frappe.get_all("Restaurant Waiter", fields=["name", "colour"])}
+	return {
+		r.name: {"waiter": r.waiter, "initials": _initials(r.waiter), "colour": colours.get(r.waiter) or "#4b5563"}
+		for r in rows if r.waiter
+	}

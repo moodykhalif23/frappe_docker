@@ -29,10 +29,18 @@
     }).then(({ message }) => {
       if (!message) return;
       dialog.hide();
-      // The floor already knows how to jump to a table and open its order pad.
-      RM.navigate_room = message.room;
-      RM.navigate_table = message.table;
-      frappe.set_route(`restaurant-manage?restaurant_room=${message.room}`);
+      const go = () => {
+        // The floor already knows how to jump to a table and open its order pad.
+        RM.navigate_room = message.room;
+        RM.navigate_table = message.table;
+        frappe.set_route(`restaurant-manage?restaurant_room=${message.room}`);
+      };
+      // Whoever is signed in on this terminal takes the table they just seated.
+      const who = window.RM_waiter && RM_waiter.current;
+      if (!who) return go();
+      frappe.call("restaurant_management.house.claim_table", {
+        table: message.table, waiter: who.waiter, token: who.token,
+      }).then(go, go);
     });
   };
 

@@ -1,0 +1,20 @@
+
+/* rm-waiter-badge: whose section a table belongs to, readable at a glance */
+.d-waiter-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 4px;
+  border-radius: 11px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: center;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  z-index: 2;
+}

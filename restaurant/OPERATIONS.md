@@ -36,8 +36,8 @@ chain, and that side is broadly right. FOH is where the gaps are.
 | A walk-in is seated by **name only** — no customer database search | ✓ host stand: name in, Customer created behind it |
 | Seating records **covers** and picks a table that **fits** | ✓ `free_tables(covers)`, tightest fit first, occupied and seated tables excluded |
 | Seating leads **straight into the order** | ✓ Seat & open order routes to the table's pad |
-| **One server owns a table**, visible on the floor tile | ✗ no waiter field; `Restaurant Object.current_user` is a mutex, not attribution |
-| Every check is attributable: **sales by server** | ✗ nothing lands on Table Order or the invoice |
+| **One server owns a table**, visible on the floor tile | ✓ Restaurant Waiter + PIN; initials badge on the tile |
+| Every check is attributable: **sales by server** | ✓ waiter stamped table → order → invoice; Sales by Waiter report |
 | The floor **never blocks** on shift bookkeeping | ✓ fixed — see below |
 | Usable on the device in the server's hand | ✗ desktop-only layout |
 
@@ -61,8 +61,13 @@ chain, and that side is broadly right. FOH is where the gaps are.
    Customer and the booking, then routes to that table's order pad. A seated
    table is excluded immediately — the floor only counts a table busy once
    items are on the order, which would otherwise let the host double-seat it.
-3. **Waiter attribution.** Waiter record + PIN, stamped on Table Order and
-   copied to the POS Invoice, initials on the floor tile, Sales-by-Waiter
-   report (covers, checks, average spend, turn time).
+3. ✅ **Waiter attribution.** `Restaurant Waiter` (name, 4-6 digit PIN, badge
+   colour) — waiters do not log in. They sign in on the shared terminal once
+   per shift; a cached token then stands in for the PIN so claiming a table is
+   one tap. Attribution follows the table: `claim_table()` writes the waiter
+   onto the table and its open orders, `Table Order.insert()` inherits it, and
+   `transfer_order_values()` carries it onto the POS Invoice. Initials show on
+   the tile; **Sales by Waiter** reports tables, covers, checks, sales, average
+   check and spend per cover.
 4. **Responsive at every breakpoint** — phone (handheld), tablet (the real
    POS surface), desktop (manager).

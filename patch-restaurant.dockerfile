@@ -71,3 +71,22 @@ RUN grep -q 'to_doc.waiter' apps/restaurant_management/restaurant_management/res
 RUN grep -q '_stamp_waiter' apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
  || cat /tmp/table_order_waiter.py >> apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
+
+# the floor needs to know who holds each table, and say so on the tile
+RUN grep -q 'customer,waiter' apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py \
+ || sed -i 's|,restricted_to_branches,customer"|,restricted_to_branches,customer,waiter"|' apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())"
+RUN grep -q 'RM_waiter_badge(this.data.waiter)' apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js \
+ || sed -i 's|            \${this.description.html()}|            \${this.description.html()}\n            \${window.RM_waiter_badge ? RM_waiter_badge(this.data.waiter) : ""}|' apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
+COPY restaurant/patches/waiter_pad.js /tmp/waiter_pad.js
+RUN grep -q 'window.RM_waiter = {' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ || cat /tmp/waiter_pad.js >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+RUN grep -q 'RM_waiter.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ || sed -i 's|RM_host_stand.mount(this);|RM_host_stand.mount(this); window.RM_waiter \&\& RM_waiter.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+COPY restaurant/patches/waiter_badge.css /tmp/waiter_badge.css
+RUN grep -q 'rm-waiter-badge' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css \
+ || cat /tmp/waiter_badge.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
+COPY --chown=frappe:frappe restaurant/patches/report/sales_by_waiter apps/restaurant_management/restaurant_management/restaurant_management/report/sales_by_waiter
