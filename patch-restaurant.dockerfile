@@ -45,6 +45,16 @@ RUN sed -i '/^\tdef before_insert/,/self.customer = customer.name$/d' apps/resta
  || cat /tmp/rb_append.py >> apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py \
  ; sed -i '/set_value("Customer", self.name, "mobile_no"/s/self.name/self.customer/' apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py').read())"
+RUN python3 - <<'PY'
+# Undo the asset-url stamping baked into earlier images: it broke frappe's loader.
+path = "apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js"
+src = open(path).read()
+bad = '${asset}?v=${window.RM_BUILD || "0"}'
+if bad in src:
+    open(path, "w").write(src.replace(bad, "${asset}"))
+    print("reverted asset url stamping")
+PY
+
 # Our appended blocks are stripped before being re-appended: a grep guard would
 # skip the append after we edit a block, silently serving the old version forever.
 RUN python3 - <<'PY'
@@ -98,22 +108,11 @@ COPY restaurant/patches/responsive.css /tmp/responsive.css
 RUN cat /tmp/waiter_badge.css /tmp/responsive.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
 COPY --chown=frappe:frappe restaurant/patches/report/sales_by_waiter apps/restaurant_management/restaurant_management/restaurant_management/report/sales_by_waiter
 
-# cache busting: every rebake stamps a new build id onto the floor's asset URLs, so
-# a redeploy reaches browsers without anyone being logged out
+# Build id, for telling at a glance which bake a browser is running. Do NOT append
+# it to asset URLs: frappe's assets.extn() reads the extension from after the "?",
+# so x.js?v=1 has no handler and the floor never loads. frappe.require already
+# appends its own version to every asset it fetches.
 COPY restaurant/patches/build_stamp.js /tmp/build_stamp.js
 RUN { echo ';'; cat /tmp/build_stamp.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && sed -i "s|__RM_BUILD__|$(date -u +%Y%m%d%H%M%S)|" apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
-RUN python3 - <<'PY'
-path = "apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js"
-src = open(path).read()
-old = "].map(asset => `assets/restaurant_management/restaurant/${asset}`)"
-new = "].map(asset => `assets/restaurant_management/restaurant/${asset}?v=${window.RM_BUILD || \"0\"}`)"
-if old in src:
-    open(path, "w").write(src.replace(old, new))
-    print("asset urls now carry the build id")
-elif new in src:
-    print("asset urls already stamped")
-else:
-    raise SystemExit("asset url pattern not found - patch needs updating")
-PY

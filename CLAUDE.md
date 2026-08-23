@@ -58,12 +58,18 @@ how a real restaurant runs, and which of those rules the app still breaks.
 logged out: sessions live in the database, and `clear-cache` only drops
 redis-held page scripts, styles and boot info.
 
-Browser caching is the part that bites. `/assets` is served with `ETag` and
-`Last-Modified` but **no `Cache-Control`**, so browsers heuristically hold the
-floor's class files stale for hours after a redeploy. Every bake therefore
-stamps `window.RM_BUILD` and appends `?v=<id>` to those asset URLs, which is
-why the stamp step is the **last** layer in the patch dockerfile — anything
-that re-runs above it cascades into a fresh id.
+Browser caching: `/assets` is served with `ETag` and `Last-Modified` but no
+`Cache-Control`. Frappe already handles this — `frappe.assets.execute()`
+appends its own version to every asset URL it fetches. **Never append your own
+query string to an asset path**: `assets.extn()` reads the extension from
+*after* the `?`, so `x.js?v=1` resolves to no handler and the whole floor
+fails to load. Each bake stamps `window.RM_BUILD` purely so you can tell which
+build a browser is running.
+
+`node --check` is not enough for these appends. It validates syntax, and the
+failure mode here is runtime: the page file ends in a class expression with no
+terminator, so an appended `(` reads as a call. Blocks are separated with `;`,
+and the only real check is loading the page in a browser.
 
 ## Live deployment
 
