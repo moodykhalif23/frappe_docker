@@ -23,6 +23,15 @@ how a real restaurant runs, and which of those rules the app still breaks.
 3. **Site name must equal the public domain** (`SITE=pos.example.com`). The nginx template rewrites the `Origin` header to the site name and frappe's websocket auth requires `Host == Origin` — mismatch = "Invalid origin", dead realtime/kitchen display. For local work use `SITE=pos.localhost` — **and** the websocket service must be able to `fetch("http://<site name>/api/...")` to authenticate each socket (it uses the rewritten Origin as the URL). Public domains resolve via real DNS; `*.localhost` needs `restaurant/compose.localhost.yaml` (deploy.sh adds it to COMPOSE_FILE automatically: frontend gets the site name as a network alias + nginx listens on :80). Never add that override on a public deployment — the alias would shadow real DNS and break the https auth fetch. Symptom of missing override: browser console shows `Error connecting to socket.io: Unauthorized: TypeError: fetch failed`, nothing on the floor live-updates.
 4. Rebuilding from `apps-restaurant.json` alone produces an **unpatched** image — always follow with the patch dockerfile build. `deploy.sh` does both.
 5. Commits: single-concern, author `moodykhalif23 <brian@sozuri.net>`, never add an AI co-author.
+6. **Flatten the image every few bakes.** The patch dockerfile builds `FROM`
+   its own output, so each bake adds ~50 layers. Past roughly 480 the overlayfs
+   mount option string exceeds the kernel limit and *every* build fails with
+   `mount source: "overlay" ... err: no such file or directory` on an arbitrary
+   early step. Running containers keep working and pruning the build cache does
+   not help, so it reads as cache corruption — it isn't. Check with
+   `docker inspect custom-erpnext:v16.6.0 --format '{{len .RootFS.Layers}}'`
+   and run `restaurant/flatten-image.sh` (export/import to one layer, config
+   carried across).
 
 ## v16 traps in the restaurant app (all patched here; details in restaurant/README.md)
 
