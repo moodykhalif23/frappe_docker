@@ -138,6 +138,11 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None):
 	})
 	booking.insert(ignore_permissions=True)
 
+	# The pad refuses to open an order until the table itself carries a customer
+	# ("You must set a customer to this table"), so seating has to set it too.
+	frappe.db.set_value("Restaurant Object", obj.name, "customer", booking.customer)
+	frappe.db.commit()
+
 	return {"booking": booking.name, "customer": booking.customer, "table": obj.name, "room": obj.room}
 
 
