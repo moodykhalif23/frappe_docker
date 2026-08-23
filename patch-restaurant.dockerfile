@@ -94,7 +94,8 @@ RUN grep -q 'RM_waiter.mount(this)' apps/restaurant_management/restaurant_manage
  || sed -i 's|RM_host_stand.mount(this);|RM_host_stand.mount(this); window.RM_waiter \&\& RM_waiter.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 COPY restaurant/patches/waiter_badge.css /tmp/waiter_badge.css
-RUN cat /tmp/waiter_badge.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
+COPY restaurant/patches/responsive.css /tmp/responsive.css
+RUN cat /tmp/waiter_badge.css /tmp/responsive.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
 COPY --chown=frappe:frappe restaurant/patches/report/sales_by_waiter apps/restaurant_management/restaurant_management/restaurant_management/report/sales_by_waiter
 
 # cache busting: every rebake stamps a new build id onto the floor's asset URLs, so

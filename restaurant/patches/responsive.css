@@ -1,0 +1,65 @@
+
+/* rm-responsive: tablet is the POS surface, phone is the handheld, desktop is the
+   manager view. These live in the page stylesheet, which is delivered with the
+   page, so a redeploy is never held stale by the browser's /assets cache. */
+
+/* Fingers, not mice. */
+@media (pointer: coarse) {
+  .order-manage .btn,
+  .restaurant-manage .btn,
+  .restaurant-manage .floor-selector .button {
+    min-height: 44px;
+  }
+  .d-waiter-badge {
+    min-width: 26px;
+    height: 26px;
+    line-height: 26px;
+    font-size: 12px;
+  }
+}
+
+/* Tablet and down: the cart is pinned to 450px in order-items-container.css,
+   which is wider than a phone and forces the pad sideways. */
+@media (max-width: 1024px) {
+  .container-order-items {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .order-manage {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  /* height: calc(100% - 334px) goes negative on a short screen and the cart
+     disappears entirely; bound it instead. */
+  .container-order-items .panel-order-items {
+    height: auto !important;
+    min-height: 150px;
+    max-height: 45vh;
+    overflow-y: auto;
+  }
+}
+
+/* Handheld. */
+@media (max-width: 640px) {
+  .container-order-items .panel-order-items {
+    max-height: 38vh;
+  }
+  .product-list {
+    padding: 4px !important;
+  }
+  /* The floor is an absolutely positioned canvas — let it pan rather than clip. */
+  .restaurant-manage .floor-map .table-container {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Our own dialogs: full width, one column. */
+  .modal-dialog {
+    margin: 0.5rem auto;
+    max-width: calc(100vw - 1rem);
+  }
+  .frappe-control[data-fieldtype="MultiCheck"] .multicheck-column {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+}
