@@ -58,13 +58,21 @@ how a real restaurant runs, and which of those rules the app still breaks.
 logged out: sessions live in the database, and `clear-cache` only drops
 redis-held page scripts, styles and boot info.
 
-Browser caching: `/assets` is served with `ETag` and `Last-Modified` but no
-`Cache-Control`. Frappe already handles this — `frappe.assets.execute()`
-appends its own version to every asset URL it fetches. **Never append your own
-query string to an asset path**: `assets.extn()` reads the extension from
-*after* the `?`, so `x.js?v=1` resolves to no handler and the whole floor
-fails to load. Each bake stamps `window.RM_BUILD` purely so you can tell which
-build a browser is running.
+Browser caching bites hard, and the origin lies to you. Frappe appends
+`?v=<version>` to each asset it fetches, where the version is
+`os.path.getmtime(sites/assets/assets.json)`. Patching JS in place never
+touches that file, so the URL is unchanged — and Cloudflare fronts this site
+caching `/assets` for `max-age=14400`, keyed on the full URL. The edge
+therefore serves the **pre-patch** body for four hours while `curl` against
+127.0.0.1:8080 shows the patch present. Diagnose with
+`cf-cache-status` and always fix it by bumping the version:
+
+    docker compose exec -T backend touch sites/assets/assets.json
+
+`redeploy.sh` does this. **Never append your own query string to an asset
+path** instead: `assets.extn()` reads the extension from *after* the `?`, so
+`x.js?v=1` resolves to no handler and the whole floor fails to load. Each bake
+stamps `window.RM_BUILD` purely so you can tell which build a browser has.
 
 `node --check` is not enough for these appends. It validates syntax, and the
 failure mode here is runtime: the page file ends in a class expression with no

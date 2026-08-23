@@ -34,6 +34,12 @@ log "custom fields"
 echo 'from restaurant_management.house import ensure_custom_fields; ensure_custom_fields()' \
   | docker compose exec -T backend bench --site "$SITE" console >/dev/null
 
+# Cloudflare caches /assets for 4h keyed on the full URL including frappe's
+# ?v=<mtime of sites/assets/assets.json>. Patching JS in place never changes
+# that mtime, so browsers keep the pre-patch file. Bump it.
+log "bumping the asset version so browsers refetch"
+docker compose exec -T backend touch sites/assets/assets.json
+
 log "clearing server caches (sessions untouched)"
 docker compose exec -T backend bench --site "$SITE" clear-cache
 docker compose exec -T backend bench --site "$SITE" clear-website-cache || true
