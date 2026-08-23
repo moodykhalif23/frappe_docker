@@ -77,6 +77,10 @@ COPY restaurant/patches/house_shift_override.js /tmp/house_shift_override.js
 RUN { echo ';'; cat /tmp/house_shift_override.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/house.py').read())"
 
+RUN grep -q 'RM_house_shift(this.pos' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ || sed -i 's|window.cur_pos = this.pos;|window.cur_pos = this.pos;\n          this.pos.check_opening_entry = (p) => RM_house_shift(this.pos, p);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+
 # host stand: seat a walk-in by name onto a table that fits, then straight to the pad
 COPY restaurant/patches/host_stand.js /tmp/host_stand.js
 RUN { echo ';'; cat /tmp/host_stand.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
