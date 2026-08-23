@@ -120,3 +120,7 @@ COPY restaurant/patches/build_stamp.js /tmp/build_stamp.js
 RUN { echo ';'; cat /tmp/build_stamp.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && sed -i "s|__RM_BUILD__|$(date -u +%Y%m%d%H%M%S)|" apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+
+# tapping a dish with no open check was a silent no-op; make it open the check
+COPY restaurant/patches/autostart_order.py /tmp/autostart_order.py
+RUN python3 /tmp/autostart_order.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
