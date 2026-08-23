@@ -45,3 +45,11 @@ RUN sed -i '/^\tdef before_insert/,/self.customer = customer.name$/d' apps/resta
  || cat /tmp/rb_append.py >> apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py \
  ; sed -i '/set_value("Customer", self.name, "mobile_no"/s/self.name/self.customer/' apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_booking/restaurant_booking.py').read())"
+# one house shift: erpnext bills against the newest open POS Opening Entry per profile,
+# so the stock per-user lookup stranded every waiter who did not open the shift
+COPY --chown=frappe:frappe restaurant/patches/house.py apps/restaurant_management/restaurant_management/house.py
+COPY restaurant/patches/house_shift_override.js /tmp/house_shift_override.js
+RUN grep -q '__house_shift' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ || cat /tmp/house_shift_override.js >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/house.py').read())"
