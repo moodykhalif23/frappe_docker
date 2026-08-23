@@ -52,4 +52,4 @@ This file is the working knowledge for developing and debugging it.
 
 ## Live deployment
 
-One production instance runs at frappe.ikobriq.com (site named exactly that) on a VPS shared with other services; Caddy fronts it → 127.0.0.1:8080. Its server-side clone of this repo tracks `origin/restaurant-pos`. Credentials are not in this repo — ask the owner.
+One production instance runs at frappe.ikobriq.com (site named exactly that) on a VPS shared with other services; Caddy fronts it → 127.0.0.1:8080. Its server-side clone of this repo tracks `origin/main`. Credentials are not in this repo — ask the owner.
