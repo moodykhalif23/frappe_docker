@@ -30,10 +30,14 @@
       if (!message) return;
       dialog.hide();
       const go = () => {
-        // The floor already knows how to jump to a table and open its order pad.
-        RM.navigate_room = message.room;
+        // Mark the table, then select its room: rendering a room opens the marked
+        // table's pad. A route with a query string is not a route in v16 — it
+        // raises "Page restaurant-manage?restaurant_room=... not found".
         RM.navigate_table = message.table;
-        frappe.set_route(`restaurant-manage?restaurant_room=${message.room}`);
+        const room = window.RM && RM.object && RM.object(message.room);
+        if (room && room.select) return room.select();
+        RM.navigate_room = message.room;
+        frappe.set_route("restaurant-manage", { restaurant_room: message.room });
       };
       // Whoever is signed in on this terminal takes the table they just seated.
       const who = window.RM_waiter && RM_waiter.current;
