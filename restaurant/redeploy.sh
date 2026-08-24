@@ -12,7 +12,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SITE="${SITE:-$(sed -n 's/^FRAPPE_SITE_NAME_HEADER=//p' .env | tail -1)}"
-IMAGE="custom-erpnext:${ERPNEXT_VERSION:-v16.6.0}"
+IMAGE="custom-erpnext:${CUSTOM_TAG:-$(sed -n "s/^CUSTOM_TAG=//p" .env)}"
 [ -n "$SITE" ] || { echo "no SITE and none in .env"; exit 1; }
 
 log() { echo "==> $*"; }

@@ -1,4 +1,4 @@
-FROM custom-erpnext:v16.6.0
+FROM custom-erpnext:v16.32.3
 USER frappe
 # Refuse to build on an app version we have not reviewed. Our patches anchor on
 # exact upstream source, and the restaurant app tracks a tagless master.

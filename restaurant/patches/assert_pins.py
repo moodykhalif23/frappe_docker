@@ -21,9 +21,13 @@ for app, want in EXPECTED.items():
     res = got.get("resolution") or {}
     actual = res.get("commit_hash") or ""
     branch = res.get("branch") or ""
+    version = got.get("version") or ""
     if want.startswith("v"):
-        if branch != want:
-            problems.append("%s: expected branch %s, got %s" % (app, want, branch or "?"))
+        # frappe is installed by bench init itself, not through apps.json, so its
+        # resolution is empty and only `version` says what actually landed.
+        if branch != want and version != want.lstrip("v"):
+            problems.append("%s: expected %s, got branch %s / version %s"
+                            % (app, want, branch or "?", version or "?"))
     elif actual != want:
         problems.append(
             "%s: expected commit %s, got %s (upstream master moved — review the "

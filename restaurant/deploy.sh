@@ -39,9 +39,13 @@ EOF
 
 if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   log "building ${IMAGE} (frappe + erpnext ${ERPNEXT_VERSION} + restaurant_management)"
+  # CACHE_BUST follows the pin file's own contents: apps-restaurant.json is a
+  # BuildKit secret and secrets are excluded from the cache key, so without this
+  # a changed pin silently reuses the old bench init.
   DOCKER_BUILDKIT=1 docker build \
     --secret id=apps_json,src=apps-restaurant.json \
-    --build-arg FRAPPE_BRANCH=version-16 \
+    --build-arg FRAPPE_BRANCH="$(sed -n 's/^frappe=//p' restaurant/PINNED_APPS)" \
+    --build-arg CACHE_BUST="$(sha256sum apps-restaurant.json restaurant/PINNED_APPS | sha256sum | cut -c1-16)" \
     -t "$IMAGE" -f images/layered/Containerfile .
   log "applying v16 compatibility patches to the restaurant app"
   docker build -t "$IMAGE" -f patch-restaurant.dockerfile .

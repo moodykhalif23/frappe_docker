@@ -47,10 +47,20 @@ how a real restaurant runs, and which of those rules the app still breaks.
    backstop — it fails the patch bake when the image disagrees with
    `PINNED_APPS`.
 
-9. **hrms is held at v16.5.0 against erpnext v16.6.0.** From hrms v16.5.1 the
-   installer writes `Accounts Settings.repost_allowed_types`, a field this
-   erpnext does not have, and `install-app hrms` dies with `AttributeError`.
-   Moving hrms up means moving erpnext up first and re-testing the till.
+9. **Move erpnext and hrms together.** hrms from v16.5.1 writes
+   `Accounts Settings.repost_allowed_types` during install; erpnext only grew
+   that field later, so an old erpnext under a current hrms dies with
+   `AttributeError: repost_allowed_types` at `install-app`. Pinning hrms *down*
+   to dodge it strands the stack a year behind — pin both to a current pair
+   instead. `restaurant/PINNED_APPS` is the single source of truth and
+   `deploy.sh` reads the frappe pin from it; its `CACHE_BUST` is the hash of
+   that file plus `apps-restaurant.json`, so a pin change can no longer be
+   silently ignored by the build cache.
+
+10. **frappe is pinned to a tag, not `version-16`.** The tag names the app
+   clone *and* the `frappe/build` + `frappe/base` image tags, so a rebuild a
+   year from now reproduces this image instead of picking up whatever
+   `version-16` points at that day.
 
 6. **Flatten the image every few bakes.** The patch dockerfile builds `FROM`
    its own output, so each bake adds ~50 layers. Past roughly 480 the overlayfs
