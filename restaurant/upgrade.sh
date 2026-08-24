@@ -45,6 +45,15 @@ if ! docker compose exec -T backend bash -lc \
   exit 1
 fi
 
+if [ "${SKIP_BUILD:-0}" = "1" ]; then
+  # The image was built and tested elsewhere and loaded here. Building frappe's
+  # assets needs more memory than a small shared box can spare, and an OOM on a
+  # machine serving other things kills whatever the kernel picks, not this build.
+  docker image inspect "$IMAGE" >/dev/null 2>&1 || {
+    echo "SKIP_BUILD=1 but ${IMAGE} is not on this machine — load it first."; exit 1; }
+  log "using the loaded ${IMAGE} (SKIP_BUILD=1), no build on this box"
+else
+
 log "building ${IMAGE} — frappe ${FRAPPE_PIN} + the pinned apps"
 DOCKER_BUILDKIT=1 docker build \
   --secret id=apps_json,src=apps-restaurant.json \
@@ -54,6 +63,8 @@ DOCKER_BUILDKIT=1 docker build \
 
 log "applying the restaurant patch layer (asserts the pins before it starts)"
 DOCKER_BUILDKIT=1 docker build -t "$IMAGE" -f patch-restaurant.dockerfile .
+
+fi
 
 log "rolling containers onto ${IMAGE}"
 docker compose up -d
