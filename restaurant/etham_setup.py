@@ -298,8 +298,9 @@ def make_profile(name="Etham"):
 
 def open_shift(profile=None, opening=5000):
     profile = profile or frappe.db.get_value("POS Profile", {"company": COMPANY, "disabled": 0})
-    for oe in frappe.get_all("POS Opening Entry", filters={"status": "Open"}, fields=["name"]):
-        print("SHIFT already open:", oe.name)
+    for oe in frappe.get_all("POS Opening Entry",
+                             filters={"status": "Open", "pos_profile": profile}, fields=["name"]):
+        print("SHIFT already open on %s: %s" % (profile, oe.name))
         return oe.name
     prof = frappe.get_doc("POS Profile", profile)
     doc = frappe.get_doc({
@@ -418,3 +419,20 @@ def status():
                                                fields=["name", "pos_profile"]))
     print("  customers      :", frappe.db.count("Customer"), "| waiters:", frappe.db.count("Restaurant Waiter"))
     print("  orders         :", frappe.db.count("Table Order"), "| bookings:", frappe.db.count("Restaurant Booking"))
+
+def activate():
+    """Point the session at Etham without deleting anything.
+
+    move_floor() repoints the rooms and tables at Etham, so until the default
+    company and the active profile follow, the floor filters to nothing.
+    """
+    frappe.defaults.set_global_default("company", COMPANY)
+    for prof in frappe.get_all("POS Profile", filters={"company": ["!=", COMPANY]}, pluck="name"):
+        frappe.db.set_value("POS Profile", prof, "disabled", 1)
+        print("  disabled old profile:", prof)
+    frappe.db.commit()
+    ours = frappe.db.get_value("POS Profile", {"company": COMPANY, "disabled": 0})
+    open_shift(ours)
+    frappe.clear_cache()
+    print("ACTIVE company=%s profile=%s" % (COMPANY, ours))
+    status()
