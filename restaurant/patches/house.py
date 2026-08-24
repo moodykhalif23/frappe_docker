@@ -452,6 +452,10 @@ def _turn_rows(from_date=None, to_date=None):
     """One row per table: parties served, covers, and how long they sat."""
     from_date = from_date or frappe.utils.today()
     to_date = to_date or from_date
+    # The stamps are custom fields; without them there are no turns to report,
+    # and the door panel must not fail over a metric.
+    if not frappe.db.has_column("Restaurant Booking", "seated_at"):
+        return []
 
     bookings = frappe.db.sql(
         """

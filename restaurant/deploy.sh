@@ -69,6 +69,12 @@ else
   docker compose exec -T backend bench --site "$SITE" migrate
 fi
 
+log "custom fields the floor hangs on stock doctypes (waiter, seating stamps)"
+docker compose exec -T backend bench --site "$SITE" console <<'PY'
+from restaurant_management.house import ensure_custom_fields
+print(ensure_custom_fields())
+PY
+
 log "site configuration the restaurant app needs on v16"
 [ -n "${SITE_URL:-}" ] && docker compose exec -T backend bench --site "$SITE" set-config host_name "$SITE_URL"
 docker compose exec -T backend bench --site "$SITE" enable-scheduler
