@@ -4,7 +4,8 @@ import { mkdirSync } from 'fs';
 const BASE = process.env.BASE || 'http://pos.localhost:8080';
 const USER = process.env.USER_ || 'Administrator';
 const PASS = process.env.PASS || 'admin';
-const WAITER = process.env.WAITER || 'Amina Otieno';
+// named so cleanup.py can find it — it is a record on a real site
+const WAITER = process.env.WAITER || 'Test Waiter';
 const PIN = process.env.PIN || '4821';
 const GUEST = process.env.GUEST || 'Playwright Party';
 

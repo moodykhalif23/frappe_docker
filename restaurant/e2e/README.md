@@ -43,6 +43,10 @@ echo 'exec(open("/home/frappe/frappe-bench/apps/restaurant_management/restaurant
 Both server suites clean up after themselves and raise on failure, so a green
 run ends with `ok` and a red one ends with a traceback.
 
+`cleanup.py` removes what the browser suites leave behind — parties, bookings,
+the test waiter and its employee record. It never cancels a submitted invoice:
+it reports them and leaves the decision to a person.
+
 **`checkout.mjs` takes a real payment.** It submits a POS Invoice, which lands
 in the books — on a client's site that is a fake sale on their ledger. It
 refuses to run against a non-local `BASE` unless `ALLOW_REAL_SALE=1`, and the
