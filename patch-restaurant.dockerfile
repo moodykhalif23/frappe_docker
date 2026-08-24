@@ -143,3 +143,7 @@ RUN python3 /tmp/table_delete_single_click.py && node --check apps/restaurant_ma
 # the pay form read this.actions before make() created it, so checkout threw
 COPY restaurant/patches/fix_pay_form_init.py /tmp/fix_pay_form_init.py
 RUN python3 /tmp/fix_pay_form_init.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+
+# covers was mandatory on the pay form and blocked payment; default it instead
+COPY restaurant/patches/dinners_not_mandatory.py /tmp/dinners_not_mandatory.py
+RUN python3 /tmp/dinners_not_mandatory.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
