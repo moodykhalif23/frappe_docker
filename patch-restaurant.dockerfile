@@ -125,3 +125,7 @@ RUN { echo ';'; cat /tmp/build_stamp.js; } >> apps/restaurant_management/restaur
 # tapping a dish with no open check was a silent no-op; make it open the check
 COPY restaurant/patches/autostart_order.py /tmp/autostart_order.py
 RUN python3 /tmp/autostart_order.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
+
+# a real-sized menu 400'd the items panel: the group list was one entry per dish
+COPY restaurant/patches/dedupe_item_groups.py /tmp/dedupe_item_groups.py
+RUN python3 /tmp/dedupe_item_groups.py && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_settings/restaurant_settings.py').read())"
