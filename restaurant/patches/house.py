@@ -232,6 +232,7 @@ def waiter_sign_in(waiter, pin):
 		"waiter_name": row.waiter_name,
 		"initials": _initials(row.waiter_name),
 		"token": token,
+		"checkin": _log_checkin(row.name, "IN"),
 	}
 
 
@@ -489,3 +490,109 @@ def turn_metrics(day=None):
         "turns_per_table": round(turns / total_tables, 2) if total_tables else 0,
         "tables": rows,
     }
+
+
+# ---- staff: the floor's PIN pad doubles as the shift clock ------------------
+#
+# Employee lives in erpnext and is always there; Employee Checkin and Attendance
+# come from hrms, so every use of them is guarded — the fork still runs without it.
+
+
+def _has_hrms():
+    return "hrms" in frappe.get_installed_apps()
+
+
+def _last_log(employee):
+    rows = frappe.get_all(
+        "Employee Checkin",
+        filters={"employee": employee, "time": [">=", frappe.utils.today() + " 00:00:00"]},
+        fields=["name", "log_type", "time"],
+        # Employee Checkin.time keeps only seconds, so two logs can tie —
+        # creation breaks it, otherwise the order is whatever the db returns.
+        order_by="time desc, creation desc",
+        limit=1,
+    )
+    return rows[0] if rows else None
+
+
+def _log_checkin(waiter, log_type):
+    """Record a floor sign-in as attendance. Never fatal: a waiter must be able
+    to start serving even if HR bookkeeping fails."""
+    if not _has_hrms():
+        return None
+    employee = frappe.db.get_value("Restaurant Waiter", waiter, "employee")
+    if not employee:
+        return None
+    try:
+        last = _last_log(employee)
+        if last and last["log_type"] == log_type:
+            return last["name"]
+        doc = frappe.get_doc({
+            "doctype": "Employee Checkin",
+            "employee": employee,
+            "log_type": log_type,
+            "time": frappe.utils.now_datetime(),
+            "device_id": "POS",
+        })
+        doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+        return doc.name
+    except Exception:
+        frappe.log_error(title="waiter checkin")
+        return None
+
+
+@frappe.whitelist()
+def waiter_sign_out(waiter, pin=None, token=None):
+    """Sign a waiter off the terminal and close their attendance for the shift."""
+    row = _authorised(waiter, pin, token)
+    frappe.cache().delete_value(_token_key(waiter))
+    return {"waiter": row.name, "waiter_name": row.waiter_name,
+            "checkin": _log_checkin(waiter, "OUT")}
+
+
+@frappe.whitelist()
+def staff():
+    """The roster a manager needs: who is on, who they are in HR, tables held."""
+    held = {}
+    for r in frappe.get_all("Restaurant Object", filters={"type": "Table"}, fields=["name", "waiter"]):
+        if r.waiter:
+            held[r.waiter] = held.get(r.waiter, 0) + 1
+
+    out = []
+    for w in frappe.get_all(
+        "Restaurant Waiter",
+        fields=["name", "waiter_name", "active", "colour", "employee", "user"],
+        order_by="waiter_name",
+    ):
+        row = {
+            "waiter": w.name,
+            "waiter_name": w.waiter_name,
+            "initials": _initials(w.waiter_name),
+            "active": bool(w.active),
+            "colour": w.colour,
+            "employee": w.employee,
+            "user": w.user,
+            "tables": held.get(w.name, 0),
+            "designation": "",
+            "on_shift": False,
+            "since": "",
+        }
+        if w.employee:
+            row["designation"] = frappe.db.get_value("Employee", w.employee, "designation") or ""
+            if _has_hrms():
+                last = _last_log(w.employee)
+                row["on_shift"] = bool(last and last["log_type"] == "IN")
+                row["since"] = str(last["time"]) if last else ""
+        out.append(row)
+    return out
+
+
+@frappe.whitelist()
+def link_employee(waiter, employee):
+    """Point a waiter at their HR record so the PIN pad can clock them in."""
+    if not frappe.db.exists("Employee", employee):
+        frappe.throw(frappe._("Unknown employee"))
+    frappe.db.set_value("Restaurant Waiter", waiter, "employee", employee)
+    frappe.db.commit()
+    return {"waiter": waiter, "employee": employee}
