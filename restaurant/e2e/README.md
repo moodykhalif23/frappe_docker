@@ -6,7 +6,7 @@ order, ring up a dish, dispatch it, check the tile badge, then re-check the
 floor at tablet and phone widths. It screenshots every step into `shots/`.
 
 ```bash
-npm i playwright@1.62.1
+npm i          # playwright, pinned in package.json
 BASE=https://pos.example.com USER_=Administrator PASS=... \
   WAITER="Amina Otieno" PIN=4821 GUEST="Test Party" node flow.mjs
 ```

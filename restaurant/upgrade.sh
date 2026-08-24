@@ -14,13 +14,28 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SITE="${SITE:-$(sed -n 's/^FRAPPE_SITE_NAME_HEADER=//p' .env | tail -1)}"
-TAG="${CUSTOM_TAG:-$(sed -n 's/^CUSTOM_TAG=//p' .env | tail -1)}"
-IMAGE="custom-erpnext:${TAG}"
 FRAPPE_PIN="$(sed -n 's/^frappe=//p' restaurant/PINNED_APPS)"
+# The image tag follows the erpnext pin, and .env is machine-local — on a box
+# that has not upgraded yet it still names the old tag, and compose would go on
+# running the old image after a successful build. Keep them in step here.
+TAG="$(sed -n 's/^erpnext=//p' restaurant/PINNED_APPS)"
+OLD_TAG="$(sed -n 's/^CUSTOM_TAG=//p' .env | tail -1)"
+IMAGE="custom-erpnext:${TAG}"
 [ -n "$SITE" ] || { echo "no SITE and none in .env"; exit 1; }
-[ -n "$TAG" ] || { echo "no CUSTOM_TAG in .env"; exit 1; }
+[ -n "$TAG" ] || { echo "no erpnext pin in restaurant/PINNED_APPS"; exit 1; }
 
 log() { echo "==> $*"; }
+
+if [ "$OLD_TAG" != "$TAG" ]; then
+  log "image tag ${OLD_TAG:-unset} -> ${TAG} (rollback tag: ${OLD_TAG:-none})"
+  cp .env ".env.before-${TAG}"
+  if grep -q '^CUSTOM_TAG=' .env; then
+    sed -i "s/^CUSTOM_TAG=.*/CUSTOM_TAG=${TAG}/" .env
+  else
+    echo "CUSTOM_TAG=${TAG}" >> .env
+  fi
+  sed -i "s/^ERPNEXT_VERSION=.*/ERPNEXT_VERSION=${TAG}/" .env
+fi
 
 log "checking for a backup of ${SITE} taken today"
 if ! docker compose exec -T backend bash -lc \
@@ -83,6 +98,8 @@ cat <<'NEXT'
 
   checkout.mjs bills a real invoice — demo sites only (ALLOW_REAL_SALE=1).
 
-==> rollback: put the previous tag back in .env as CUSTOM_TAG, `docker compose
-    up -d`, and restore the backup with `bench --site SITE restore <file>`.
+==> rollback: the previous .env was saved next to it as .env.before-<tag>.
+    Restore it, `docker compose up -d` to go back to the old image, and if the
+    data itself needs winding back, `bench --site SITE restore <backup file>`.
+    The old image is still on the box — nothing prunes it for you.
 NEXT

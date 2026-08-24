@@ -1,0 +1,9 @@
+{
+  "name": "restaurant-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Browser suites for the restaurant POS. npm i, then see README.md.",
+  "dependencies": {
+    "playwright": "1.62.1"
+  }
+}
