@@ -35,11 +35,17 @@ how a real restaurant runs, and which of those rules the app still breaks.
 
 8. **Editing `apps-restaurant.json` does not bust the build cache.** It is
    mounted as a BuildKit *secret*, and secrets are excluded from the cache key,
-   so `bench init` is reused and the new pin never lands — the build succeeds
-   and the image still holds the old app version. After changing a pin, build
-   the base with `--no-cache-filter builder`, then confirm inside the image:
-   `docker run --rm --entrypoint cat custom-erpnext:<tag> \
-   /home/frappe/frappe-bench/sites/apps.json`.
+   so `bench init` is reused and the new pin never lands — the build succeeds,
+   takes long enough to look real, and the image still holds the old version.
+   Pass the layered Containerfile's `CACHE_BUST` arg, which exists for this and
+   is interpolated into the `bench init` RUN:
+   `--build-arg CACHE_BUST=<pin>-<date>`. `--no-cache-filter builder` does
+   *not* do it — it was tried and the builder layer was still reused.
+   Confirm in the image afterwards, reading the app rather than the manifest:
+   `docker run --rm --entrypoint bash custom-erpnext:<tag> -lc \
+   'grep -m1 version apps/hrms/hrms/__init__.py'`. `assert_pins.py` is the
+   backstop — it fails the patch bake when the image disagrees with
+   `PINNED_APPS`.
 
 9. **hrms is held at v16.5.0 against erpnext v16.6.0.** From hrms v16.5.1 the
    installer writes `Accounts Settings.repost_allowed_types`, a field this
