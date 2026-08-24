@@ -37,7 +37,13 @@ browser_suite() {
   ( cd restaurant/e2e && BASE="$BASE" node "$file" ) 2>&1 \
     | grep -E 'PASS|FAIL|RESULT|PAGE ERRORS|REFUSING|Error'
   rc=${PIPESTATUS[0]}
-  [ "$rc" -eq 0 ] && record "$name" PASS || record "$name" FAIL
+  # exit 2 is a deliberate refusal (checkout.mjs will not bill a live site),
+  # which is not a failure of the thing under test
+  case "$rc" in
+    0) record "$name" PASS ;;
+    2) record "$name" SKIP ;;
+    *) record "$name" FAIL ;;
+  esac
 }
 
 server_suite "floor lifecycle (turns, queue, bookings)" turn_test.py
@@ -49,10 +55,16 @@ browser_suite "checkout and the turn" checkout.mjs
 echo
 echo "================ verdict ================"
 fails=0
+skips=0
 for i in "${!NAMES[@]}"; do
   printf "%-8s %s\n" "${VERDICTS[$i]}" "${NAMES[$i]}"
   [ "${VERDICTS[$i]}" = "FAIL" ] && fails=$((fails + 1))
+  [ "${VERDICTS[$i]}" = "SKIP" ] && skips=$((skips + 1))
 done
 echo "========================================="
-[ "$fails" -eq 0 ] && echo "all suites green" || echo "${fails} suite(s) failed"
+if [ "$fails" -eq 0 ]; then
+  if [ "$skips" -gt 0 ]; then echo "all suites green (${skips} skipped)"; else echo "all suites green"; fi
+else
+  echo "${fails} suite(s) failed"
+fi
 exit "$fails"
