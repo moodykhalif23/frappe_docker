@@ -8,6 +8,15 @@ const USER = process.env.USER_ || 'Administrator';
 const PASS = process.env.PASS || 'admin';
 const GUEST = process.env.GUEST || 'Checkout Test Party';
 
+// This test takes a real payment: it submits a POS Invoice that lands in the
+// books. Against anything but a local site that is a fake sale on a client's
+// ledger, so it has to be asked for explicitly.
+if (!/^https?:\/\/(pos\.)?localhost/.test(BASE) && process.env.ALLOW_REAL_SALE !== '1') {
+  console.error(`REFUSING: ${BASE} is not a local site and this test submits a real POS Invoice.`);
+  console.error('Set ALLOW_REAL_SALE=1 only on a demo site, and cancel the invoice afterwards.');
+  process.exit(2);
+}
+
 mkdirSync('shots', { recursive: true });
 let n = 0;
 const results = [];

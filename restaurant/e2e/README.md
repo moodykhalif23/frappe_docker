@@ -43,4 +43,10 @@ echo 'exec(open("/home/frappe/frappe-bench/apps/restaurant_management/restaurant
 Both server suites clean up after themselves and raise on failure, so a green
 run ends with `ok` and a red one ends with a traceback.
 
+**`checkout.mjs` takes a real payment.** It submits a POS Invoice, which lands
+in the books — on a client's site that is a fake sale on their ledger. It
+refuses to run against a non-local `BASE` unless `ALLOW_REAL_SALE=1`, and the
+invoice it creates has to be cancelled afterwards. The browser tests do not
+clean up after themselves; the server suites do.
+
 `staff_test.py` needs hrms; without it every check but the first is skipped.
