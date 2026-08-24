@@ -27,6 +27,7 @@ whether the page runs.
 |---|---|---|
 | `flow.mjs` | sign in, floor, waiter PIN, seat, order, dispatch, badge, responsive | browser |
 | `door.mjs` | the door panel opens, a party queues, seating lands on the pad | browser |
+| `checkout.mjs` | seat → dish → pay, then the table is free and the turn is on the board | browser |
 | `turn_test.py` | seat → sit → pay → free, and the Table Turns report | server |
 | `staff_test.py` | waiter ↔ Employee, PIN writes attendance, roster reads it | server |
 
