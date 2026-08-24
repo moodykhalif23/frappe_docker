@@ -109,7 +109,8 @@ RUN grep -q 'RM_waiter.mount(this)' apps/restaurant_management/restaurant_manage
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 COPY restaurant/patches/waiter_badge.css /tmp/waiter_badge.css
 COPY restaurant/patches/responsive.css /tmp/responsive.css
-RUN cat /tmp/waiter_badge.css /tmp/responsive.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
+COPY restaurant/patches/menu_card.css /tmp/menu_card.css
+RUN cat /tmp/waiter_badge.css /tmp/responsive.css /tmp/menu_card.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
 COPY --chown=frappe:frappe restaurant/patches/report/sales_by_waiter apps/restaurant_management/restaurant_management/restaurant_management/report/sales_by_waiter
 
 # Build id, for telling at a glance which bake a browser is running. Do NOT append

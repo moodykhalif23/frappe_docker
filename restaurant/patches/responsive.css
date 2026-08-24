@@ -6,6 +6,7 @@
 /* Fingers, not mice. */
 @media (pointer: coarse) {
   .order-manage .btn,
+  .pos-items .small-box.item .add-item,
   .restaurant-manage .btn,
   .restaurant-manage .floor-selector .button {
     min-height: 44px;
@@ -45,8 +46,9 @@
   .container-order-items .panel-order-items {
     max-height: 38vh;
   }
-  .product-list {
-    padding: 4px !important;
+  .pos-items .widget-group-body {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
   /* The floor is an absolutely positioned canvas — let it pan rather than clip. */
   .restaurant-manage .floor-map .table-container {
