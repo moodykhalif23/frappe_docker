@@ -103,8 +103,11 @@ def run():
 	check("a booking holds no table", not frappe.db.get_value("Restaurant Booking", bk["name"], "table"))
 	check("booking frees nothing on the floor", len(house.free_tables()) == free_count,
 		f"{free_count} -> {len(house.free_tables())}")
-	check("it shows under today's expected",
-		bk["name"] in [r["name"] for r in house.reservations()])
+	# book_table can land tomorrow if the shift runs past midnight — ask for the
+	# day the booking is actually on rather than assuming it is today
+	booked_day = str(frappe.db.get_value("Restaurant Booking", bk["name"], "reservation_time"))[:10]
+	check("it shows under that day's expected",
+		bk["name"] in [r["name"] for r in house.reservations(booked_day)], booked_day)
 	check("it is not in the queue", bk["name"] not in [w["name"] for w in house.waitlist()])
 
 	free_now = house.free_tables(3)

@@ -467,6 +467,7 @@ def _turn_rows(from_date=None, to_date=None):
             coalesce(b.seated_at, b.reservation_time) as seated, b.left_at as left_at
         from `tabRestaurant Booking` b
         where b.left_at is not null
+            and b.status = 'Success'
             and b.table is not null and b.table != ''
             and date(b.left_at) between %(from_date)s and %(to_date)s
         """,

@@ -169,3 +169,8 @@ RUN python3 /tmp/free_table_on_payment.py \
 COPY restaurant/patches/table_delete_explains.py /tmp/table_delete_explains.py
 RUN python3 /tmp/table_delete_explains.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
+
+# the reports and the waiter list had no way in but search
+COPY restaurant/patches/workspace_reports.py /tmp/workspace_reports.py
+RUN python3 /tmp/workspace_reports.py \
+ && python3 -c "import json; json.load(open('apps/restaurant_management/restaurant_management/restaurant_management/workspace/restaurant/restaurant.json'))"

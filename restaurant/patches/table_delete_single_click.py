@@ -4,7 +4,9 @@
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js"
 
 src = open(P).read()
-if "rm_confirm_delete" in src:
+# The later explains-patch renames this marker, so recognise either: the patch
+# layer builds FROM its own output and would otherwise fail on the next bake.
+if "rm_confirm_delete" in src or "rm_delete_explains" in src:
     print("table delete gesture: already applied")
     raise SystemExit
 
