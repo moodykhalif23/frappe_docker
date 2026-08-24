@@ -32,3 +32,5 @@ node_modules
 # VitePress
 **/.vitepress/dist
 **/.vitepress/cache
+restaurant/e2e/shots/
+restaurant/e2e/checkout/
