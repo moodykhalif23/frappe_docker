@@ -39,13 +39,21 @@ chain, and that side is broadly right. FOH is where the gaps are.
 | **One server owns a table**, visible on the floor tile | ✓ Restaurant Waiter + PIN; initials badge on the tile |
 | Every check is attributable: **sales by server** | ✓ waiter stamped table → order → invoice; Sales by Waiter report |
 | The floor **never blocks** on shift bookkeeping | ✓ fixed — see below |
+| A full house keeps a **queue**, and the wait is quoted from real numbers | ✓ door panel: waitlist, covers waiting, longest wait, average turn |
+| **Reservations** are taken and the day's expected list is visible | ✓ `book_table()`, "Expected today", seat or no-show from the same row |
+| A booking **holds no table** until the party arrives | ✓ the table is picked on arrival, from what is free and fits |
+| The **turn** is measured: seated → paid → free | ✓ paying closes the booking; Table Turns reports turns, covers, average and longest sitting, turns per seat |
+| Staff are **people**, not just badges on a tile | ✓ a waiter links to an Employee; the PIN they already tap writes an Employee Checkin |
 | Usable on the device in the server's hand | ✗ desktop-only layout |
 
 ## Decisions taken (ikobriq, 2026-08-23)
 
 - **Waiter identity: PIN on a shared terminal.** Waiters do not log in as
   frappe users; they tap a name and a 4-digit PIN to claim a table or send an
-  order. No `hrms` on this site, so waiters need their own light record.
+  order. That light record stays even with `hrms` installed — a waiter carrying
+  plates should not meet a login — but it now links to an Employee, so the PIN
+  doubles as the shift clock and HR gets attendance without a second ritual.
+  The link is optional: a floor without `hrms` still signs waiters in.
 - **Cash shift: one house shift.** A manager opens one POS Opening Entry per
   day per POS Profile and every waiter's orders bill into it.
 
@@ -69,5 +77,19 @@ chain, and that side is broadly right. FOH is where the gaps are.
    `transfer_order_values()` carries it onto the POS Invoice. Initials show on
    the tile; **Sales by Waiter** reports tables, covers, checks, sales, average
    check and spend per cover.
-4. **Responsive at every breakpoint** — phone (handheld), tablet (the real
+4. ✅ **The door.** A full house had nowhere to put a walk-in but a mental
+   list. "Door" on the toolbar carries the queue (longest wait first), the
+   day's bookings, and one tap to seat either — which picks a table that fits
+   and lands on its pad. The button badges the number waiting. Seating keeps
+   the time the party arrived or was booked for, so the wait and a late
+   reservation both stay measurable.
+5. ✅ **The turn.** Paying the check closes the booking instead of leaving the
+   table held until its two-hour window lapsed. The pair of stamps that writes
+   — seated and left — is the turn: **Table Turns** reports parties served,
+   covers, average and longest sitting, and turns per seat; the average also
+   sits on the door strip, because that is the number a host quotes a wait from.
+6. ✅ **Staff.** A waiter links to an Employee, and signing in on the terminal
+   writes an Employee Checkin (signing off writes the OUT). `staff()` is the
+   roster: who is on, their designation, how many tables they hold.
+7. **Responsive at every breakpoint** — phone (handheld), tablet (the real
    POS surface), desktop (manager).
