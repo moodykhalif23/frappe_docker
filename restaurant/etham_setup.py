@@ -325,6 +325,24 @@ def setup():
 
 # ---------------- phase 4: retire the demo ----------------
 
+def _nuke(doctype, filters=None):
+    """Cancel then delete. Submitted docs refuse deletion outright."""
+    kept = 0
+    for name in frappe.get_all(doctype, filters=filters or {}, pluck="name"):
+        try:
+            doc = frappe.get_doc(doctype, name)
+            if doc.meta.is_submittable and doc.docstatus == 1:
+                doc.flags.ignore_links = True
+                doc.flags.ignore_permissions = True
+                doc.cancel()
+            frappe.delete_doc(doctype, name, force=True, ignore_permissions=True)
+        except Exception as exc:
+            kept += 1
+            print("  kept %s %s (%s)" % (doctype, name, str(exc)[:70]))
+    frappe.db.commit()
+    return kept
+
+
 def wipe_demo(company=None):
     """Remove the demo trading data, then the demo company itself."""
     demo = company or next((c for c in frappe.get_all("Company", pluck="name") if c != COMPANY), None)
@@ -335,21 +353,13 @@ def wipe_demo(company=None):
 
     keep_items = {row[1] for row in MENU}
     for dt in ("Table Order", "Restaurant Booking"):
-        for d in frappe.get_all(dt, pluck="name"):
-            frappe.delete_doc(dt, d, force=True, ignore_permissions=True)
+        _nuke(dt)
     print("  orders and bookings cleared")
 
-    for dt in ("POS Invoice Merge Log", "POS Invoice", "Sales Invoice",
-               "POS Closing Entry", "POS Opening Entry"):
-        for d in frappe.get_all(dt, filters={"company": demo}, pluck="name"):
-            try:
-                doc = frappe.get_doc(dt, d)
-                if doc.docstatus == 1:
-                    doc.flags.ignore_links = True
-                    doc.cancel()
-                frappe.delete_doc(dt, d, force=True, ignore_permissions=True)
-            except Exception as e:
-                print("  kept %s %s (%s)" % (dt, d, str(e)[:60]))
+    for dt in ("POS Invoice Merge Log", "POS Invoice", "Sales Invoice", "Payment Entry",
+               "Stock Entry", "POS Closing Entry", "POS Opening Entry"):
+        if frappe.db.exists("DocType", dt):
+            _nuke(dt, {"company": demo})
     print("  demo vouchers cleared")
 
     for c in frappe.get_all("Customer", pluck="name"):
