@@ -1,0 +1,48 @@
+
+/* rm-door: the host's queue. Rows are scannable at arm's length. */
+.rm-door-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  background: var(--control-bg, #f4f5f6);
+  font-size: 0.82rem;
+  color: var(--text-muted, #7c7c7c);
+}
+.rm-door-summary strong { color: var(--text-color, #1f272e); font-size: 1rem; }
+.rm-door-head {
+  margin: 16px 0 6px;
+  font-size: 0.72rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-muted, #7c7c7c);
+}
+.rm-door-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 4px;
+  margin-bottom: 6px;
+}
+.rm-door-who strong { font-size: 0.92rem; }
+.rm-door-meta {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--text-muted, #7c7c7c);
+  margin-top: 1px;
+}
+.rm-door-actions { display: flex; gap: 6px; flex: 0 0 auto; }
+.rm-door-actions .btn { border-radius: 3px; }
+
+@media (pointer: coarse) {
+  .rm-door-actions .btn { min-height: 38px; padding: 0 12px; }
+}
+@media (max-width: 640px) {
+  .rm-door-row { flex-direction: column; align-items: stretch; }
+  .rm-door-actions .btn { flex: 1; }
+}

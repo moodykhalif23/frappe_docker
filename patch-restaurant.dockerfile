@@ -108,15 +108,18 @@ RUN grep -q 'customer,waiter' apps/restaurant_management/restaurant_management/r
 RUN grep -q 'RM_waiter_badge(this.data.waiter)' apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js \
  || sed -i 's|            \${this.description.html()}|            \${this.description.html()}\n            \${window.RM_waiter_badge ? RM_waiter_badge(this.data.waiter) : ""}|' apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
+COPY restaurant/patches/door.js /tmp/door.js
 COPY restaurant/patches/waiter_pad.js /tmp/waiter_pad.js
+RUN { echo ';'; cat /tmp/door.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 RUN { echo ';'; cat /tmp/waiter_pad.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 RUN grep -q 'RM_waiter.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
- || sed -i 's|RM_host_stand.mount(this);|RM_host_stand.mount(this); window.RM_waiter \&\& RM_waiter.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ || sed -i 's|RM_host_stand.mount(this);|RM_host_stand.mount(this); window.RM_waiter \&\& RM_waiter.mount(this); window.RM_door \&\& RM_door.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 COPY restaurant/patches/waiter_badge.css /tmp/waiter_badge.css
 COPY restaurant/patches/responsive.css /tmp/responsive.css
 COPY restaurant/patches/menu_card.css /tmp/menu_card.css
-RUN cat /tmp/waiter_badge.css /tmp/responsive.css /tmp/menu_card.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
+COPY restaurant/patches/door.css /tmp/door.css
+RUN cat /tmp/waiter_badge.css /tmp/responsive.css /tmp/menu_card.css /tmp/door.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
 COPY --chown=frappe:frappe restaurant/patches/report/sales_by_waiter apps/restaurant_management/restaurant_management/restaurant_management/report/sales_by_waiter
 
 # Build id, for telling at a glance which bake a browser is running. Do NOT append
@@ -153,3 +156,11 @@ RUN python3 /tmp/fix_pay_form_init.py && node --check apps/restaurant_management
 # covers was mandatory on the pay form and blocked payment; default it instead
 COPY restaurant/patches/dinners_not_mandatory.py /tmp/dinners_not_mandatory.py
 RUN python3 /tmp/dinners_not_mandatory.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+
+# Table turns: how many parties a table served and how long each sat
+COPY --chown=frappe:frappe restaurant/patches/report/table_turns apps/restaurant_management/restaurant_management/restaurant_management/report/table_turns
+
+# paying the check closes the booking, which frees the table and stamps the turn
+COPY restaurant/patches/free_table_on_payment.py /tmp/free_table_on_payment.py
+RUN python3 /tmp/free_table_on_payment.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"

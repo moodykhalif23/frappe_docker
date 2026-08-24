@@ -134,6 +134,7 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None):
 		"reservation_end_time": frappe.utils.add_to_date(now, hours=2),
 		"table": obj.name,
 		"status": "Open",
+		"seated_at": now,
 		"company": obj.company,
 	})
 	booking.insert(ignore_permissions=True)
@@ -147,6 +148,8 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None):
 
 
 WAITER_FIELD = {"fieldname": "waiter", "fieldtype": "Link", "options": "Restaurant Waiter", "label": "Waiter"}
+SEATED_FIELD = {"fieldname": "seated_at", "fieldtype": "Datetime", "label": "Seated At", "read_only": 1}
+LEFT_FIELD = {"fieldname": "left_at", "fieldtype": "Datetime", "label": "Left At", "read_only": 1}
 
 
 def ensure_custom_fields():
@@ -157,6 +160,10 @@ def ensure_custom_fields():
 		"Restaurant Object": [dict(WAITER_FIELD, insert_after="current_user")],
 		"Table Order": [dict(WAITER_FIELD, insert_after="customer")],
 		"POS Invoice": [dict(WAITER_FIELD, insert_after="customer", read_only=1)],
+		"Restaurant Booking": [
+			dict(SEATED_FIELD, insert_after="reservation_end_time"),
+			dict(LEFT_FIELD, insert_after="seated_at"),
+		],
 	}, ignore_validate=True)
 	frappe.db.commit()
 	return "ok"
@@ -255,3 +262,230 @@ def floor_waiters():
 		r.name: {"waiter": r.waiter, "initials": _initials(r.waiter), "colour": colours.get(r.waiter) or "#4b5563"}
 		for r in rows if r.waiter
 	}
+
+
+# ---- the door: waitlist and reservations -----------------------------------
+#
+# A waiting party is a Restaurant Booking with no table and status Waitlisted;
+# seating one just assigns the table and flips it to Open. The doctype already
+# carries no_of_people, contact_number and a No Show status, so the queue is a
+# view over data that already exists rather than a new store.
+
+def _waited_minutes(since):
+    if not since:
+        return 0
+    return int((frappe.utils.now_datetime() - frappe.utils.get_datetime(since)).total_seconds() // 60)
+
+
+def _booking_row(b):
+    return {
+        "name": b.name,
+        "guest": frappe.db.get_value("Customer", b.customer, "customer_name") or b.customer or "Guest",
+        "covers": b.no_of_people or 0,
+        "contact": b.contact_number or "",
+        "status": b.status,
+        "table": b.table,
+        "table_label": frappe.db.get_value("Restaurant Object", b.table, "description") if b.table else "",
+        "at": str(b.reservation_time or ""),
+        "waited": _waited_minutes(b.creation),
+    }
+
+
+@frappe.whitelist()
+def waitlist():
+    """Parties waiting at the door, longest wait first."""
+    rows = frappe.get_all(
+        "Restaurant Booking",
+        filters={"status": "Waitlisted"},
+        fields=["name", "customer", "no_of_people", "contact_number", "status", "table",
+                "reservation_time", "creation"],
+        order_by="creation asc",
+    )
+    return [_booking_row(frappe._dict(r)) for r in rows]
+
+
+@frappe.whitelist()
+def add_to_waitlist(guest_name, covers=2, contact=None):
+    """Put a walk-in on the queue without holding a table."""
+    guest_name = (guest_name or "").strip()
+    if not guest_name:
+        frappe.throw(frappe._("A guest name is required"))
+
+    now = frappe.utils.now_datetime()
+    booking = frappe.get_doc({
+        "doctype": "Restaurant Booking",
+        "customer": _walkin_customer(guest_name, contact),
+        "contact_number": contact,
+        "no_of_people": int(covers or 1),
+        "reservation_time": now,
+        "reservation_end_time": frappe.utils.add_to_date(now, hours=2),
+        "status": "Waitlisted",
+        "company": frappe.defaults.get_global_default("company") or COMPANY,
+    })
+    booking.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return _booking_row(booking)
+
+
+@frappe.whitelist()
+def seat_from_waitlist(booking, table):
+    """Give a waiting party a table: the queue's whole purpose."""
+    doc = frappe.get_doc("Restaurant Booking", booking)
+    obj = frappe.db.get_value("Restaurant Object", table, ["name", "room", "company"], as_dict=True)
+    if not obj:
+        frappe.throw(frappe._("Unknown table"))
+    if _table_busy(obj.name, obj.company) or _table_seated(obj.name):
+        frappe.throw(frappe._("That table was just taken — pick another"))
+
+    now = frappe.utils.now_datetime()
+    doc.table = obj.name
+    doc.status = "Open"
+    # reservation_time stays the time they arrived or were promised — overwriting it
+    # would make both the wait and a late reservation unmeasurable.
+    doc.seated_at = now
+    doc.reservation_end_time = frappe.utils.add_to_date(now, hours=2)
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"booking": doc.name, "table": obj.name, "room": obj.room,
+            "waited": _waited_minutes(doc.creation)}
+
+
+@frappe.whitelist()
+def close_booking(booking, status="No Show"):
+    """Mark a party as a no-show, or as having left before being seated."""
+    if status not in ("No Show", "Cancelled"):
+        frappe.throw(frappe._("Use No Show or Cancelled"))
+    frappe.db.set_value("Restaurant Booking", booking, "status", status)
+    frappe.db.commit()
+    return {"booking": booking, "status": status}
+
+
+@frappe.whitelist()
+def reservations(day=None):
+    """Bookings for a day, so the host can see who is expected."""
+    day = day or frappe.utils.today()
+    rows = frappe.get_all(
+        "Restaurant Booking",
+        filters={"reservation_time": ["between", [day + " 00:00:00", day + " 23:59:59"]],
+                 "status": ["!=", "Waitlisted"]},
+        fields=["name", "customer", "no_of_people", "contact_number", "status", "table",
+                "reservation_time", "creation"],
+        order_by="reservation_time asc",
+    )
+    return [_booking_row(frappe._dict(r)) for r in rows]
+
+
+@frappe.whitelist()
+def door_summary():
+    """One call for the door button's badge and the panel's header."""
+    waiting = waitlist()
+    turns = turn_metrics()
+    return {
+        "waiting": len(waiting),
+        "covers_waiting": sum(w["covers"] for w in waiting),
+        "longest_wait": max([w["waited"] for w in waiting], default=0),
+        "free_tables": len(free_tables()),
+        "expected_today": len(reservations()),
+        # the host quotes a wait off the average turn, so it belongs on the door
+        "avg_turn": turns["avg_turn"],
+        "turns_today": turns["turns"],
+        "seated_now": turns["seated_now"],
+    }
+
+
+@frappe.whitelist()
+def free_table(table, status="Success"):
+    """Close the party sitting at a table so the next one can be seated.
+
+    Called when the check is paid; until this exists a table stays 'seated'
+    until its two-hour window lapses.
+    """
+    now = frappe.utils.now_datetime()
+    closed = []
+    for b in frappe.get_all("Restaurant Booking", filters={"table": table, "status": "Open"},
+                            fields=["name"]):
+        frappe.db.set_value("Restaurant Booking", b.name,
+                            {"status": status, "left_at": now}, update_modified=False)
+        closed.append(b.name)
+    if closed:
+        frappe.db.commit()
+    return {"table": table, "closed": closed}
+
+
+def _turn_rows(from_date=None, to_date=None):
+    """One row per table: parties served, covers, and how long they sat."""
+    from_date = from_date or frappe.utils.today()
+    to_date = to_date or from_date
+
+    bookings = frappe.db.sql(
+        """
+        select b.table as tbl, b.no_of_people as covers,
+            coalesce(b.seated_at, b.reservation_time) as seated, b.left_at as left_at
+        from `tabRestaurant Booking` b
+        where b.left_at is not null
+            and b.table is not null and b.table != ''
+            and date(b.left_at) between %(from_date)s and %(to_date)s
+        """,
+        {"from_date": from_date, "to_date": to_date},
+        as_dict=True,
+    )
+
+    tables = {t.name: t for t in frappe.get_all(
+        "Restaurant Object", filters={"type": "Table"},
+        fields=["name", "description", "room", "no_of_seats"])}
+
+    by_table = {}
+    for b in bookings:
+        if not b.seated or not b.left_at:
+            continue
+        minutes = int((frappe.utils.get_datetime(b.left_at)
+                       - frappe.utils.get_datetime(b.seated)).total_seconds() // 60)
+        # A clock that runs backwards, or a party parked overnight, is bad data
+        # rather than a turn — counting it would poison the average.
+        if minutes < 0 or minutes > 12 * 60:
+            continue
+        row = by_table.setdefault(b.tbl, {"turns": 0, "covers": 0, "minutes": []})
+        row["turns"] += 1
+        row["covers"] += int(b.covers or 0)
+        row["minutes"].append(minutes)
+
+    out = []
+    for name, agg in by_table.items():
+        t = tables.get(name) or frappe._dict()
+        seats = t.get("no_of_seats") or 0
+        mins = agg["minutes"]
+        out.append({
+            "table": name,
+            "table_label": t.get("description") or name,
+            "room": t.get("room") or "",
+            "seats": seats,
+            "turns": agg["turns"],
+            "covers": agg["covers"],
+            "avg_turn": int(sum(mins) / len(mins)) if mins else 0,
+            "longest_turn": max(mins) if mins else 0,
+            "turns_per_seat": round(agg["turns"] / seats, 2) if seats else 0,
+        })
+    out.sort(key=lambda r: (-r["turns"], r["table_label"]))
+    return out
+
+
+@frappe.whitelist()
+def turn_metrics(day=None):
+    """How the floor performed: turns, covers and average sitting time."""
+    rows = _turn_rows(day, day)
+    all_minutes = [r["avg_turn"] for r in rows for _ in range(r["turns"])]
+    turns = sum(r["turns"] for r in rows)
+    seated_now = frappe.db.count("Restaurant Booking", {"status": "Open", "table": ["!=", ""]})
+    total_tables = frappe.db.count("Restaurant Object", {"type": "Table"})
+    return {
+        "day": day or frappe.utils.today(),
+        "turns": turns,
+        "covers": sum(r["covers"] for r in rows),
+        "avg_turn": int(sum(all_minutes) / len(all_minutes)) if all_minutes else 0,
+        "longest_turn": max([r["longest_turn"] for r in rows], default=0),
+        "tables_used": len(rows),
+        "total_tables": total_tables,
+        "seated_now": seated_now,
+        "turns_per_table": round(turns / total_tables, 2) if total_tables else 0,
+        "tables": rows,
+    }
