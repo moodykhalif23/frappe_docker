@@ -160,7 +160,8 @@
 }
 .pos-items .small-box.item .small-box-footer .form-group { flex: 0 0 auto; }
 
-@media (pointer: coarse) {
+/* Touch-sized on a phone, and at phone width on any device. */
+@media (pointer: coarse), (max-width: 640px) {
   .pos-items .small-box.item .add-item { min-height: 44px; padding: 0 16px; }
   .pos-items .small-box.item .input-group { min-height: 40px; }
 }

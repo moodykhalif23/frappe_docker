@@ -6,7 +6,8 @@ import { mkdirSync } from 'fs';
 const BASE = process.env.BASE || 'http://pos.localhost:8080';
 const USER = process.env.USER_ || 'Administrator';
 const PASS = process.env.PASS || 'admin';
-const GUEST = process.env.GUEST || 'Door Test Party';
+// unique per run: two parties with the same name make every assertion ambiguous
+const GUEST = (process.env.GUEST || 'Door Test Party') + ' ' + Date.now().toString().slice(-6);
 
 mkdirSync('shots', { recursive: true });
 let n = 0;
@@ -21,6 +22,10 @@ const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, i
 const page = await ctx.newPage();
 const errs = [];
 page.on('pageerror', e => errs.push(String(e).split('\n')[0].slice(0, 120)));
+
+const api = (method, args = {}) => page.evaluate(
+  ([m, a]) => frappe.call('restaurant_management.house.' + m, a).then(r => r.message),
+  [method, args]);
 
 const shot = async (label) => {
   n += 1;
@@ -102,9 +107,31 @@ await page.waitForTimeout(9000);
 await page.locator('.page-actions button').filter({ hasText: /^Door/ }).first().click();
 await page.waitForTimeout(3000);
 await shot('queue-after');
-const still = await page.locator('.modal.show').last().locator('.rm-door-row').filter({ hasText: GUEST }).count();
-ok('the seated party has left the queue', still === 0, `${still} row(s)`);
+const waiting = await api('waitlist');
+ok('the seated party has left the queue', !waiting.some(w => w.guest === GUEST),
+   `${waiting.length} still waiting`);
+const expected = await api('reservations');
+ok('and is not still listed as expected', !expected.some(r => r.guest === GUEST),
+   `${expected.length} expected`);
+
+// leave the floor as we found it
+const removed = await page.evaluate(async (guest) => {
+  const del = (doctype, name) => frappe.call('frappe.client.delete', { doctype, name })
+    .then(() => 1).catch(() => 0);
+  const cs = await frappe.call('frappe.client.get_list',
+    { doctype: 'Customer', filters: { customer_name: guest }, fields: ['name'], limit_page_length: 0 });
+  let n = 0;
+  for (const c of (cs.message || [])) {
+    const bs = await frappe.call('frappe.client.get_list',
+      { doctype: 'Restaurant Booking', filters: { customer: c.name }, fields: ['name'], limit_page_length: 0 });
+    for (const b of (bs.message || [])) n += await del('Restaurant Booking', b.name);
+    n += await del('Customer', c.name);
+  }
+  return n;
+}, GUEST);
+ok('the test party was cleaned up', removed > 0, `${removed} record(s) removed`);
 
 console.log('\nRESULT ' + results.filter(r => r.pass).length + ' passed, ' + results.filter(r => !r.pass).length + ' failed');
 console.log('PAGE ERRORS ' + JSON.stringify(errs.slice(0, 5)));
 await browser.close();
+process.exit(results.some(r => !r.pass) ? 1 : 0);

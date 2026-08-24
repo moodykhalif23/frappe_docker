@@ -39,7 +39,9 @@
 .rm-door-actions { display: flex; gap: 6px; flex: 0 0 auto; }
 .rm-door-actions .btn { border-radius: 3px; }
 
-@media (pointer: coarse) {
+/* Big targets follow either a touch device or a narrow layout — a phone-width
+   window on a laptop is used the same way and deserves the same buttons. */
+@media (pointer: coarse), (max-width: 640px) {
   .rm-door-actions .btn { min-height: 38px; padding: 0 12px; }
 }
 @media (max-width: 640px) {

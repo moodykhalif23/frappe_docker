@@ -64,11 +64,15 @@ def run():
 	row = next((r for r in m["tables"] if r["table"] == table), None)
 	check("the turn lands on the table's row", row, str(row))
 	if row:
-		check("turn length is the 45 minutes it sat", 44 <= row["avg_turn"] <= 46, row["avg_turn"])
+		# The table may already have turns from earlier today, so the average is
+		# not ours to assert — the 45 minutes we staged is the longest.
+		check("the 45 minutes it sat is on the board", row["longest_turn"] >= 44, row)
 		check("covers counted", row["covers"] >= 2, row["covers"])
 	check("floor summary counts the turn", m["turns"] >= 1, m["turns"])
-	check("door summary carries the average", house.door_summary().get("avg_turn") >= 44,
-		house.door_summary().get("avg_turn"))
+	door = house.door_summary()
+	check("door summary carries the average turn", door.get("avg_turn") == m["avg_turn"],
+		f"door {door.get('avg_turn')} vs metrics {m['avg_turn']}")
+	check("door summary counts what is seated", "seated_now" in door, str(door.get("seated_now")))
 
 	from restaurant_management.restaurant_management.report.table_turns import table_turns
 	cols, rows = table_turns.execute({"from_date": frappe.utils.today(), "to_date": frappe.utils.today()})

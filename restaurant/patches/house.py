@@ -400,10 +400,14 @@ def close_booking(booking, status="No Show"):
 def reservations(day=None):
     """Bookings for a day, so the host can see who is expected."""
     day = day or frappe.utils.today()
+    filters = {"reservation_time": ["between", [day + " 00:00:00", day + " 23:59:59"]],
+               "status": ["!=", "Waitlisted"]}
+    # A party already sitting down is on the floor, not at the door.
+    if frappe.db.has_column("Restaurant Booking", "seated_at"):
+        filters["seated_at"] = ["is", "not set"]
     rows = frappe.get_all(
         "Restaurant Booking",
-        filters={"reservation_time": ["between", [day + " 00:00:00", day + " 23:59:59"]],
-                 "status": ["!=", "Waitlisted"]},
+        filters=filters,
         fields=["name", "customer", "no_of_people", "contact_number", "status", "table",
                 "reservation_time", "creation"],
         order_by="reservation_time asc",

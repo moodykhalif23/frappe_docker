@@ -12,32 +12,32 @@ cd "$(dirname "$0")/../.."
 SITE="${SITE:-$(sed -n 's/^FRAPPE_SITE_NAME_HEADER=//p' .env | tail -1)}"
 BASE="${BASE:-http://${SITE}:8080}"
 APP=/home/frappe/frappe-bench/apps/restaurant_management/restaurant_management
+# playwright must resolve from restaurant/e2e — ESM imports ignore NODE_PATH
+[ -d restaurant/e2e/node_modules ] || { echo "run: (cd restaurant/e2e && npm i playwright@1.62.1)"; exit 1; }
 BE="$(docker compose ps -q backend)"
 
 declare -a NAMES=() VERDICTS=()
 record() { NAMES+=("$1"); VERDICTS+=("$2"); }
 
 server_suite() {
-  local name="$1" file="$2"
+  local name="$1" file="$2" out rc
   echo "=== ${name} ==="
   docker cp "restaurant/e2e/${file}" "${BE}:${APP}/${file}" >/dev/null
-  if echo "exec(open(\"${APP}/${file}\").read(), globals()); run()" \
-     | docker compose exec -T backend bench --site "$SITE" console 2>&1 \
-     | grep -E 'PASS|FAIL|passed' | tee /dev/stderr | grep -q 'AssertionError\|FAIL'; then
-    record "$name" FAIL
-  else
-    record "$name" PASS
-  fi
+  out="$(echo "exec(open(\"${APP}/${file}\").read(), globals()); run()" \
+        | docker compose exec -T backend bench --site "$SITE" console 2>&1)"
+  echo "$out" | grep -E 'PASS|FAIL|passed'
+  # the suite raises on failure, so a traceback or any FAIL line is the verdict
+  if echo "$out" | grep -qE 'FAIL |AssertionError'; then rc=1; else rc=0; fi
+  [ "$rc" -eq 0 ] && record "$name" PASS || record "$name" FAIL
 }
 
 browser_suite() {
-  local name="$1" file="$2"
+  local name="$1" file="$2" rc
   echo "=== ${name} ==="
-  if (cd restaurant/e2e && BASE="$BASE" node "$file" 2>&1 | grep -E 'PASS|FAIL|RESULT|PAGE ERRORS|REFUSING'); then
-    record "$name" PASS
-  else
-    record "$name" FAIL
-  fi
+  ( cd restaurant/e2e && BASE="$BASE" node "$file" ) 2>&1 \
+    | grep -E 'PASS|FAIL|RESULT|PAGE ERRORS|REFUSING|Error'
+  rc=${PIPESTATUS[0]}
+  [ "$rc" -eq 0 ] && record "$name" PASS || record "$name" FAIL
 }
 
 server_suite "floor lifecycle (turns, queue, bookings)" turn_test.py

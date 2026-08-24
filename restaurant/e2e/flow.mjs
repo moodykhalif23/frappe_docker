@@ -39,6 +39,18 @@ await page.click('button.btn-login');
 await page.waitForURL(/\/app|\/desk/, { timeout: 60000 }).catch(() => {});
 ok('signs in to the desk', /\/app|\/desk/.test(page.url()), page.url());
 
+// A fresh site has no waiters, and the floor needs one to sign in as.
+const provisioned = await page.evaluate(async ([name, pin]) => {
+  const found = await frappe.call('frappe.client.get_list', {
+    doctype: 'Restaurant Waiter', filters: { waiter_name: name },
+    fields: ['name'], limit_page_length: 0 });
+  if ((found.message || []).length) return 'existing';
+  await frappe.call('frappe.client.insert', { doc: {
+    doctype: 'Restaurant Waiter', waiter_name: name, pin, active: 1, colour: '#2563eb' } });
+  return 'created';
+}, [WAITER, PIN]);
+ok('a waiter exists to sign in as', !!provisioned, `${WAITER} (${provisioned})`);
+
 // 2. the floor
 await page.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded', timeout: 60000 });
 await page.waitForTimeout(11000);
@@ -171,3 +183,4 @@ await page.setViewportSize({ width: 1440, height: 900 });
 console.log('\nRESULT ' + results.filter(r => r.pass).length + ' passed, ' + results.filter(r => !r.pass).length + ' failed');
 console.log('PAGE ERRORS ' + JSON.stringify(errs.slice(0, 5)));
 await browser.close();
+process.exit(results.some(r => !r.pass) ? 1 : 0);

@@ -3,8 +3,8 @@
    manager view. These live in the page stylesheet, which is delivered with the
    page, so a redeploy is never held stale by the browser's /assets cache. */
 
-/* Fingers, not mice. */
-@media (pointer: coarse) {
+/* Fingers, not mice — and a narrow window is used with fingers too. */
+@media (pointer: coarse), (max-width: 640px) {
   .order-manage .btn,
   .pos-items .small-box.item .add-item,
   .restaurant-manage .btn,
