@@ -20,6 +20,15 @@ log() { echo "==> $*"; }
 log "pulling"
 git pull --ff-only
 
+# The patch layer builds FROM the base image. After a pin change that base does
+# not exist on this box yet, and docker would try to pull it from the hub.
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  echo "No ${IMAGE} on this machine — the pinned versions changed."
+  echo "This is a version move, not a redeploy. Run instead:"
+  echo "  SITE=${SITE} ./restaurant/upgrade.sh"
+  exit 1
+fi
+
 log "rebaking the patch layer (stamps a fresh build id onto asset URLs)"
 DOCKER_BUILDKIT=1 docker build -t "$IMAGE" -f patch-restaurant.dockerfile .
 
