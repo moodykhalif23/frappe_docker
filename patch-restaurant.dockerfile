@@ -164,3 +164,8 @@ COPY --chown=frappe:frappe restaurant/patches/report/table_turns apps/restaurant
 COPY restaurant/patches/free_table_on_payment.py /tmp/free_table_on_payment.py
 RUN python3 /tmp/free_table_on_payment.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
+
+# deleting a table: say what is holding it, and offer to clear an unpaid check
+COPY restaurant/patches/table_delete_explains.py /tmp/table_delete_explains.py
+RUN python3 /tmp/table_delete_explains.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js

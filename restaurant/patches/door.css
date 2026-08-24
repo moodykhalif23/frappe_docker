@@ -48,3 +48,15 @@
   .rm-door-row { flex-direction: column; align-items: stretch; }
   .rm-door-actions .btn { flex: 1; }
 }
+
+/* The empty tables themselves, not just a count — the host picks one by name. */
+.rm-door-free { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.rm-free-table {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid var(--border-color, #d1d5db); border-radius: 3px;
+  padding: 4px 9px; font-size: 12px; background: var(--fg-color, #fff);
+}
+.rm-free-table em { font-style: normal; opacity: .6; }
+@media (pointer: coarse), (max-width: 640px) {
+  .rm-free-table { padding: 8px 12px; font-size: 13px; }
+}

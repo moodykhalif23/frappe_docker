@@ -70,7 +70,7 @@
     </div>`;
 
   const render = (dialog, data) => {
-    const { summary, waiting, expected } = data;
+    const { summary, waiting, expected, free } = data;
     const wrap = dialog.fields_dict.board.$wrapper;
     wrap.html(`
       <div class="rm-door">
@@ -85,6 +85,12 @@
         <h5 class="rm-door-head">${__("At the door")}</h5>
         ${waiting.length ? waiting.map(r => rowHtml(r, "waiting")).join("")
                          : `<p class="text-muted small">${__("Nobody waiting.")}</p>`}
+        <h5 class="rm-door-head">${__("Empty now")}</h5>
+        ${(free && free.length)
+          ? `<div class="rm-door-free">${free.map(t => `<span class="rm-free-table" title="${
+              t.seats ? __("seats {0}", [t.seats]) : __("capacity not set")}">${esc(t.description)}${
+              t.seats ? ` <em>${t.seats}</em>` : ""}</span>`).join("")}</div>`
+          : `<p class="text-muted small">${__("Every table is taken.")}</p>`}
         <h5 class="rm-door-head">${__("Expected today")}</h5>
         ${expected.length ? expected.map(r => rowHtml(r, "expected")).join("")
                           : `<p class="text-muted small">${__("No bookings today.")}</p>`}
@@ -103,8 +109,9 @@
     });
   };
 
-  const refresh = (dialog) => Promise.all([call("door_summary"), call("waitlist"), call("reservations")])
-    .then(([summary, waiting, expected]) => render(dialog, { summary, waiting, expected }));
+  const refresh = (dialog) => Promise.all([
+    call("door_summary"), call("waitlist"), call("reservations"), call("free_tables"),
+  ]).then(([summary, waiting, expected, free]) => render(dialog, { summary, waiting, expected, free }));
 
   window.RM_door = {
     mounted: false,

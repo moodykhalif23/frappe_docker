@@ -639,3 +639,66 @@ def link_employee(waiter, employee):
     frappe.db.set_value("Restaurant Waiter", waiter, "employee", employee)
     frappe.db.commit()
     return {"waiter": waiter, "employee": employee}
+
+
+# ---- deleting a table ------------------------------------------------------
+#
+# Seating opens a Table Order, and an order that was never paid keeps its table
+# linked for good: the floor refuses the delete with frappe's raw link error.
+# An unpaid check can be closed; an invoiced one is history and must not be.
+
+OPEN_ORDER_STATES = ["not in", ["Invoiced", "Cancelled"]]
+
+
+@frappe.whitelist()
+def table_blockers(table):
+    """What is stopping this table from being deleted, in plain terms."""
+    obj = frappe.db.get_value("Restaurant Object", table, ["name", "description"], as_dict=True)
+    if not obj:
+        frappe.throw(frappe._("That table no longer exists"))
+
+    open_orders = frappe.get_all(
+        "Table Order", filters={"table": table, "status": OPEN_ORDER_STATES},
+        fields=["name", "status", "amount"], order_by="creation")
+    invoiced = frappe.get_all(
+        "Table Order", filters={"table": table, "status": "Invoiced"}, fields=["name"])
+    bookings = frappe.get_all(
+        "Restaurant Booking", filters={"table": table, "status": "Open"}, fields=["name"])
+
+    return {
+        "table": table,
+        "label": obj.description or table,
+        "open_orders": open_orders,
+        "invoiced_orders": len(invoiced),
+        "open_bookings": len(bookings),
+        # Invoiced orders are the books; the table has to stay for them to make sense.
+        "deletable": not invoiced,
+    }
+
+
+@frappe.whitelist()
+def release_table(table):
+    """Close the unpaid checks and seatings holding a table. Never touches an
+    invoiced order — that is a sale, and the table is part of its record."""
+    closed_orders, closed_bookings = [], []
+
+    for o in frappe.get_all("Table Order", filters={"table": table, "status": OPEN_ORDER_STATES},
+                            fields=["name", "docstatus"]):
+        doc = frappe.get_doc("Table Order", o.name)
+        if doc.docstatus == 1:
+            doc.cancel()
+        frappe.delete_doc("Table Order", o.name, force=1, ignore_permissions=True)
+        closed_orders.append(o.name)
+
+    now = frappe.utils.now_datetime()
+    for b in frappe.get_all("Restaurant Booking", filters={"table": table, "status": "Open"},
+                            fields=["name"]):
+        values = {"status": "Cancelled"}
+        if frappe.db.has_column("Restaurant Booking", "left_at"):
+            values["left_at"] = now
+        frappe.db.set_value("Restaurant Booking", b.name, values, update_modified=False)
+        closed_bookings.append(b.name)
+
+    frappe.db.set_value("Restaurant Object", table, "customer", None)
+    frappe.db.commit()
+    return {"table": table, "orders": closed_orders, "bookings": closed_bookings}

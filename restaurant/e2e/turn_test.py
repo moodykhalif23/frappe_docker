@@ -122,6 +122,29 @@ def run():
 	house.close_booking(nb["name"], "No Show")
 	check("a no-show closes", frappe.db.get_value("Restaurant Booking", nb["name"], "status") == "No Show")
 
+	# --- what stops a table being deleted, and clearing it ---
+	# a table that has never been billed — one with past sales is correctly undeletable
+	spare = [x for x in house.free_tables(2)
+	         if not frappe.db.count("Table Order", {"table": x["name"], "status": "Invoiced"})]
+	if spare:
+		t = spare[0]["name"]
+		house.seat_walkin(GUEST, 2, t)
+		blockers = house.table_blockers(t)
+		check("a seated table reports what holds it", blockers["open_bookings"] >= 1, str(blockers["open_bookings"]))
+		check("but it is still deletable", blockers["deletable"], str(blockers))
+		freed = house.release_table(t)
+		check("releasing closes the seating", freed["bookings"], str(freed))
+		check("the released table is free again", t in [x["name"] for x in house.free_tables()])
+		check("and nothing holds it now", house.table_blockers(t)["open_bookings"] == 0)
+
+	# a table carrying an invoiced order is history and must refuse deletion
+	invoiced = frappe.get_all("Table Order", filters={"status": "Invoiced"},
+		fields=["table"], limit=1)
+	if invoiced and invoiced[0].table:
+		b = house.table_blockers(invoiced[0].table)
+		check("a table with past sales refuses deletion", not b["deletable"],
+			f"{b['invoiced_orders']} invoiced")
+
 	_cleanup()
 	return _report(results)
 
