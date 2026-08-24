@@ -7,8 +7,8 @@
 /* Grid follows the panel width, not the viewport: the pad is a resizable panel. */
 .pos-items .widget-group-body {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(252px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)) !important;
+  gap: 8px;
   align-items: stretch;
 }
 
@@ -24,12 +24,12 @@
 .pos-items .small-box.item {
   display: flex !important;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   height: 100%;
-  min-height: 106px;
+  min-height: 96px;
   margin: 0 !important;
-  padding: 12px !important;
-  border-radius: 12px !important;
+  padding: 9px !important;
+  border-radius: 4px !important;
   background: var(--card-bg, var(--fg-color, #fff)) !important;
   border: 1px solid var(--border-color, #e2e8f0) !important;
   box-shadow: none !important;
@@ -39,7 +39,7 @@
 
 .pos-items .small-box.item .inner {
   padding: 0 !important;
-  padding-right: 56px !important;
+  padding-right: 46px !important;
   margin: 0;
 }
 
@@ -48,9 +48,9 @@
   align-items: baseline;
   gap: 6px;
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.83rem;
   font-weight: 600;
-  line-height: 1.3;
+  line-height: 1.25;
   color: var(--text-color, #1f272e);
 }
 .pos-items .small-box.item .inner .title .fa-circle {
@@ -60,8 +60,8 @@
 }
 
 .pos-items .small-box.item .inner p {
-  margin: 3px 0 0;
-  font-size: 0.72rem;
+  margin: 2px 0 0;
+  font-size: 0.68rem;
   line-height: 1.35;
   color: var(--text-muted, #7c7c7c);
   display: -webkit-box;
@@ -74,11 +74,11 @@
 /* Photo or initials: a 46px corner badge, not a watermark. */
 .pos-items .small-box.item .icon {
   position: absolute !important;
-  top: 10px !important;
-  right: 10px !important;
-  width: 46px !important;
-  height: 46px !important;
-  border-radius: 10px !important;
+  top: 8px !important;
+  right: 8px !important;
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 3px !important;
   overflow: hidden !important;
   opacity: 1 !important;
   display: flex !important;
@@ -93,7 +93,7 @@
   display: block;
 }
 .pos-items .small-box.item .icon .no-image {
-  font-size: 0.85rem !important;
+  font-size: 0.72rem !important;
   font-weight: 700 !important;
   letter-spacing: 0.02em;
   color: var(--text-muted, #7c7c7c) !important;
@@ -120,39 +120,39 @@
   display: flex !important;
   flex-wrap: nowrap !important;
   width: auto !important;
-  border-radius: 999px !important;
+  border-radius: 3px !important;
   background: var(--control-bg, #f4f5f6) !important;
   align-items: center;
   overflow: hidden;
 }
 .pos-items .small-box.item .input-group > * { flex: 0 0 auto; }
 .pos-items .small-box.item .input-group .input-group-text {
-  padding: 0 10px;
-  font-size: 0.8rem;
-  line-height: 34px;
+  padding: 0 7px;
+  font-size: 0.72rem;
+  line-height: 26px;
 }
 /* Bootstrap's .custom-file is width:100%, which wraps the +/- onto new rows. */
 .pos-items .small-box.item .input-group .custom-file {
   width: auto !important;
-  min-width: 22px !important;
+  min-width: 16px !important;
   padding-top: 0 !important;
   text-align: center;
   position: static !important;
-  line-height: 34px;
+  line-height: 26px;
 }
 .pos-items .small-box.item .add-qty { font-size: 0.85rem; font-weight: 600; }
 
 .pos-items .small-box.item .add-item {
   float: none !important;
-  border-radius: 999px !important;
-  min-height: 36px;
+  border-radius: 3px !important;
+  min-height: 28px;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
   flex: 1 1 auto;
   min-width: 0;
-  padding: 0 10px;
-  font-size: 0.78rem;
+  padding: 0 8px;
+  font-size: 0.7rem;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;

@@ -129,3 +129,17 @@ RUN python3 /tmp/autostart_order.py && node --check apps/restaurant_management/r
 # a real-sized menu 400'd the items panel: the group list was one entry per dish
 COPY restaurant/patches/dedupe_item_groups.py /tmp/dedupe_item_groups.py
 RUN python3 /tmp/dedupe_item_groups.py && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_settings/restaurant_settings.py').read())"
+
+# deleting a table silently failed: _delete was a @property, so dispatch called None
+COPY restaurant/patches/fix_table_delete.py /tmp/fix_table_delete.py
+RUN python3 /tmp/fix_table_delete.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())" \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
+
+# the table trash was bound to a double-click and gave no feedback on a single tap
+COPY restaurant/patches/table_delete_single_click.py /tmp/table_delete_single_click.py
+RUN python3 /tmp/table_delete_single_click.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
+
+# the pay form read this.actions before make() created it, so checkout threw
+COPY restaurant/patches/fix_pay_form_init.py /tmp/fix_pay_form_init.py
+RUN python3 /tmp/fix_pay_form_init.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js

@@ -141,11 +141,12 @@ def _item(name, group, description, rate, veg):
             "doctype": "Item", "item_code": name, "item_name": name,
             "item_group": group, "stock_uom": "Nos",
             "is_stock_item": 0, "is_sales_item": 1, "is_purchase_item": 0,
-            "description": description or name,
+            "description": description,
             "include_item_in_manufacturing": 0,
         }).insert(ignore_permissions=True)
+    # An empty description must stay empty — the card repeats it under the name.
     frappe.db.set_value("Item", name, {"item_type": veg, "item_group": group,
-                                       "description": description or name},
+                                       "description": description},
                         update_modified=False)
     pl = _price_list()
     existing = frappe.db.get_value("Item Price", {"item_code": name, "price_list": pl}, "name")
