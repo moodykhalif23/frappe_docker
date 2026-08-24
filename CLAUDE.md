@@ -23,6 +23,16 @@ how a real restaurant runs, and which of those rules the app still breaks.
 3. **Site name must equal the public domain** (`SITE=pos.example.com`). The nginx template rewrites the `Origin` header to the site name and frappe's websocket auth requires `Host == Origin` — mismatch = "Invalid origin", dead realtime/kitchen display. For local work use `SITE=pos.localhost` — **and** the websocket service must be able to `fetch("http://<site name>/api/...")` to authenticate each socket (it uses the rewritten Origin as the URL). Public domains resolve via real DNS; `*.localhost` needs `restaurant/compose.localhost.yaml` (deploy.sh adds it to COMPOSE_FILE automatically: frontend gets the site name as a network alias + nginx listens on :80). Never add that override on a public deployment — the alias would shadow real DNS and break the https auth fetch. Symptom of missing override: browser console shows `Error connecting to socket.io: Unauthorized: TypeError: fetch failed`, nothing on the floor live-updates.
 4. Rebuilding from `apps-restaurant.json` alone produces an **unpatched** image — always follow with the patch dockerfile build. `deploy.sh` does both.
 5. Commits: single-concern, author `moodykhalif23 <brian@sozuri.net>`, never add an AI co-author.
+7. **Pin what you build on.** `restaurant/PINNED_APPS` records the exact
+   erpnext and hrms tags and the restaurant app's commit; `assert_pins.py` runs
+   first in the patch dockerfile and fails the bake on any mismatch. The
+   restaurant app tracks a **tagless master**, and bench clones with `--branch`,
+   which will not accept a bare SHA — so master is asserted rather than pinned.
+   If upstream moves, the build stops with the old and new commits: review the
+   diff (our patches anchor on exact source), re-test, then update PINNED_APPS.
+   To get a real pin, fork the app, tag the commit and point
+   `apps-restaurant.json` at the fork.
+
 6. **Flatten the image every few bakes.** The patch dockerfile builds `FROM`
    its own output, so each bake adds ~50 layers. Past roughly 480 the overlayfs
    mount option string exceeds the kernel limit and *every* build fails with

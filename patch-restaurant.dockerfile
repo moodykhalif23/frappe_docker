@@ -1,5 +1,11 @@
 FROM custom-erpnext:v16.6.0
 USER frappe
+# Refuse to build on an app version we have not reviewed. Our patches anchor on
+# exact upstream source, and the restaurant app tracks a tagless master.
+COPY restaurant/PINNED_APPS /tmp/PINNED_APPS
+COPY restaurant/patches/assert_pins.py /tmp/assert_pins.py
+RUN python3 /tmp/assert_pins.py
+
 RUN sed -i "s/Sales Taxes And Charges/Sales Taxes and Charges/; s/tax += item.tax_amount$/tax += (item.tax_amount or 0)/; s/amount += item.amount$/amount += (item.amount or 0)/; s/\"rate\", \"amount\"/\"rate\", \"tax_amount\"/; s/tax\.amount or 0/tax.tax_amount or 0/" apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py
 RUN sed -i "s/ RM = new RestaurantManage(wrapper);/ RM = window.RM = new RestaurantManage(wrapper);/" apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 RUN sed -i 's/single_column: true$/single_column: true,\n    hide_sidebar: true/' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \

@@ -1,0 +1,12 @@
+# What this image is expected to contain. Checked at build time by
+# restaurant/patches/assert_pins.py — a mismatch fails the bake loudly rather
+# than shipping a silently different app.
+#
+# erpnext and hrms are pinned to real tags. erpnext-restaurant has NO tags
+# upstream and bench clones with --branch, which will not take a bare SHA, so
+# master is asserted instead. To convert that into a true pin: fork
+# alphabit-technology/erpnext-restaurant, tag this commit, and point
+# apps-restaurant.json at the fork + tag.
+erpnext=v16.6.0
+hrms=v16.16.0
+restaurant_management=c55ac4ae84810be445b4895089516e12a299ba9a
