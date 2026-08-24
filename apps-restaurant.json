@@ -1,5 +1,5 @@
 [
   {"url": "https://github.com/frappe/erpnext", "branch": "v16.6.0"},
-  {"url": "https://github.com/frappe/hrms", "branch": "v16.16.0"},
+  {"url": "https://github.com/frappe/hrms", "branch": "v16.5.0"},
   {"url": "https://github.com/alphabit-technology/erpnext-restaurant.git", "branch": "master"}
 ]

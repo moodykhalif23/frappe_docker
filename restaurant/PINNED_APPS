@@ -2,11 +2,16 @@
 # restaurant/patches/assert_pins.py — a mismatch fails the bake loudly rather
 # than shipping a silently different app.
 #
+# hrms is held at v16.5.0 deliberately: from v16.5.1 its installer writes to
+# Accounts Settings.repost_allowed_types, a field erpnext v16.6.0 does not have,
+# and the install dies with AttributeError. Moving hrms up means moving erpnext
+# up first and re-testing the till.
+#
 # erpnext and hrms are pinned to real tags. erpnext-restaurant has NO tags
 # upstream and bench clones with --branch, which will not take a bare SHA, so
 # master is asserted instead. To convert that into a true pin: fork
 # alphabit-technology/erpnext-restaurant, tag this commit, and point
 # apps-restaurant.json at the fork + tag.
 erpnext=v16.6.0
-hrms=v16.16.0
+hrms=v16.5.0
 restaurant_management=c55ac4ae84810be445b4895089516e12a299ba9a
