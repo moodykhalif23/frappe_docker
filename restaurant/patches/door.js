@@ -144,8 +144,39 @@
           });
         },
       });
+
+      dialog.set_secondary_action_label(__("Take a booking"));
+      dialog.set_secondary_action(() => RM_door.book(dialog));
+
       dialog.show();
       refresh(dialog);
+    },
+
+    // A booking holds no table: the right one depends on the night, so it is
+    // picked when they walk in.
+    book(parent) {
+      const d = new frappe.ui.Dialog({
+        title: __("Take a booking"),
+        fields: [
+          { fieldname: "guest_name", fieldtype: "Data", label: __("Name"), reqd: 1 },
+          { fieldname: "covers", fieldtype: "Int", label: __("Guests"), default: 2, reqd: 1 },
+          { fieldname: "when", fieldtype: "Datetime", label: __("When"), reqd: 1,
+            default: frappe.datetime.now_datetime() },
+          { fieldname: "contact", fieldtype: "Data", label: __("Phone (optional)") },
+        ],
+        primary_action_label: __("Book"),
+        primary_action: ({ guest_name, covers, when, contact }) => {
+          call("book_table", { guest_name, covers: covers || 2, when, contact }).then(row => {
+            d.hide();
+            frappe.show_alert({
+              message: __("{0} booked for {1}", [row.guest, (row.at || "").slice(0, 16)]),
+              indicator: "green",
+            });
+            if (parent) refresh(parent);
+          });
+        },
+      });
+      d.show();
     },
   };
 })();

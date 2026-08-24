@@ -272,6 +272,13 @@ def floor_waiters():
 # carries no_of_people, contact_number and a No Show status, so the queue is a
 # view over data that already exists rather than a new store.
 
+def _company():
+    # A site with no global default still has a Company; falling back to a bare
+    # name here was a NameError waiting for the first tenant that skipped it.
+    return (frappe.defaults.get_global_default("company")
+            or frappe.db.get_value("Company", {}, "name"))
+
+
 def _waited_minutes(since):
     if not since:
         return 0
@@ -321,7 +328,35 @@ def add_to_waitlist(guest_name, covers=2, contact=None):
         "reservation_time": now,
         "reservation_end_time": frappe.utils.add_to_date(now, hours=2),
         "status": "Waitlisted",
-        "company": frappe.defaults.get_global_default("company") or COMPANY,
+        "company": _company(),
+    })
+    booking.insert(ignore_permissions=True)
+    frappe.db.commit()
+    return _booking_row(booking)
+
+
+@frappe.whitelist()
+def book_table(guest_name, covers=2, when=None, contact=None, table=None):
+    """Take a reservation for later. No table is held: it is chosen on arrival,
+    which is how a floor actually works — the right table depends on the night."""
+    guest_name = (guest_name or "").strip()
+    if not guest_name:
+        frappe.throw(frappe._("A guest name is required"))
+    when = frappe.utils.get_datetime(when) if when else frappe.utils.now_datetime()
+    if table and (_table_busy(table, frappe.db.get_value("Restaurant Object", table, "company"))
+                  or _table_seated(table)):
+        frappe.throw(frappe._("That table is taken"))
+
+    booking = frappe.get_doc({
+        "doctype": "Restaurant Booking",
+        "customer": _walkin_customer(guest_name, contact),
+        "contact_number": contact,
+        "no_of_people": int(covers or 2),
+        "reservation_time": when,
+        "reservation_end_time": frappe.utils.add_to_date(when, hours=2),
+        "table": table,
+        "status": "Open",
+        "company": _company(),
     })
     booking.insert(ignore_permissions=True)
     frappe.db.commit()

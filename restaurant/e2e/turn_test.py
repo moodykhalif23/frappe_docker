@@ -9,10 +9,11 @@ from restaurant_management import house
 
 GUEST = "Turn Test Party"
 QGUEST = "Turn Test Queue"
+BGUEST = "Turn Test Booking"
 
 
 def _cleanup():
-	for guest in (GUEST, QGUEST):
+	for guest in (GUEST, QGUEST, BGUEST):
 		for c in frappe.get_all("Customer", filters={"customer_name": guest}, fields=["name"]):
 			for b in frappe.get_all("Restaurant Booking", filters={"customer": c.name}, fields=["name"]):
 				frappe.db.set_value("Restaurant Booking", b.name, "table", None)
@@ -90,6 +91,32 @@ def run():
 		check("seating off the queue stamps seated_at", qb.get("seated_at"))
 		check("it leaves the queue", q["name"] not in [w["name"] for w in house.waitlist()])
 		house.free_table(free_now[0]["name"])
+
+	# --- a booking holds no table until they arrive ---
+	when = add_to_date(now_datetime(), hours=2)
+	free_count = len(house.free_tables())
+	bk = house.book_table(BGUEST, 3, when)
+	check("a booking holds no table", not frappe.db.get_value("Restaurant Booking", bk["name"], "table"))
+	check("booking frees nothing on the floor", len(house.free_tables()) == free_count,
+		f"{free_count} -> {len(house.free_tables())}")
+	check("it shows under today's expected",
+		bk["name"] in [r["name"] for r in house.reservations()])
+	check("it is not in the queue", bk["name"] not in [w["name"] for w in house.waitlist()])
+
+	free_now = house.free_tables(3)
+	if free_now:
+		booked_at = frappe.db.get_value("Restaurant Booking", bk["name"], "reservation_time")
+		house.seat_from_waitlist(bk["name"], free_now[0]["name"])
+		check("seating a booking keeps the time it was booked for",
+			str(frappe.db.get_value("Restaurant Booking", bk["name"], "reservation_time")) == str(booked_at),
+			str(booked_at))
+		check("seating a booking stamps seated_at",
+			frappe.db.get_value("Restaurant Booking", bk["name"], "seated_at"))
+		house.free_table(free_now[0]["name"])
+
+	nb = house.book_table(BGUEST, 2, add_to_date(now_datetime(), hours=3))
+	house.close_booking(nb["name"], "No Show")
+	check("a no-show closes", frappe.db.get_value("Restaurant Booking", nb["name"], "status") == "No Show")
 
 	_cleanup()
 	return _report(results)
