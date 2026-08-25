@@ -89,10 +89,13 @@ fi
 
 log "refreshing caches — nobody is logged out, sessions live in the database"
 docker compose exec -T backend bench --site "$SITE" clear-cache
-# frappe versions asset URLs off this file's mtime; touching it is what gets a
-# CDN to serve the new bundle. Never append a query string of your own.
-docker compose exec -T backend touch sites/assets/assets.json
 docker compose restart frontend
+for _ in $(seq 1 30); do docker compose exec -T backend true 2>/dev/null && break; sleep 2; done
+# frappe versions asset URLs off this file's mtime, so touching it is what gets a
+# browser and a CDN to fetch the new bundle. It must come AFTER the frontend
+# restart: the entrypoint re-links assets on boot and resets the mtime, which
+# silently undid this and served the old stylesheet for another four hours.
+docker compose exec -T backend touch sites/assets/assets.json
 
 log "what landed:"
 docker compose exec -T backend bench --site "$SITE" list-apps
