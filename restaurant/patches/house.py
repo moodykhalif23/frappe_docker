@@ -266,15 +266,12 @@ def floor_waiters():
 
 
 # ---- the door: waitlist and reservations -----------------------------------
-#
 # A waiting party is a Restaurant Booking with no table and status Waitlisted;
-# seating one just assigns the table and flips it to Open. The doctype already
-# carries no_of_people, contact_number and a No Show status, so the queue is a
-# view over data that already exists rather than a new store.
+# seating one assigns the table and flips it to Open.
 
 def _company():
-    # A site with no global default still has a Company; falling back to a bare
-    # name here was a NameError waiting for the first tenant that skipped it.
+    # A site with no global default still has a Company; the old bare-name
+    # fallback was a NameError waiting for the first tenant that skipped it.
     return (frappe.defaults.get_global_default("company")
             or frappe.db.get_value("Company", {}, "name"))
 
@@ -537,9 +534,8 @@ def turn_metrics(day=None):
 
 
 # ---- staff: the floor's PIN pad doubles as the shift clock ------------------
-#
-# Employee lives in erpnext and is always there; Employee Checkin and Attendance
-# come from hrms, so every use of them is guarded — the fork still runs without it.
+# Employee is erpnext and always present; Employee Checkin is hrms, so every use
+# of it is guarded and a floor without hrms still signs waiters in.
 
 
 def _has_hrms():
@@ -643,10 +639,8 @@ def link_employee(waiter, employee):
 
 
 # ---- deleting a table ------------------------------------------------------
-#
-# Seating opens a Table Order, and an order that was never paid keeps its table
-# linked for good: the floor refuses the delete with frappe's raw link error.
-# An unpaid check can be closed; an invoiced one is history and must not be.
+# An unpaid check keeps its table linked for good and blocks the delete; it can
+# be closed. An invoiced one is history and must not be.
 
 OPEN_ORDER_STATES = ["not in", ["Invoiced", "Cancelled"]]
 

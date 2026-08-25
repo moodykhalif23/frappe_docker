@@ -1,9 +1,7 @@
-# Remove what the suites leave behind. The browser suites write real records;
-# the server suites clean up after themselves but a failed run can strand some.
+# Remove what the browser suites leave behind. Paid invoices are reported, never
+# cancelled — that is an accounting decision, not a test's.
 #
 #   exec(open(".../cleanup.py").read(), globals()); run()
-#
-# Paid invoices are reported, never cancelled — that is an accounting decision.
 
 import frappe
 
