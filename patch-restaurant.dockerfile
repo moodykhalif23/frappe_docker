@@ -180,3 +180,17 @@ COPY --chown=frappe:frappe restaurant/patches/inventory.py apps/restaurant_manag
 COPY --chown=frappe:frappe restaurant/patches/report/restock_list apps/restaurant_management/restaurant_management/restaurant_management/report/restock_list
 COPY --chown=frappe:frappe restaurant/patches/report/consumption_variance apps/restaurant_management/restaurant_management/restaurant_management/report/consumption_variance
 RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/inventory.py').read())"
+
+# stock the kitchen actually burns: sale -> recipe -> issue, plus waste and variance
+COPY --chown=frappe:frappe restaurant/patches/inventory.py apps/restaurant_management/restaurant_management/inventory.py
+RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/inventory.py').read())"
+COPY --chown=frappe:frappe restaurant/patches/report/restock_list apps/restaurant_management/restaurant_management/restaurant_management/report/restock_list
+COPY --chown=frappe:frappe restaurant/patches/report/consumption_variance apps/restaurant_management/restaurant_management/restaurant_management/report/consumption_variance
+
+# closing the selling day from the floor
+COPY restaurant/patches/close_day.js /tmp/close_day.js
+RUN { echo ';'; cat /tmp/close_day.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+RUN grep -q 'RM_close_day.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ || sed -i 's|window.RM_door \&\& RM_door.mount(this);|window.RM_door \&\& RM_door.mount(this); window.RM_close_day \&\& RM_close_day.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js

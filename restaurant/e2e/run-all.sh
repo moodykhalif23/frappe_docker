@@ -48,7 +48,7 @@ browser_suite() {
 
 server_suite "floor lifecycle (turns, queue, bookings)" turn_test.py
 server_suite "staff and attendance" staff_test.py
-server_suite "stock: sale to recipe to shelf" stock_test.py
+server_suite "stock: sale -> recipe -> issue" stock_test.py
 browser_suite "floor, waiter, order, dispatch" flow.mjs
 browser_suite "the door" door.mjs
 browser_suite "checkout and the turn" checkout.mjs

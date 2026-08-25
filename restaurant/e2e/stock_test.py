@@ -13,6 +13,22 @@ PLAIN = "ZZ Test Uncosted Dish"
 
 
 def _cleanup():
+    # Order matters: a closing entry will not cancel while a shift is open, and
+    # a banked invoice will not cancel while its closing entry stands.
+    for op in frappe.get_all("POS Opening Entry", filters={"status": "Open", "docstatus": 1}, pluck="name"):
+        frappe.db.set_value("POS Opening Entry", op, "status", "Closed", update_modified=False)
+    frappe.db.commit()
+    test_invoices = frappe.get_all("POS Invoice", filters={"customer": ["like", "ZZ Test%"]}, pluck="name")
+    if test_invoices:
+        for ref in frappe.get_all("POS Invoice Reference",
+                                  filters={"pos_invoice": ["in", test_invoices],
+                                           "parenttype": "POS Closing Entry"},
+                                  fields=["parent"], distinct=True):
+            doc = frappe.get_doc("POS Closing Entry", ref.parent)
+            if doc.docstatus == 1:
+                doc.cancel()
+            frappe.delete_doc("POS Closing Entry", ref.parent, force=1, ignore_permissions=True)
+        frappe.db.commit()
     for inum in frappe.get_all("POS Invoice", filters={"customer": ["like", "ZZ Test%"]}, pluck="name"):
         d = frappe.get_doc("POS Invoice", inum)
         if d.docstatus == 1:
@@ -190,6 +206,23 @@ def run():
     if ING_A in var:
         check("variance shows the 0.5 waste as the gap",
               round(var[ING_A]["difference"], 2) == 0.5, str(var[ING_A]))
+
+    # --- closing the selling day ---
+    from restaurant_management import house
+    before = house.day_summary()
+    check("the counter reads as open", before.get("open"), str(before.get("shift")))
+    if before.get("open") and before.get("open_checks"):
+        try:
+            house.close_day()
+            check("it refuses to close over open checks", False, "it closed anyway")
+        except Exception:
+            check("it refuses to close over open checks", True,
+                  f"{before['open_checks']} open")
+    closed = house.close_day(force=1)
+    check("closing banks the day", closed.get("closed"), str(closed.get("closed")))
+    check("the counter is closed afterwards", not house.day_summary().get("open"))
+    _ensure_shift(profile)
+    check("a fresh day can be opened", house.day_summary().get("open"))
 
     _cleanup()
     return _report(results)

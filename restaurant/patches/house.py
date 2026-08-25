@@ -697,3 +697,80 @@ def release_table(table):
     frappe.db.set_value("Restaurant Object", table, "customer", None)
     frappe.db.commit()
     return {"table": table, "orders": closed_orders, "bookings": closed_bookings}
+
+
+# ---- closing the day -------------------------------------------------------
+# A shift left open bills into yesterday and then refuses today's sales with
+# "POS Opening Entry is outdated", which reads as a broken till.
+
+
+def _open_shift_doc(pos_profile=None):
+    filters = {"status": "Open", "docstatus": 1}
+    if pos_profile:
+        filters["pos_profile"] = pos_profile
+    name = frappe.db.get_value("POS Opening Entry", filters, "name", order_by="period_start_date desc")
+    return frappe.get_doc("POS Opening Entry", name) if name else None
+
+
+@frappe.whitelist()
+def day_summary(pos_profile=None):
+    """What closing would sweep up, so nobody closes a day blind."""
+    shift = _open_shift_doc(pos_profile)
+    if not shift:
+        return {"open": False}
+
+    invoices = frappe.get_all(
+        "POS Invoice",
+        filters={"docstatus": 1, "pos_profile": shift.pos_profile,
+                 "posting_date": [">=", frappe.utils.getdate(shift.period_start_date)]},
+        fields=["name", "grand_total", "customer"])
+    open_orders = frappe.get_all(
+        "Table Order",
+        filters={"status": ["not in", ["Invoiced", "Cancelled"]], "show_in_pos": 1},
+        fields=["name", "table", "amount"])
+
+    return {
+        "open": True,
+        "shift": shift.name,
+        "profile": shift.pos_profile,
+        "opened_at": str(shift.period_start_date),
+        "stale": frappe.utils.getdate(shift.period_start_date) < frappe.utils.getdate(),
+        "invoices": len(invoices),
+        "sales": round(sum(i.grand_total or 0 for i in invoices), 2),
+        "open_checks": len(open_orders),
+        "open_checks_value": round(sum(o.amount or 0 for o in open_orders), 2),
+        "currency": frappe.db.get_value("Company", shift.company, "default_currency"),
+    }
+
+
+@frappe.whitelist()
+def close_day(pos_profile=None, force=0):
+    """Close the selling day: bank the shift so tomorrow can open a fresh one.
+
+    Refuses while checks are still open unless told otherwise — those tables
+    would be stranded on a closed shift with no way to bill them.
+    """
+    from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import (
+        make_closing_entry_from_opening,
+    )
+
+    shift = _open_shift_doc(pos_profile)
+    if not shift:
+        return {"closed": None, "message": frappe._("The counter is already closed")}
+
+    summary = day_summary(pos_profile)
+    if summary["open_checks"] and not int(force or 0):
+        frappe.throw(frappe._("{0} check(s) are still open. Settle them first, or close anyway.")
+                     .format(summary["open_checks"]))
+
+    closing = make_closing_entry_from_opening(shift)
+    closing.posting_date = frappe.utils.today()
+    closing.posting_time = frappe.utils.nowtime()
+    closing.period_end_date = frappe.utils.now_datetime()
+    closing.insert(ignore_permissions=True)
+    closing.submit()
+    frappe.db.commit()
+
+    return {"closed": closing.name, "shift": shift.name,
+            "invoices": summary["invoices"], "sales": summary["sales"],
+            "open_checks_left": summary["open_checks"]}
