@@ -76,7 +76,8 @@ docker compose exec -T backend bench --site "$SITE" migrate
 log "custom fields the floor hangs on stock doctypes"
 docker compose exec -T backend bench --site "$SITE" console <<'PY'
 from restaurant_management.house import ensure_custom_fields
-print(ensure_custom_fields())
+from restaurant_management.inventory import ensure_fields
+print(ensure_custom_fields(), ensure_fields())
 PY
 
 if ! docker compose exec -T backend bench --site "$SITE" list-apps 2>/dev/null | grep -q '^hrms'; then

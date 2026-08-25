@@ -30,6 +30,7 @@ whether the page runs.
 | `checkout.mjs` | seat → dish → pay, then the table is free and the turn is on the board | browser |
 | `turn_test.py` | seat → sit → pay → free, and the Table Turns report | server |
 | `staff_test.py` | waiter ↔ Employee, PIN writes attendance, roster reads it | server |
+| `stock_test.py` | sale → recipe → issue, idempotent, waste, restock, variance | server |
 
 ```bash
 BASE=https://pos.example.com PASS=... node door.mjs

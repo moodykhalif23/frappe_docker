@@ -12,6 +12,12 @@ WANTED = [
      "report_ref_doctype": "POS Invoice", "doc_view": "Report", "block": "rmSalesRepBlk"},
     {"label": "Table Turns", "type": "Report", "link_to": "Table Turns",
      "report_ref_doctype": "Restaurant Booking", "doc_view": "Report", "block": "rmTurnsRepBlk"},
+    {"label": "Restock List", "type": "Report", "link_to": "Restock List",
+     "report_ref_doctype": "Item", "doc_view": "Report", "block": "rmRestockBlk"},
+    {"label": "Consumption Variance", "type": "Report", "link_to": "Consumption Variance",
+     "report_ref_doctype": "Stock Ledger Entry", "doc_view": "Report", "block": "rmVarianceBlk"},
+    {"label": "Recipes", "type": "DocType", "link_to": "BOM", "block": "rmBomBlk"},
+    {"label": "Stock Entry", "type": "DocType", "link_to": "Stock Entry", "block": "rmStockBlk"},
 ]
 
 doc = json.load(open(P))

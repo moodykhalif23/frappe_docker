@@ -174,3 +174,9 @@ RUN python3 /tmp/table_delete_explains.py \
 COPY restaurant/patches/workspace_reports.py /tmp/workspace_reports.py
 RUN python3 /tmp/workspace_reports.py \
  && python3 -c "import json; json.load(open('apps/restaurant_management/restaurant_management/restaurant_management/workspace/restaurant/restaurant.json'))"
+
+# Stock the kitchen actually burns: sale -> recipe -> issue, plus waste and variance
+COPY --chown=frappe:frappe restaurant/patches/inventory.py apps/restaurant_management/restaurant_management/inventory.py
+COPY --chown=frappe:frappe restaurant/patches/report/restock_list apps/restaurant_management/restaurant_management/restaurant_management/report/restock_list
+COPY --chown=frappe:frappe restaurant/patches/report/consumption_variance apps/restaurant_management/restaurant_management/restaurant_management/report/consumption_variance
+RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/inventory.py').read())"
