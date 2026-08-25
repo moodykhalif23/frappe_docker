@@ -43,12 +43,25 @@ def _cleanup():
     frappe.db.commit()
 
 
+def _ingredient_group():
+    """Ingredients get their own group: a menu group carries selling defaults
+    that do not resolve an inventory account."""
+    name = "Ingredients"
+    if not frappe.db.exists("Item Group", name):
+        frappe.get_doc({"doctype": "Item Group", "item_group_name": name,
+                        "parent_item_group": frappe.db.get_value("Item Group", {"is_group": 1}),
+                        "is_group": 0}).insert(ignore_permissions=True)
+        frappe.db.commit()
+    return name
+
+
 def _item(code, stock, uom="Kg", group=None):
     if frappe.db.exists("Item", code):
         return code
     frappe.get_doc({
         "doctype": "Item", "item_code": code, "item_name": code,
-        "item_group": group or frappe.db.get_value("Item Group", {"is_group": 0}, "name"),
+        "item_group": group or (_ingredient_group() if stock
+                                else frappe.db.get_value("Item Group", {"is_group": 0}, "name")),
         "stock_uom": uom, "is_stock_item": 1 if stock else 0,
         "include_item_in_manufacturing": 1 if stock else 0,
     }).insert(ignore_permissions=True)
