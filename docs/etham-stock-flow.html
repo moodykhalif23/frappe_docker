@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Etham Eatery — Stock, Recipes and Purchasing</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  :root{
+    --ink:#1a1a1a; --muted:#5b6169; --line:#d8dce1; --soft:#f4f6f8;
+    --accent:#7a1f1f; --accent-soft:#f6ecec; --ok:#1f6b3a; --warn:#8a5a00;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family:"Source Serif 4","Georgia",serif; color:var(--ink);
+    font-size:10.5pt; line-height:1.55; margin:0;
+  }
+  h1,h2,h3,h4,.ui,th,.tag{font-family:"Inter","Helvetica Neue",Arial,sans-serif}
+  h1{font-size:23pt;line-height:1.15;margin:0 0 6pt;letter-spacing:-.4pt}
+  h2{font-size:14pt;margin:0 0 10pt;padding-bottom:5pt;border-bottom:2px solid var(--accent);
+     letter-spacing:-.2pt}
+  h3{font-size:11.5pt;margin:16pt 0 5pt;color:var(--accent)}
+  h4{font-size:10pt;margin:12pt 0 3pt;text-transform:uppercase;letter-spacing:.6pt;color:var(--muted)}
+  p{margin:0 0 8pt}
+  ul,ol{margin:0 0 8pt;padding-left:16pt}
+  li{margin-bottom:3pt}
+  .lede{font-size:11.5pt;color:var(--muted);margin-bottom:14pt}
+  .section{page-break-before:always}
+  .cover{padding-top:38mm}
+  .eyebrow{font-family:Inter,Arial,sans-serif;font-size:8.5pt;letter-spacing:2pt;
+    text-transform:uppercase;color:var(--accent);margin-bottom:10pt}
+  .meta{margin-top:26pt;font-family:Inter,Arial,sans-serif;font-size:9pt;color:var(--muted)}
+  .meta b{color:var(--ink);font-weight:600}
+  table{width:100%;border-collapse:collapse;margin:8pt 0 12pt;font-size:9.5pt}
+  th{background:var(--soft);text-align:left;padding:6pt 7pt;font-size:8.5pt;
+     text-transform:uppercase;letter-spacing:.5pt;border-bottom:1.5px solid var(--line)}
+  td{padding:6pt 7pt;border-bottom:1px solid var(--line);vertical-align:top}
+  tr{page-break-inside:avoid}
+  .ui{font-family:Inter,Arial,sans-serif;font-size:9pt;background:var(--soft);
+      padding:1pt 5pt;border-radius:3px;white-space:nowrap}
+  .callout{border-left:3px solid var(--accent);background:var(--accent-soft);
+    padding:9pt 12pt;margin:10pt 0;page-break-inside:avoid}
+  .callout p:last-child{margin-bottom:0}
+  .callout b{color:var(--accent)}
+  .flow{margin:10pt 0 14pt}
+  .step{display:flex;gap:10pt;padding:8pt 0;border-bottom:1px solid var(--line);
+        page-break-inside:avoid}
+  .step:last-child{border-bottom:none}
+  .num{font-family:Inter,Arial,sans-serif;font-weight:700;font-size:9pt;color:#fff;
+    background:var(--accent);min-width:19px;height:19px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;flex:0 0 19px;margin-top:2pt}
+  .step h4{margin:0 0 2pt;text-transform:none;letter-spacing:0;color:var(--ink);font-size:10.5pt}
+  .step p{margin:0;font-size:9.5pt;color:var(--muted)}
+  .moves{font-family:Inter,Arial,sans-serif;font-size:8pt;color:var(--accent);
+         text-transform:uppercase;letter-spacing:.5pt;margin-top:3pt;display:block}
+  .status-no{color:var(--accent);font-weight:600}
+  .status-yes{color:var(--ok);font-weight:600}
+  .tag{display:inline-block;font-size:7.5pt;text-transform:uppercase;letter-spacing:.6pt;
+    padding:1.5pt 6pt;border-radius:9px;font-weight:600}
+  .t-build{background:var(--accent-soft);color:var(--accent)}
+  .t-native{background:#e8f2ec;color:var(--ok)}
+  .t-config{background:#fdf3e0;color:var(--warn)}
+  .foot{margin-top:20pt;padding-top:8pt;border-top:1px solid var(--line);
+    font-family:Inter,Arial,sans-serif;font-size:8.5pt;color:var(--muted)}
+  .two{display:flex;gap:14pt}
+  .two > div{flex:1}
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="eyebrow">Etham Eatery · Operations</div>
+  <h1>Stock, Recipes and Purchasing</h1>
+  <p class="lede">How ingredients move from your supplier to the plate — what the
+  system records at each step, which reports answer which question, and what you
+  can change yourself without calling us.</p>
+  <div class="meta">
+    <b>Prepared for</b> Etham Eatery &nbsp;·&nbsp; <b>System</b> ERPNext v16 + Restaurant POS<br>
+    <b>Date</b> 25 August 2026 &nbsp;·&nbsp; <b>Covers</b> the stock flow, the reports, and day-to-day configuration
+  </div>
+  <div class="callout" style="margin-top:30pt">
+    <p><b>Read this first.</b> Your menu is live and selling, but the system is
+    not yet tracking a single ingredient. Nothing is broken — stock tracking has
+    simply not been switched on for Etham yet. Part 2 says exactly where you
+    stand and Part 3 says what it takes. Everything in Part 4 is yours to run
+    without us.</p>
+  </div>
+</div>
+
+<div class="section">
+<h2>Part 1 · How stock actually moves</h2>
+<p class="lede">Eight steps. Every one of them writes a line in the stock ledger,
+so any number in any report can be traced back to the document that caused it.</p>
+
+<div class="flow">
+  <div class="step"><div class="num">1</div><div>
+    <h4>You order from a supplier</h4>
+    <p>A <span class="ui">Purchase Order</span> records what you asked for and the
+    agreed price. It commits nothing and moves no stock — but it is what the
+    shortage report counts as "already on the way".</p>
+    <span class="moves">Moves: nothing yet</span>
+  </div></div>
+
+  <div class="step"><div class="num">2</div><div>
+    <h4>The delivery arrives</h4>
+    <p>A <span class="ui">Purchase Receipt</span> records what actually turned up,
+    which is often not what was ordered. <b>This is the step that puts stock on
+    your shelf.</b> Short deliveries and rejected goods get caught here, not at
+    month end.</p>
+    <span class="moves">Moves: stock in ↑</span>
+  </div></div>
+
+  <div class="step"><div class="num">3</div><div>
+    <h4>The bill follows</h4>
+    <p>A <span class="ui">Purchase Invoice</span> records what you owe. Kept
+    separate from the receipt on purpose: goods and paperwork rarely arrive
+    together, and you should not have to hold up the kitchen for an invoice.</p>
+    <span class="moves">Moves: money owed ↑</span>
+  </div></div>
+
+  <div class="step"><div class="num">4</div><div>
+    <h4>Prep work turns raw into ready</h4>
+    <p>Stocks, sauces and marinades made in batches are recorded once, then drawn
+    on by many dishes. This is also where <b>yield</b> becomes visible: 5&nbsp;kg of
+    beef on the bone is not 5&nbsp;kg of trimmed beef, and pretending otherwise is
+    what makes recipe costs lie.</p>
+    <span class="moves">Moves: raw out ↓ · prepped in ↑</span>
+  </div></div>
+
+  <div class="step"><div class="num">5</div><div>
+    <h4>A waiter sells a dish</h4>
+    <p>The till writes a <span class="ui">POS Invoice</span>. A dish is not a
+    stocked thing — you never counted "Grilled Chicken" in the store — so nothing
+    moves in inventory at this moment. This surprises people, and it is correct.</p>
+    <span class="moves">Moves: sales ↑</span>
+  </div></div>
+
+  <div class="step"><div class="num">6</div><div>
+    <h4>The kitchen's burn is booked against recipes</h4>
+    <p>Each dish sold is looked up in its <b>recipe</b>, the ingredients are added
+    across every sale of the service, and one entry issues them from the store.
+    <b>This is the step that connects the till to the pantry</b> — without it, the
+    two never meet.</p>
+    <span class="moves">Moves: ingredients out ↓</span>
+  </div></div>
+
+  <div class="step"><div class="num">7</div><div>
+    <h4>Waste and staff meals are recorded</h4>
+    <p>Spoilage, breakage, comps and staff food are booked with a reason. Skip
+    this and every loss silently becomes "unexplained variance", which is another
+    way of saying you will end up suspecting your team.</p>
+    <span class="moves">Moves: stock out ↓</span>
+  </div></div>
+
+  <div class="step"><div class="num">8</div><div>
+    <h4>Someone counts the shelf</h4>
+    <p>A physical count corrects the system to reality. The gap between what the
+    recipes say you should have and what is actually there is the single most
+    useful number in the whole system — it tells you whether your recipes are
+    honest, your portions are controlled, and your stock is secure.</p>
+    <span class="moves">Moves: correction ↕</span>
+  </div></div>
+</div>
+
+<div class="callout">
+  <p><b>The one idea worth keeping.</b> Two kinds of thing live in the system.
+  <b>Ingredients</b> are counted, bought and stored. <b>Dishes</b> are sold and
+  never counted. A <b>recipe</b> is the bridge, and it is the only reason the
+  till can tell the store what to reduce.</p>
+</div>
+</div>
+
+<div class="section">
+<h2>Part 2 · Where Etham stands today</h2>
+<p class="lede">Measured on your live system on 25 August 2026, not estimated.</p>
+
+<table>
+  <tr><th style="width:42%">What we checked</th><th style="width:20%">Found</th><th>What it means</th></tr>
+  <tr><td>Menu items priced and sellable</td><td class="status-yes">170</td><td>The till is complete and trading.</td></tr>
+  <tr><td>Ingredients tracked as stock</td><td class="status-no">0</td><td>Nothing is counted. No shelf balance exists.</td></tr>
+  <tr><td>Recipes linking dish to ingredient</td><td class="status-no">0</td><td>The till cannot tell the store anything.</td></tr>
+  <tr><td>Stock movements recorded</td><td class="status-no">0</td><td>No history to report on.</td></tr>
+  <tr><td>Reorder rules</td><td class="status-no">0</td><td>Nothing can warn you before you run out.</td></tr>
+  <tr><td>Till reduces stock on sale</td><td class="status-no">Off</td><td>Correct for now — with no recipes there is nothing to reduce.</td></tr>
+  <tr><td>Suppliers on file</td><td class="status-no">3 generic</td><td>Placeholders from the demo, not your butcher or greengrocer.</td></tr>
+  <tr><td>Store location</td><td class="status-yes">Stores&nbsp;-&nbsp;ETH</td><td>Exists and is already attached to the till.</td></tr>
+</table>
+
+<div class="callout">
+  <p><b>The honest summary.</b> If you asked the system today "what do I need to
+  buy tomorrow", it has no way to answer. Not because the capability is missing —
+  ERPNext does this well and we have already proven the whole loop on a test
+  restaurant — but because Etham's own ingredients, recipes and opening counts
+  have not been entered yet. That is the work in Part 3.</p>
+</div>
+
+<h3>What you already own, unused</h3>
+<p>Everything below is standard in your system right now. It needs data, not
+development.</p>
+<ul>
+  <li>Stock ledger with full traceability — every movement tied to its document</li>
+  <li>Purchase orders, receipts, invoices and supplier records</li>
+  <li>Recipes with costing, including sub-recipes</li>
+  <li>Reorder rules that raise a request automatically</li>
+  <li>Stock counts, waste entries and multi-store handling</li>
+  <li>Batch and expiry tracking, if you ever want it on dairy and meat</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>Part 3 · What we build, and why</h2>
+<p class="lede">Seven pieces. Three are data entry we do with you, three are
+configuration, one is real development.</p>
+
+<table>
+  <tr><th style="width:26%">Piece</th><th style="width:15%">Type</th><th>What it gives you</th></tr>
+  <tr>
+    <td><b>Ingredient catalogue</b></td><td><span class="tag t-config">Setup</span></td>
+    <td>Every ingredient as a counted item in its real unit — kilograms, litres, each — not "Nos" for everything. Wrong units are the most common reason restaurant stock reports never make sense.</td>
+  </tr>
+  <tr>
+    <td><b>Opening counts</b></td><td><span class="tag t-config">Setup</span></td>
+    <td>One physical count to give the system a truthful starting point. Everything after this is arithmetic.</td>
+  </tr>
+  <tr>
+    <td><b>Recipes</b></td><td><span class="tag t-config">Setup</span></td>
+    <td>One per dish that consumes stock. Also gives you the true food cost and margin of every plate you sell.</td>
+  </tr>
+  <tr>
+    <td><b>Recipe-driven consumption</b></td><td><span class="tag t-build">Build</span></td>
+    <td>The nightly job that reads each sale, looks up the recipe <i>as you have edited it in the system</i>, and issues the ingredients. Our proven version read recipes from code — meaning you would have to call us to change one. That is the piece being rewritten.</td>
+  </tr>
+  <tr>
+    <td><b>Restock view</b></td><td><span class="tag t-native">Report</span></td>
+    <td>One screen: what is below its level, how much is already on order, and what to buy. This is the "easy to see what needs restocking" you asked for.</td>
+  </tr>
+  <tr>
+    <td><b>Waste capture</b></td><td><span class="tag t-build">Build</span></td>
+    <td>A quick way for the kitchen to log spoilage with a reason, so losses are explained rather than discovered.</td>
+  </tr>
+  <tr>
+    <td><b>Variance report</b></td><td><span class="tag t-build">Build</span></td>
+    <td>What the recipes say you used against what the count says you actually used. The number that exposes over-portioning, waste and theft.</td>
+  </tr>
+</table>
+
+<h3>The reports you get</h3>
+<table>
+  <tr><th style="width:34%">Question you will ask</th><th>Where it is answered</th></tr>
+  <tr><td>What do I need to buy?</td><td><span class="ui">Stock Projected Qty</span> — on hand, on order, and the shortfall in one row</td></tr>
+  <tr><td>What has run out?</td><td><span class="ui">Item Shortage Report</span></td></tr>
+  <tr><td>Where did my beef go?</td><td><span class="ui">Stock Ledger</span> — every movement, with the document behind it</td></tr>
+  <tr><td>What did we use this week?</td><td><span class="ui">Stock Balance</span> — opening, in, out, closing</td></tr>
+  <tr><td>What is sitting too long?</td><td><span class="ui">Stock Ageing</span> — your spoilage warning</td></tr>
+  <tr><td>What does this dish cost me?</td><td>The recipe's own costing, against the menu price</td></tr>
+  <tr><td>Are my recipes honest?</td><td>Variance report — theoretical against counted</td></tr>
+  <tr><td>Which waiter sold what?</td><td><span class="ui">Sales by Waiter</span> — already live</td></tr>
+  <tr><td>How hard is each table working?</td><td><span class="ui">Table Turns</span> — already live</td></tr>
+</table>
+
+<div class="callout">
+  <p><b>A caution worth stating plainly.</b> Stock tracking is only as good as the
+  habits behind it. Recipes that do not match what the kitchen actually plates,
+  deliveries received days late, and waste that never gets logged will each
+  produce confident, wrong numbers. The system cannot fix any of those — it can
+  only make them visible.</p>
+</div>
+</div>
+
+<div class="section">
+<h2>Part 4 · Running it yourself</h2>
+<p class="lede">The jobs below are yours. None of them need us.</p>
+
+<h3>Every delivery</h3>
+<ol>
+  <li>Open <span class="ui">Purchase Receipt</span> → New.</li>
+  <li>Pick the supplier, then add each item and the quantity <b>that actually arrived</b>.</li>
+  <li>Save and Submit. The shelf balance updates immediately.</li>
+</ol>
+<p>If the invoice comes with the goods, use <b>Create → Purchase Invoice</b> from
+the receipt so the two stay linked.</p>
+
+<h3>Every service, or at close</h3>
+<ol>
+  <li>Close the shift on the till as normal.</li>
+  <li>The consumption run books that service's ingredient burn against your recipes.</li>
+  <li>Nothing to do by hand — but if the kitchen changed a recipe today, change it in the system too, or tonight's numbers will be wrong.</li>
+</ol>
+
+<h3>When a recipe changes</h3>
+<ol>
+  <li>Open <span class="ui">BOM</span> → find the dish.</li>
+  <li>Adjust quantities, or add and remove ingredients.</li>
+  <li>Save and Submit. It applies from the next consumption run.</li>
+</ol>
+<p>Portion sizes drift over time. A recipe reviewed once a quarter is worth more
+than a perfect one written once.</p>
+
+<h3>When something is wasted</h3>
+<ol>
+  <li>Open <span class="ui">Stock Entry</span> → New → type <b>Material Issue</b>.</li>
+  <li>Add the item and quantity, set the source to your store.</li>
+  <li>Write the reason in the remarks — spoiled, dropped, staff meal, comped.</li>
+</ol>
+
+<h3>Counting the shelf</h3>
+<ol>
+  <li>Open <span class="ui">Stock Reconciliation</span> → New.</li>
+  <li>Pull in the items, enter the counted quantity against each.</li>
+  <li>Submit. The system corrects itself and the difference is recorded.</li>
+</ol>
+<p>Count the expensive and the easily-lost weekly — meat, fish, spirits. Dry
+goods monthly is enough.</p>
+
+<h3>Setting a reorder level</h3>
+<ol>
+  <li>Open the ingredient in <span class="ui">Item</span>.</li>
+  <li>Scroll to <b>Reorder</b> and add a row: warehouse, the level that should
+  trigger a top-up, and how much to order.</li>
+  <li>Save. Below that level, the system raises the request itself.</li>
+</ol>
+<p>Set the level at what you burn during the lead time, plus a buffer. A supplier
+who takes three days needs three days of cover, not one.</p>
+
+<h3>Adding a new dish</h3>
+<ol>
+  <li>Open <span class="ui">Item</span> → New. Leave <b>Maintain Stock</b> unticked — a dish is sold, not counted.</li>
+  <li>Put it in the right menu group so it prints to the correct station.</li>
+  <li>Set the price, then add it to the restaurant menu.</li>
+  <li>If it consumes tracked ingredients, create its recipe.</li>
+</ol>
+
+<h3>Adding staff</h3>
+<ol>
+  <li>Open <span class="ui">Waiters</span> from the Restaurant screen → New.</li>
+  <li>Enter the name and a 4–6 digit PIN, and tick Active.</li>
+  <li>To put them on the payroll and attendance, link an <span class="ui">Employee</span> record — the PIN they already tap then doubles as their clock-in.</li>
+</ol>
+
+<div class="callout">
+  <p><b>When to call us instead.</b> Anything that changes the shape of the system
+  rather than its contents: a second branch or store location, a new payment
+  method, tax treatment, or a report that does not exist yet. Everything in this
+  part is contents, and it is yours.</p>
+</div>
+
+<div class="foot">
+  Etham Eatery · Stock, Recipes and Purchasing · 25 August 2026 · Prepared by Sokisoko
+</div>
+</div>
+
+</body>
+</html>
