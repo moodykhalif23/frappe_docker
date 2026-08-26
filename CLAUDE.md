@@ -8,6 +8,11 @@ This file is the working knowledge for developing and debugging it.
 [restaurant/OPERATIONS.md](restaurant/OPERATIONS.md) is the behavioural spec —
 how a real restaurant runs, and which of those rules the app still breaks.
 
+## Start here
+
+`docs/HANDOFF.md` — what is live for Etham right now, how to reach the server,
+what is shipped and what is deliberately not. Read it before touching anything.
+
 ## Layout
 
 - `apps-restaurant.json` — apps baked into the image (erpnext pinned + restaurant app), fed to `images/layered/Containerfile` as the `apps_json` build secret.
