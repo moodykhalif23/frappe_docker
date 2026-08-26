@@ -93,6 +93,24 @@ what is shipped and what is deliberately not. Read it before touching anything.
 ## Kit features (added by this fork, shipped via the patch layer)
 
 - **Guest order tracker**: `/assets/restaurant_management/order-status.html?order=<Table Order name>` — no login; polls `restaurant_management.api.order_status` (allow_guest) every 5s and shows per-item progress (Sent → Preparing → Ready → Served). Exposes item names/qty/status only. Order names are sequential — treat links as semi-private; add a token before offering it publicly.
+- **Seats, not tables**: occupancy is counted in seats. A party is one
+  `Restaurant Booking` carrying its covers and its waiter; a table's free seats
+  are `no_of_seats` less the covers on it. Two parties can share a six-top, each
+  with its own `Table Order` (`Table Order.booking` links them) and its own
+  server, so *Sales by Waiter* splits a shared table correctly. The tile reads
+  `5/6` with a badge per party (`AT·2`, `MT·3`); the old single `d-waiter-badge`
+  is the **section** and now shows only on a table nobody is sitting at. Server
+  side is `house.table_occupancy/table_seats/parties/add_covers/claim_party/
+  release_party`; the floor is `restaurant/patches/seats.js`. Requires
+  `Restaurant Settings.multiple_pending_order = 1` — `ensure_custom_fields()`
+  sets it, and without it the app refuses a second check on a table.
+- **The counter is opened by hand**: with no open shift the pad used to fall
+  through to erpnext's `create_opening_voucher()`, so the first waiter to ring a
+  dish opened the drawer with an uncounted float. `house.open_day()` + an "Open
+  day" button now do it deliberately, per mode of payment; billing refuses until
+  then. `close_day()` banks the shift **and sweeps**: every table's waiter is
+  cleared and every party still sitting is closed, because sections and parties
+  are shift-long. That sweep is why leftover `W` badges used to survive the night.
 - **Menu item editor**: Menu Management screen has a "New Item" button and tapping a card's price pill opens an edit dialog (name, category, price, Veg/Non-Veg, photo). Backed by `restaurant_management.api.upsert_menu_item`/`get_menu_item` (appended via `restaurant/patches/api_append.py`); writes land on Item / Item Price / Restaurant Menu, so frappe stays the system of record.
 
 ## Working on it
@@ -102,6 +120,9 @@ what is shipped and what is deliberately not. Read it before touching anything.
   The script lives in the container only after `deploy.sh` copies it — re-copy after container recreation.
 - The floor layout is data: each `Restaurant Object` carries `data_style` JSON (x/y/z/width/height). `layout_floor()` re-grids everything; origin starts at x=60 — the desk sidebar no longer overlaps the page (see below).
 - Full-POS look: `restaurant-manage` passes `hide_sidebar: true` to `make_app_page` (v16 built-in; the container auto-restores the sidebar on route change). The footer "Close" link navigates back to `/app`; the accounting shift-close (POS Closing Entry) stays in the page menu, Shift+Ctrl+C.
+- Paying a check frees **that party's** seats, not the table:
+  `free_table(table, booking=...)`. `TableOrder.make_invoice` passes its own
+  booking — without it, paying one check evicts the strangers next to them.
 - Inventory model: dishes are non-stock; 20 stocked ingredients + a BOM per dish; `backflush()` posts one Material Issue covering all un-flushed POS Invoices (tracked via a `RESTAURANT-BACKFLUSH:` tag in Stock Entry remarks). Run at day end or via cron.
 - DB access: `docker compose exec -T backend bench --site <site> mariadb < file.sql`. MariaDB root password defaults to `123` (compose default) unless `DB_PASSWORD` is set.
 

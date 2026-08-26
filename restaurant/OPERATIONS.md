@@ -42,6 +42,10 @@ chain, and that side is broadly right. FOH is where the gaps are.
 | A full house keeps a **queue**, and the wait is quoted from real numbers | ✓ door panel: waitlist, covers waiting, longest wait, average turn |
 | **Reservations** are taken and the day's expected list is visible | ✓ `book_table()`, "Expected today", seat or no-show from the same row |
 | A booking **holds no table** until the party arrives | ✓ the table is picked on arrival, from what is free and fits |
+| A table is **seats, not a boolean** — a six-top with two guests has four to sell | ✓ `table_occupancy()`; the tile reads `2/6`, the host is offered the free seats |
+| Two parties can **share a table**, each with its own check and its own server | ✓ one `Restaurant Booking` per party, one `Table Order` per party, waiter on the party |
+| The **counter is opened by a manager**, with a counted float | ✓ "Open day"; billing refuses until then instead of opening the drawer itself |
+| Sections and parties **end with the shift** | ✓ closing the day clears every table's waiter and closes any party still sitting |
 | The **turn** is measured: seated → paid → free | ✓ paying closes the booking; Table Turns reports turns, covers, average and longest sitting, turns per seat |
 | Staff are **people**, not just badges on a tile | ✓ a waiter links to an Employee; the PIN they already tap writes an Employee Checkin |
 | Usable on the device in the server's hand | ✗ desktop-only layout |
@@ -56,6 +60,21 @@ chain, and that side is broadly right. FOH is where the gaps are.
   The link is optional: a floor without `hrms` still signs waiters in.
 - **Cash shift: one house shift.** A manager opens one POS Opening Entry per
   day per POS Profile and every waiter's orders bill into it.
+
+## Decisions taken (ikobriq, 2026-08-26)
+
+- **Occupancy is counted in seats.** A party is a `Restaurant Booking` carrying
+  its covers; a table's free seats are its capacity less the covers sitting on
+  it. Nothing is time-boxed — seats are held until the check is paid or the
+  party is released, because expiring a booking on its two-hour window would
+  offer the host chairs that still have people in them.
+- **A shared table has one owner per party, not per table.** The waiter goes on
+  the booking and is stamped onto that party's check, so two servers can work
+  one six-top and each keeps the covers they served. The table-level waiter is
+  the *section*, and only badges a table nobody is sitting at.
+- **The till is opened by hand.** The floor used to fall through to erpnext's
+  opening dialog, so the first waiter to ring a dish opened the drawer with a
+  float nobody counted. Billing now refuses until a manager opens the day.
 
 ## Build order
 
@@ -91,5 +110,7 @@ chain, and that side is broadly right. FOH is where the gaps are.
 6. ✅ **Staff.** A waiter links to an Employee, and signing in on the terminal
    writes an Employee Checkin (signing off writes the OUT). `staff()` is the
    roster: who is on, their designation, how many tables they hold.
-7. **Responsive at every breakpoint** — phone (handheld), tablet (the real
+7. ✅ **Seats and the counter.** Occupancy in seats, a party per booking, a
+   check and a waiter per party, and a day that a manager opens and closes.
+8. **Responsive at every breakpoint** — phone (handheld), tablet (the real
    POS surface), desktop (manager).

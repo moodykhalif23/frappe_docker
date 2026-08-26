@@ -36,11 +36,24 @@ docker run --rm -v /home/frappe/frappe_docker:/repo alpine:3 ls /repo
 - **Staff**: waiter → Employee link; the PIN pad writes Employee Checkins (hrms).
 - **Stock**: sales spend stock through each dish's BOM (idempotent), waste with a
   mandatory reason, **Restock List** and **Consumption Variance** reports.
-- **Close day**: a button that shows what it will bank and refuses over open
-  checks. A shift left open bills into yesterday and then rejects today's sales.
+- **Open/close day**: the counter no longer opens itself when the first order is
+  rung — a manager opens it with a counted float per mode of payment. Closing
+  shows what it will bank, refuses over open checks, and sweeps the floor: table
+  sections cleared, parties still sitting closed.
+- **Seats, not tables**: a six-top with two guests has four seats to sell. Two
+  parties can share a table, each with its own check and its own waiter; the
+  tile reads `5/6` with a badge per party. *Sales by Waiter* splits a shared
+  table correctly because the waiter is on the party, not the table.
 
-Suites: `restaurant/e2e/run-all.sh` — floor 27, staff 13, stock 25, plus three
-browser suites. All green on the deployed image.
+Suites: `restaurant/e2e/run-all.sh` — floor 33, staff 13, stock 25, plus four
+browser suites (`flow`, `door`, `seats`, `checkout`). All seven green locally on
+`custom-erpnext:v16.32.3`; **not yet deployed to frappe.ikobriq.com**.
+
+Deploying the seat model needs `ensure_custom_fields()` (it adds
+`Restaurant Booking.waiter`, `Table Order.booking`, `POS Invoice.booking` and
+sets `Restaurant Settings.multiple_pending_order`) — `redeploy.sh` runs it. The
+box's image was at 427 layers and had to be flattened before it would build;
+check `docker inspect ... {{len .RootFS.Layers}}` there too.
 
 ## The gap that matters
 
