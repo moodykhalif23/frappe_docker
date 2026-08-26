@@ -21,7 +21,8 @@
     mount(rm) {
       if (this.mounted) return;
       this.mounted = true;
-      this.refresh();
+      // The floor is still wiring itself up; do not compete with it.
+      setTimeout(() => RM_seats.refresh(), 1500);
       this.timer = setInterval(() => RM_seats.refresh(), 10000);
       // Checks moving usually means seats moved with them.
       frappe.realtime.on("synchronize_order_data", () => RM_seats.soon());

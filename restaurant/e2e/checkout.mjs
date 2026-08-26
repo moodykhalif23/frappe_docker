@@ -88,6 +88,8 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(4000);
 const add = page.locator('.order-manage .add-item:visible').first();
+// The menu loads from the server; under load it is slower than a fixed sleep.
+await add.waitFor({ state: 'visible', timeout: 45000 }).catch(() => {});
 ok('the menu offers a dish', await add.count() > 0);
 await add.click({ force: true });
 await page.waitForTimeout(5000);

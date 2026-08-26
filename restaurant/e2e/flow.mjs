@@ -145,6 +145,8 @@ if (chipCount > 1) {
 await shot('order-selected');
 
 const addBtns = page.locator('.order-manage .add-item:visible');
+// The menu loads from the server; under load it is slower than a fixed sleep.
+await addBtns.first().waitFor({ state: 'visible', timeout: 45000 }).catch(() => {});
 const dishes = await addBtns.count();
 ok('menu shows dishes to add', dishes > 0, `${dishes} dishes`);
 const dishLabel = (await addBtns.first().innerText()).replace(/\s+/g, ' ').trim();

@@ -200,6 +200,10 @@ RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restauran
 COPY --chown=frappe:frappe restaurant/patches/report/restock_list apps/restaurant_management/restaurant_management/restaurant_management/report/restock_list
 COPY --chown=frappe:frappe restaurant/patches/report/consumption_variance apps/restaurant_management/restaurant_management/restaurant_management/report/consumption_variance
 
+# the order pad's menu opens before its DOM lands and renders nothing
+COPY restaurant/patches/items_tree_race.py /tmp/items_tree_race.py
+RUN python3 /tmp/items_tree_race.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/items-tree-class.js
+
 # rooms and tables carry their readable description as their name, not a hash
 COPY restaurant/patches/clean_names.py /tmp/clean_names.py
 RUN python3 /tmp/clean_names.py

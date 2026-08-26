@@ -31,6 +31,16 @@
 .rm-party i::before {
   content: "\00b7\00a0";
 }
+/* The stock pill is a fixed 40px wide, which "5/6" overflows out of the tile. */
+.restaurant-manage .floor-map .d-table .d-table-seats {
+  width: auto !important;
+  min-width: 40px;
+  padding: 0 7px !important;
+  margin-left: 0 !important;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  opacity: 0.85 !important;
+}
 .d-table.rm-full .d-table-seats {
   background-color: #97264f;
   color: #fff;
