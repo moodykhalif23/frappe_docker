@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Etham Eatery — What we need from you</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  :root{
+    --ink:#1a1a1a; --muted:#5b6169; --line:#d8dce1; --soft:#f4f6f8;
+    --accent:#7a1f1f; --accent-soft:#f6ecec; --ok:#1f6b3a; --warn:#8a5a00;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family:"Source Serif 4","Georgia",serif; color:var(--ink);
+    font-size:10.5pt; line-height:1.55; margin:0;
+  }
+  h1,h2,h3,h4,.ui,th,.tag{font-family:"Inter","Helvetica Neue",Arial,sans-serif}
+  h1{font-size:23pt;line-height:1.15;margin:0 0 6pt;letter-spacing:-.4pt}
+  h2{font-size:14pt;margin:0 0 10pt;padding-bottom:5pt;border-bottom:2px solid var(--accent);
+     letter-spacing:-.2pt}
+  h3{font-size:11.5pt;margin:16pt 0 5pt;color:var(--accent)}
+  h4{font-size:10pt;margin:12pt 0 3pt;text-transform:uppercase;letter-spacing:.6pt;color:var(--muted)}
+  p{margin:0 0 8pt}
+  ul,ol{margin:0 0 8pt;padding-left:16pt}
+  li{margin-bottom:3pt}
+  .lede{font-size:11.5pt;color:var(--muted);margin-bottom:14pt}
+  .section{page-break-before:always}
+  .cover{padding-top:38mm}
+  .eyebrow{font-family:Inter,Arial,sans-serif;font-size:8.5pt;letter-spacing:2pt;
+    text-transform:uppercase;color:var(--accent);margin-bottom:10pt}
+  .meta{margin-top:26pt;font-family:Inter,Arial,sans-serif;font-size:9pt;color:var(--muted)}
+  .meta b{color:var(--ink);font-weight:600}
+  table{width:100%;border-collapse:collapse;margin:8pt 0 12pt;font-size:9.5pt}
+  th{background:var(--soft);text-align:left;padding:6pt 7pt;font-size:8.5pt;
+     text-transform:uppercase;letter-spacing:.5pt;border-bottom:1.5px solid var(--line)}
+  td{padding:6pt 7pt;border-bottom:1px solid var(--line);vertical-align:top}
+  tr{page-break-inside:avoid}
+  .ui{font-family:Inter,Arial,sans-serif;font-size:9pt;background:var(--soft);
+      padding:1pt 5pt;border-radius:3px;white-space:nowrap}
+  .callout{border-left:3px solid var(--accent);background:var(--accent-soft);
+    padding:9pt 12pt;margin:10pt 0;page-break-inside:avoid}
+  .callout p:last-child{margin-bottom:0}
+  .callout b{color:var(--accent)}
+  .flow{margin:10pt 0 14pt}
+  .step{display:flex;gap:10pt;padding:8pt 0;border-bottom:1px solid var(--line);
+        page-break-inside:avoid}
+  .step:last-child{border-bottom:none}
+  .num{font-family:Inter,Arial,sans-serif;font-weight:700;font-size:9pt;color:#fff;
+    background:var(--accent);min-width:19px;height:19px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;flex:0 0 19px;margin-top:2pt}
+  .step h4{margin:0 0 2pt;text-transform:none;letter-spacing:0;color:var(--ink);font-size:10.5pt}
+  .step p{margin:0;font-size:9.5pt;color:var(--muted)}
+  .moves{font-family:Inter,Arial,sans-serif;font-size:8pt;color:var(--accent);
+         text-transform:uppercase;letter-spacing:.5pt;margin-top:3pt;display:block}
+  .status-no{color:var(--accent);font-weight:600}
+  .status-yes{color:var(--ok);font-weight:600}
+  .tag{display:inline-block;font-size:7.5pt;text-transform:uppercase;letter-spacing:.6pt;
+    padding:1.5pt 6pt;border-radius:9px;font-weight:600}
+  .t-build{background:var(--accent-soft);color:var(--accent)}
+  .t-native{background:#e8f2ec;color:var(--ok)}
+  .t-config{background:#fdf3e0;color:var(--warn)}
+  .foot{margin-top:20pt;padding-top:8pt;border-top:1px solid var(--line);
+    font-family:Inter,Arial,sans-serif;font-size:8.5pt;color:var(--muted)}
+  .two{display:flex;gap:14pt}
+  .two > div{flex:1}
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <div class="eyebrow">Etham Eatery</div>
+  <h1>Switching on stock tracking</h1>
+  <p class="lede">Everything on the system side is built and running. Three lists
+  from your kitchen are all that stand between you and knowing, every morning,
+  what you used, what you have, and what to buy.</p>
+  <div class="meta">
+    <p><b>What this is for</b><br>Your kitchen team, over about a week.</p>
+    <p><b>What you get at the end</b><br>A restock list you can order from, and a
+    report that shows where stock is going.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>What you get, once the lists are in</h2>
+
+  <p>Today the till records every sale correctly. What it cannot do yet is tell
+  you what those sales <i>cost you in stock</i>, because it does not know what is
+  in your dishes.</p>
+
+  <p>Once it does, three things happen on their own, every day:</p>
+
+  <div class="flow">
+    <div class="step"><div class="num">1</div><div>
+      <h4>Selling a dish takes its ingredients off the shelf</h4>
+      <p>Sell four steaks, and the beef and oil they used come off your stock. No
+      one types anything.</p>
+    </div></div>
+    <div class="step"><div class="num">2</div><div>
+      <h4>A restock list tells you what to buy</h4>
+      <p>Open <span class="ui">Restock List</span> and it shows what has fallen
+      below the level you set, and how much to order.</p>
+    </div></div>
+    <div class="step"><div class="num">3</div><div>
+      <h4>A second report shows where stock is going</h4>
+      <p><span class="ui">Consumption Variance</span> compares what your recipes
+      say you should have used against what actually left the shelf. A steady gap
+      is over-portioning, spoilage, or something walking out of the door.</p>
+    </div></div>
+  </div>
+
+  <div class="callout">
+    <p><b>Why we are asking rather than guessing.</b> We could invent an
+    ingredient list and a set of recipes for you in an afternoon. Every number
+    the system then produced would be fiction, and you would make ordering
+    decisions on it. The lists below are the difference between a system that
+    reports and one that guesses.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>List 1 · What you buy</h2>
+
+  <p>Every raw item that comes through your back door, and the unit you buy it
+  in. Not dishes — ingredients.</p>
+
+  <h4>What we need for each one</h4>
+  <table>
+    <tr><th>Column</th><th>Meaning</th><th>Example</th></tr>
+    <tr><td>Item</td><td>What you call it in the kitchen</td><td>Beef, topside</td></tr>
+    <tr><td>Unit</td><td>How you buy and count it</td><td>Kg</td></tr>
+    <tr><td>Typical price</td><td>Roughly what you pay per unit, in KES</td><td>720</td></tr>
+    <tr><td>Supplier</td><td>Who you usually buy it from</td><td>Kariokor Butchery</td></tr>
+    <tr><td>Reorder at</td><td>The level where you would start worrying</td><td>10</td></tr>
+    <tr><td>Order how much</td><td>Your usual order size</td><td>25</td></tr>
+  </table>
+
+  <div class="callout">
+    <p><b>The unit matters more than anything else here.</b> Pick the unit you
+    actually count in, and stay with it. If you buy cooking oil in 20-litre jerry
+    cans but measure it into pans in millilitres, tell us both — we set the
+    conversion up once and you never think about it again. Getting this wrong is
+    the one mistake that is painful to correct later.</p>
+  </div>
+
+  <h4>How long this takes</h4>
+  <p>Most kitchens land between 60 and 120 ingredients. A chef who knows the
+  store can usually write it in a morning. Start with the things you buy every
+  week — the last few rare items can follow.</p>
+</section>
+
+<section class="section">
+  <h2>List 2 · What is on the shelf right now</h2>
+
+  <p>One physical count, on the day you start. This is the opening balance
+  everything else counts from.</p>
+
+  <table>
+    <tr><th>Item</th><th>Counted</th><th>Unit</th></tr>
+    <tr><td>Beef, topside</td><td>14.5</td><td>Kg</td></tr>
+    <tr><td>Cooking oil</td><td>38</td><td>Litre</td></tr>
+    <tr><td>Tomatoes</td><td>22</td><td>Kg</td></tr>
+  </table>
+
+  <div class="callout">
+    <p><b>Count on a closed day if you can</b> — after service, before the next
+    delivery. A count taken while the kitchen is cooking is wrong before you
+    finish writing it.</p>
+  </div>
+
+  <p>If an item is genuinely at zero, write zero. Leaving it blank and leaving it
+  out are different things, and only one of them is true.</p>
+</section>
+
+<section class="section">
+  <h2>List 3 · What goes into each dish</h2>
+
+  <p>The one that takes real time, and the one that makes the other two worth
+  having. For each dish on your menu: the ingredients, and how much of each.</p>
+
+  <h4>Example — one plate of beef steak</h4>
+  <table>
+    <tr><th>Ingredient</th><th>Amount</th><th>Unit</th></tr>
+    <tr><td>Beef, topside</td><td>0.25</td><td>Kg</td></tr>
+    <tr><td>Cooking oil</td><td>0.02</td><td>Litre</td></tr>
+    <tr><td>Salt</td><td>0.005</td><td>Kg</td></tr>
+  </table>
+
+  <p>Amounts are <b>per plate as served</b>, not per batch — unless you cook in
+  batches, in which case tell us the batch size and we handle the division.</p>
+
+  <h4>You do not need all 170 dishes to start</h4>
+  <p>Start with the twenty or thirty that sell most. They account for the
+  overwhelming majority of what leaves your store, and they give you a working
+  system this week rather than a perfect one next month. The rest can be added
+  any time, by you, without calling us.</p>
+
+  <div class="callout">
+    <p><b>Sauces and preps that you make in batches</b> — a house sauce, a spice
+    mix, a stock — are worth listing as their own recipe rather than repeating
+    their ingredients inside every dish. Tell us which ones you make ahead and we
+    will set them up that way.</p>
+  </div>
+</section>
+
+<section class="section">
+  <h2>How to send them</h2>
+
+  <p>Any of these works. Pick whichever is least effort for your team:</p>
+  <ul>
+    <li>A spreadsheet — one tab per list, columns as shown above.</li>
+    <li>A written list, photographed clearly. Handwriting is fine.</li>
+    <li>Typed straight into the system yourself. If you would rather do this, say
+    so and we will show you where — it is the same three screens you will use
+    afterwards anyway.</li>
+  </ul>
+
+  <p>Send List 1 as soon as it is written; it does not need to wait for the other
+  two. We load it, set your units up, and then Lists 2 and 3 go in quickly.</p>
+</section>
+
+<section class="section">
+  <h2>Running it day to day</h2>
+
+  <p>Once the lists are in, this is the whole of it. None of it needs us.</p>
+
+  <h3>Closing the day</h3>
+  <p>Press <span class="ui">Close day</span> on the floor screen when service
+  ends. It shows what it is about to bank — the takings and how many bills — and
+  asks you to confirm.</p>
+  <p>If any tables still have unpaid checks, it will say so and refuse. That is
+  deliberate: closing over an open check leaves that table with no way to be
+  billed. Settle them, then close.</p>
+  <div class="callout">
+    <p><b>Close every night.</b> A day left open bills the next morning's sales
+    into yesterday, and eventually the till starts refusing sales as "outdated".
+    If that happens, the button will read <b>Close day (yesterday)</b> — press it
+    and you are back to normal.</p>
+  </div>
+
+  <h3>Recording waste</h3>
+  <p>When something is spoiled, dropped, or eaten by staff, record it with a
+  reason. It takes a few seconds and it is what keeps the variance report
+  honest — otherwise every loss looks like theft.</p>
+
+  <h3>Ordering</h3>
+  <p>Open <span class="ui">Restock List</span>. Anything below its reorder level
+  is marked, with a suggested quantity. Order from it, and record the delivery
+  when it arrives so the count goes back up.</p>
+
+  <h3>Checking for leaks</h3>
+  <p>Open <span class="ui">Consumption Variance</span> weekly. Small gaps are
+  normal — nobody portions to the gram. Look for the same item drifting week
+  after week, which usually means the recipe is wrong or portions have crept.</p>
+
+  <h3>Changing things yourself</h3>
+  <p>Recipes, prices, reorder levels, new ingredients and new dishes are all
+  yours to change, whenever you like. A recipe change applies to sales from that
+  point on; it does not rewrite history.</p>
+</section>
+
+<section class="section">
+  <h2>In short</h2>
+  <table>
+    <tr><th>What</th><th>Who</th><th>Roughly</th></tr>
+    <tr><td>List 1 — what you buy</td><td>Your chef or storekeeper</td><td>A morning</td></tr>
+    <tr><td>List 2 — opening count</td><td>Whoever counts stock</td><td>An evening</td></tr>
+    <tr><td>List 3 — recipes for your top sellers</td><td>Your chef</td><td>A few days</td></tr>
+    <tr><td>Loading it and switching on</td><td>Us</td><td>Same week</td></tr>
+  </table>
+
+  <p>Send List 1 when it is ready and we will start. Anything unclear above, ask
+  — a wrong list is more expensive than a slow one.</p>
+</section>
+
+</body>
+</html>
