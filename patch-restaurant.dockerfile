@@ -200,6 +200,12 @@ RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restauran
 COPY --chown=frappe:frappe restaurant/patches/report/restock_list apps/restaurant_management/restaurant_management/restaurant_management/report/restock_list
 COPY --chown=frappe:frappe restaurant/patches/report/consumption_variance apps/restaurant_management/restaurant_management/restaurant_management/report/consumption_variance
 
+# rooms and tables carry their readable description as their name, not a hash
+COPY restaurant/patches/clean_names.py /tmp/clean_names.py
+RUN python3 /tmp/clean_names.py
+COPY --chown=frappe:frappe restaurant/rename_objects.py apps/restaurant_management/restaurant_management/rename_objects.py
+RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/rename_objects.py').read())"
+
 # closing the selling day from the floor
 COPY restaurant/patches/close_day.js /tmp/close_day.js
 RUN { echo ';'; cat /tmp/close_day.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
