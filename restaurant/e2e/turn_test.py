@@ -43,8 +43,10 @@ def run():
 
 	b = frappe.get_doc("Restaurant Booking", booking)
 	check("seating stamps seated_at", b.get("seated_at"), str(b.get("seated_at")))
-	check("seated table leaves the free list",
-		table not in [t["name"] for t in house.free_tables()])
+	seats = house.table_seats(table)
+	check("seating takes seats, not the whole table",
+		seats["occupied"] == 2 and table not in [t["name"] for t in house.free_tables(whole_table=1)],
+		f'{seats["occupied"]}/{seats["capacity"]} taken')
 
 	# Backdate the seating so the turn has a measurable length.
 	frappe.db.set_value("Restaurant Booking", booking, "seated_at",

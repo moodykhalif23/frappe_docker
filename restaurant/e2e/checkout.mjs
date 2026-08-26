@@ -49,7 +49,7 @@ await page.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded'
 await page.waitForTimeout(11000);
 await shot('floor');
 
-const freeBefore = (await api('free_tables')).length;
+const freeBefore = (await api('free_tables', { whole_table: 1 })).length;
 const turnsBefore = (await api('turn_metrics')).turns;
 ok('the floor has a free table to seat', freeBefore > 0, `${freeBefore} free, ${turnsBefore} turns so far`);
 
@@ -66,8 +66,9 @@ await seat.getByRole('button', { name: 'Seat & open order' }).click();
 await page.waitForTimeout(9000);
 await shot('pad');
 ok('seating opened the pad', await page.locator('.order-manage').count() > 0);
-ok('the table left the free list', (await api('free_tables')).length === freeBefore - 1,
-   `${freeBefore} -> ${(await api('free_tables')).length}`);
+ok('the seated table is no longer offered whole',
+   (await api('free_tables', { whole_table: 1 })).length === freeBefore - 1,
+   `${freeBefore} -> ${(await api('free_tables', { whole_table: 1 })).length}`);
 
 // open a check and ring a dish — both are double-click by design
 await page.locator('.order-manage .btn-app.btn-order').first().dblclick({ force: true });
@@ -113,7 +114,7 @@ ok('payment raises no page error', errs.length === 0, JSON.stringify(errs.slice(
 // the loop closes: table free again, turn on the board
 await page.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded', timeout: 60000 });
 await page.waitForTimeout(10000);
-const freeAfter = (await api('free_tables')).length;
+const freeAfter = (await api('free_tables', { whole_table: 1 })).length;
 const metrics = await api('turn_metrics');
 await shot('floor-after');
 ok('the table is free for the next party', freeAfter === freeBefore, `${freeBefore} -> ${freeAfter}`);

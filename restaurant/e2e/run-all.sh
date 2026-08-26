@@ -51,6 +51,7 @@ server_suite "staff and attendance" staff_test.py
 server_suite "stock: sale -> recipe -> issue" stock_test.py
 browser_suite "floor, waiter, order, dispatch" flow.mjs
 browser_suite "the door" door.mjs
+browser_suite "seats, parties and the counter" seats.mjs
 browser_suite "checkout and the turn" checkout.mjs
 
 echo

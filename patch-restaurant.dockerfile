@@ -64,15 +64,18 @@ PY
 # Our appended blocks are stripped before being re-appended: a grep guard would
 # skip the append after we edit a block, silently serving the old version forever.
 RUN python3 - <<'PY'
-for path, marker in (
-    ("apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js", "\n// One house shift: erpnext bills"),
-    ("apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py", "\n    def _stamp_waiter("),
-    ("apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css", "\n/* rm-waiter-badge"),
+for path, markers in (
+    ("apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js",
+     ("\n// One house shift: erpnext bills",)),
+    ("apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py",
+     ("\n    def _party(", "\n    def _stamp_waiter(")),
+    ("apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css",
+     ("\n/* rm-waiter-badge",)),
 ):
     body = open(path).read()
-    cut = body.find(marker)
-    if cut != -1:
-        open(path, "w").write(body[:cut].rstrip() + "\n")
+    cuts = [c for c in (body.find(m) for m in markers) if c != -1]
+    if cuts:
+        open(path, "w").write(body[:min(cuts)].rstrip() + "\n")
         print("reset " + path)
 PY
 
@@ -99,6 +102,9 @@ COPY --chown=frappe:frappe restaurant/patches/doctype/restaurant_waiter apps/res
 COPY restaurant/patches/table_order_waiter.py /tmp/table_order_waiter.py
 RUN grep -q 'to_doc.waiter' apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
  || sed -i 's|        to_doc.table = self.table|        to_doc.table = self.table\n        to_doc.waiter = self.get("waiter")|' apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py
+# The invoice has to name the party too, or a shared table bills to one guest.
+RUN grep -q 'to_doc.booking' apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
+ || sed -i 's|        to_doc.waiter = self.get("waiter")|        to_doc.waiter = self.get("waiter")\n        to_doc.booking = self.get("booking")|' apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py
 RUN cat /tmp/table_order_waiter.py >> apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
 
 # the floor needs to know who holds each table, and say so on the tile
@@ -115,11 +121,18 @@ RUN { echo ';'; cat /tmp/waiter_pad.js; } >> apps/restaurant_management/restaura
 RUN grep -q 'RM_waiter.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  || sed -i 's|RM_host_stand.mount(this);|RM_host_stand.mount(this); window.RM_waiter \&\& RM_waiter.mount(this); window.RM_door \&\& RM_door.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+COPY restaurant/patches/seats.js /tmp/seats.js
+RUN { echo ';'; cat /tmp/seats.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+RUN grep -q 'RM_seats.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ || sed -i 's|window.RM_door \&\& RM_door.mount(this);|window.RM_door \&\& RM_door.mount(this); window.RM_seats \&\& RM_seats.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+
+COPY restaurant/patches/seats.css /tmp/seats.css
 COPY restaurant/patches/waiter_badge.css /tmp/waiter_badge.css
 COPY restaurant/patches/responsive.css /tmp/responsive.css
 COPY restaurant/patches/menu_card.css /tmp/menu_card.css
 COPY restaurant/patches/door.css /tmp/door.css
-RUN cat /tmp/waiter_badge.css /tmp/responsive.css /tmp/menu_card.css /tmp/door.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
+RUN cat /tmp/waiter_badge.css /tmp/seats.css /tmp/responsive.css /tmp/menu_card.css /tmp/door.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
 COPY --chown=frappe:frappe restaurant/patches/report/sales_by_waiter apps/restaurant_management/restaurant_management/restaurant_management/report/sales_by_waiter
 
 # Build id, for telling at a glance which bake a browser is running. Do NOT append

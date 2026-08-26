@@ -44,20 +44,15 @@ def _table_busy(table, company):
 	}))
 
 
-def _table_seated(table):
-	# A party is seated the moment it is booked, but the floor only counts a table
-	# busy once items are on the order — without this the host can double-seat it.
-	return bool(frappe.db.count("Restaurant Booking", {
-		"table": table,
-		"status": "Open",
-		"reservation_end_time": [">", frappe.utils.now_datetime()],
-	}))
-
-
 @frappe.whitelist()
-def free_tables(covers=0, room=None):
-	"""Tables that can seat the party and have nothing open on them."""
+def free_tables(covers=0, room=None, whole_table=0):
+	"""Where the party can sit — whole tables, and seats left on shared ones.
+
+	A six-top with two guests has four seats to sell; `whole_table` is for the
+	host who wants the table to itself.
+	"""
 	covers = int(covers or 0)
+	whole_table = int(whole_table or 0)
 	filters = {"type": "Table"}
 	if room:
 		filters["room"] = room
@@ -69,23 +64,31 @@ def free_tables(covers=0, room=None):
 		fields=["name", "description", "no_of_seats", "minimum_seating", "room", "company"],
 		order_by="description",
 	):
-		seats = t.no_of_seats or 0
-		# A table with no capacity recorded is still offered, but last and labelled:
-		# bad data should not hide a usable table, nor pretend it fits a coach party.
-		if covers and seats and seats < covers:
+		seats = table_seats(t.name, t)
+		free = seats["free"]
+		if whole_table and seats["occupied"]:
 			continue
-		if _table_busy(t.name, t.company) or _table_seated(t.name):
-			continue
+		# A table with no capacity recorded is still offered, but last and labelled.
+		if free is not None:
+			if covers and free < covers:
+				continue
+			if not free:
+				continue
 		out.append({
 			"name": t.name,
-			"description": t.description or t.name,
-			"seats": seats,
+			"description": seats["description"],
+			"seats": seats["capacity"],
+			"free": free,
+			"occupied": seats["occupied"],
+			"shared": bool(seats["occupied"]),
+			"parties": seats["parties"],
 			"room": t.room,
-			"fits": bool(seats) and (not covers or seats >= covers),
+			"fits": bool(seats["capacity"]) and (not covers or (free or 0) >= covers),
 		})
 
-	# Smallest table that fits first — don't burn a six-top on a couple.
-	out.sort(key=lambda t: (not t["fits"], t["seats"] or 9999, t["description"]))
+	# Empty before shared, then the tightest fit.
+	out.sort(key=lambda t: (not t["fits"], t["shared"],
+							t["free"] if t["free"] is not None else 9999, t["description"]))
 	return out
 
 
@@ -106,7 +109,7 @@ def _walkin_customer(guest_name, contact=None):
 
 
 @frappe.whitelist()
-def seat_walkin(guest_name, covers=1, table=None, contact=None):
+def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None):
 	"""Seat a walk-in: a name goes in, a party is seated on a table.
 
 	The stock check-in demands an existing Customer and a reservation window,
@@ -121,8 +124,7 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None):
 	obj = frappe.db.get_value("Restaurant Object", table, ["name", "room", "company"], as_dict=True)
 	if not obj:
 		frappe.throw(frappe._("That table no longer exists"))
-	if _table_busy(obj.name, obj.company) or _table_seated(obj.name):
-		frappe.throw(frappe._("That table was just taken — pick another"))
+	_seats_or_throw(obj.name, covers)
 
 	now = frappe.utils.now_datetime()
 	booking = frappe.get_doc({
@@ -137,19 +139,26 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None):
 		"seated_at": now,
 		"company": obj.company,
 	})
+	if waiter and frappe.db.has_column("Restaurant Booking", "waiter"):
+		booking.waiter = waiter
 	booking.insert(ignore_permissions=True)
 
-	# The pad refuses to open an order until the table itself carries a customer
-	# ("You must set a customer to this table"), so seating has to set it too.
+	# The pad refuses to open an order until the table carries a customer; on a
+	# shared table this is only the default, each check carries its own.
 	frappe.db.set_value("Restaurant Object", obj.name, "customer", booking.customer)
 	frappe.db.commit()
 
-	return {"booking": booking.name, "customer": booking.customer, "table": obj.name, "room": obj.room}
+	order = _open_check(booking, obj)
+
+	return {"booking": booking.name, "customer": booking.customer, "table": obj.name,
+			"room": obj.room, "order": order, "seats": table_seats(obj.name)}
 
 
 WAITER_FIELD = {"fieldname": "waiter", "fieldtype": "Link", "options": "Restaurant Waiter", "label": "Waiter"}
 SEATED_FIELD = {"fieldname": "seated_at", "fieldtype": "Datetime", "label": "Seated At", "read_only": 1}
 LEFT_FIELD = {"fieldname": "left_at", "fieldtype": "Datetime", "label": "Left At", "read_only": 1}
+BOOKING_FIELD = {"fieldname": "booking", "fieldtype": "Link", "options": "Restaurant Booking",
+				 "label": "Party", "read_only": 1}
 
 
 def ensure_custom_fields():
@@ -158,13 +167,23 @@ def ensure_custom_fields():
 
 	create_custom_fields({
 		"Restaurant Object": [dict(WAITER_FIELD, insert_after="current_user")],
-		"Table Order": [dict(WAITER_FIELD, insert_after="customer")],
-		"POS Invoice": [dict(WAITER_FIELD, insert_after="customer", read_only=1)],
+		"Table Order": [
+			dict(WAITER_FIELD, insert_after="customer"),
+			dict(BOOKING_FIELD, insert_after="waiter"),
+		],
+		"POS Invoice": [
+			dict(WAITER_FIELD, insert_after="customer", read_only=1),
+			dict(BOOKING_FIELD, insert_after="waiter"),
+		],
 		"Restaurant Booking": [
+			dict(WAITER_FIELD, insert_after="table"),
 			dict(SEATED_FIELD, insert_after="reservation_end_time"),
 			dict(LEFT_FIELD, insert_after="seated_at"),
 		],
 	}, ignore_validate=True)
+
+	# Two parties on one table means two open checks on it.
+	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)
 	frappe.db.commit()
 	return "ok"
 
@@ -243,6 +262,8 @@ def claim_table(table, waiter, pin=None, token=None):
 
 	if not frappe.db.exists("Restaurant Object", table):
 		frappe.throw(frappe._("Unknown table"))
+	if not house_shift():
+		frappe.throw(frappe._("The counter is closed. Open the day before claiming tables."))
 
 	frappe.db.set_value("Restaurant Object", table, "waiter", waiter)
 	for order in frappe.get_all(
@@ -340,9 +361,8 @@ def book_table(guest_name, covers=2, when=None, contact=None, table=None):
     if not guest_name:
         frappe.throw(frappe._("A guest name is required"))
     when = frappe.utils.get_datetime(when) if when else frappe.utils.now_datetime()
-    if table and (_table_busy(table, frappe.db.get_value("Restaurant Object", table, "company"))
-                  or _table_seated(table)):
-        frappe.throw(frappe._("That table is taken"))
+    if table:
+        _seats_or_throw(table, covers)
 
     booking = frappe.get_doc({
         "doctype": "Restaurant Booking",
@@ -361,14 +381,13 @@ def book_table(guest_name, covers=2, when=None, contact=None, table=None):
 
 
 @frappe.whitelist()
-def seat_from_waitlist(booking, table):
+def seat_from_waitlist(booking, table, waiter=None):
     """Give a waiting party a table: the queue's whole purpose."""
     doc = frappe.get_doc("Restaurant Booking", booking)
     obj = frappe.db.get_value("Restaurant Object", table, ["name", "room", "company"], as_dict=True)
     if not obj:
         frappe.throw(frappe._("Unknown table"))
-    if _table_busy(obj.name, obj.company) or _table_seated(obj.name):
-        frappe.throw(frappe._("That table was just taken — pick another"))
+    _seats_or_throw(obj.name, doc.no_of_people)
 
     now = frappe.utils.now_datetime()
     doc.table = obj.name
@@ -377,10 +396,15 @@ def seat_from_waitlist(booking, table):
     # would make both the wait and a late reservation unmeasurable.
     doc.seated_at = now
     doc.reservation_end_time = frappe.utils.add_to_date(now, hours=2)
+    if waiter and frappe.db.has_column("Restaurant Booking", "waiter"):
+        doc.waiter = waiter
     doc.save(ignore_permissions=True)
+
+    frappe.db.set_value("Restaurant Object", obj.name, "customer", doc.customer)
     frappe.db.commit()
+
     return {"booking": doc.name, "table": obj.name, "room": obj.room,
-            "waited": _waited_minutes(doc.creation)}
+            "order": _open_check(doc, obj), "waited": _waited_minutes(doc.creation)}
 
 
 @frappe.whitelist()
@@ -431,16 +455,18 @@ def door_summary():
 
 
 @frappe.whitelist()
-def free_table(table, status="Success"):
-    """Close the party sitting at a table so the next one can be seated.
+def free_table(table, status="Success", booking=None):
+    """Close the party whose check was paid, giving its seats back.
 
-    Called when the check is paid; until this exists a table stays 'seated'
-    until its two-hour window lapses.
+    On a shared table only that party leaves; closing every booking would evict
+    the strangers sitting next to them.
     """
     now = frappe.utils.now_datetime()
     closed = []
-    for b in frappe.get_all("Restaurant Booking", filters={"table": table, "status": "Open"},
-                            fields=["name"]):
+    filters = {"table": table, "status": "Open"}
+    if booking:
+        filters = {"name": booking, "status": "Open"}
+    for b in frappe.get_all("Restaurant Booking", filters=filters, fields=["name"]):
         frappe.db.set_value("Restaurant Booking", b.name,
                             {"status": status, "left_at": now}, update_modified=False)
         closed.append(b.name)
@@ -771,6 +797,318 @@ def close_day(pos_profile=None, force=0):
     closing.submit()
     frappe.db.commit()
 
+    swept = _end_of_day_sweep()
+
     return {"closed": closing.name, "shift": shift.name,
             "invoices": summary["invoices"], "sales": summary["sales"],
-            "open_checks_left": summary["open_checks"]}
+            "open_checks_left": summary["open_checks"],
+            "parties_closed": len(swept["parties_closed"]),
+            "sections_cleared": len(swept["sections_cleared"])}
+
+
+# ---- seats, not tables ------------------------------------------------------
+# Two parties can share a six-top: occupancy is counted in seats, and a party is
+# one Restaurant Booking carrying its own waiter.
+
+
+def _party_fields():
+    fields = ["name", "customer", "no_of_people", "reservation_time", "creation"]
+    for optional in ("waiter", "seated_at"):
+        if frappe.db.has_column("Restaurant Booking", optional):
+            fields.append(optional)
+    return fields
+
+
+def parties_at(table):
+    """Every party still sitting at a table, oldest first.
+
+    Not time-boxed: seats are held until the check is paid or the party is
+    released, because a two-hour window would offer occupied chairs.
+    """
+    rows = frappe.get_all(
+        "Restaurant Booking",
+        filters={"table": table, "status": "Open"},
+        fields=_party_fields(),
+        order_by="creation asc",
+    )
+    return [frappe._dict(r) for r in rows]
+
+
+def _party_row(p, orders=None):
+    waiter = p.get("waiter")
+    row = {
+        "booking": p.name,
+        "guest": frappe.db.get_value("Customer", p.customer, "customer_name") or p.customer or "Guest",
+        "customer": p.customer,
+        "covers": int(p.no_of_people or 0),
+        "waiter": waiter,
+        "initials": _initials(waiter) if waiter else "",
+        "colour": (frappe.db.get_value("Restaurant Waiter", waiter, "colour") or "#4b5563") if waiter else "#4b5563",
+        "seated_at": str(p.get("seated_at") or p.get("reservation_time") or ""),
+        "minutes": _waited_minutes(p.get("seated_at") or p.get("reservation_time")),
+    }
+    row["order"] = (orders or {}).get(p.name)
+    return row
+
+
+def _orders_by_booking(table):
+    if not frappe.db.has_column("Table Order", "booking"):
+        return {}
+    return {
+        o.booking: o.name
+        for o in frappe.get_all(
+            "Table Order",
+            filters={"table": table, "booking": ["is", "set"],
+                     "status": ["not in", ["Cancelled", "Invoiced"]]},
+            fields=["name", "booking"],
+        )
+    }
+
+
+def table_seats(table, doc=None):
+    """capacity / occupied / free for one table, with the parties on it."""
+    t = doc or frappe.db.get_value(
+        "Restaurant Object", table,
+        ["name", "description", "room", "company", "no_of_seats"], as_dict=True)
+    if not t:
+        frappe.throw(frappe._("Unknown table"))
+
+    parties = parties_at(t.name)
+    orders = _orders_by_booking(t.name)
+    capacity = int(t.get("no_of_seats") or 0)
+    occupied = sum(int(p.no_of_people or 0) for p in parties)
+    rows = [_party_row(p, orders) for p in parties]
+
+    # A check opened straight on the pad has unknown covers: take the whole table.
+    if not parties and _table_busy(t.name, t.get("company")):
+        occupied = capacity
+        rows = [{"booking": None, "guest": frappe._("Open check"), "customer": None,
+                 "covers": 0, "waiter": frappe.db.get_value("Restaurant Object", t.name, "waiter"),
+                 "initials": "", "colour": "#4b5563", "seated_at": "", "minutes": 0,
+                 "order": None, "unseated": True}]
+
+    return {
+        "table": t.name,
+        "description": t.get("description") or t.name,
+        "room": t.get("room"),
+        "capacity": capacity,
+        "occupied": occupied,
+        # Unrecorded capacity reads as unknown, not as full.
+        "free": max(capacity - occupied, 0) if capacity else None,
+        "parties": rows,
+    }
+
+
+@frappe.whitelist()
+def table_occupancy(room=None):
+    """Seat counts for the whole floor, keyed by table — one call per repaint."""
+    filters = {"type": "Table"}
+    if room:
+        filters["room"] = room
+
+    tables = frappe.get_all(
+        "Restaurant Object", filters=filters,
+        fields=["name", "description", "room", "company", "no_of_seats"])
+    return {t.name: table_seats(t.name, t) for t in tables}
+
+
+def free_seats(table):
+    """Seats a party could still be put on. None when capacity is unrecorded."""
+    return table_seats(table)["free"]
+
+
+def _seats_or_throw(table, covers):
+    """Refuse a party that does not fit in what is left of the table."""
+    seats = table_seats(table)
+    covers = int(covers or 0)
+    if seats["free"] is None:
+        return seats
+    if covers > seats["free"]:
+        if seats["occupied"]:
+            frappe.throw(frappe._("{0} has {1} of {2} seats free — {3} won't fit.").format(
+                seats["description"], seats["free"], seats["capacity"], covers))
+        frappe.throw(frappe._("{0} seats {1}, not {2}.").format(
+            seats["description"], seats["capacity"], covers))
+    return seats
+
+
+def _open_check(booking, table):
+    """Open this party's own check, so a shared table bills as two."""
+    try:
+        order = frappe.get_doc("Restaurant Object", table.name).add_order()
+    except Exception:
+        # Seating must not fail because the pad refused a check.
+        frappe.log_error(title="open check at seating")
+        return None
+
+    values = {"customer": booking.customer, "dinners": booking.no_of_people}
+    if frappe.db.has_column("Table Order", "booking"):
+        values["booking"] = booking.name
+    if booking.get("waiter") and frappe.db.has_column("Table Order", "waiter"):
+        values["waiter"] = booking.waiter
+
+    frappe.db.set_value("Table Order", order.name, values, update_modified=False)
+    frappe.db.commit()
+    return order.name
+
+
+@frappe.whitelist()
+def parties(table):
+    """The parties on one table, for the pad's 'whose check is this?' picker."""
+    return table_seats(table)["parties"]
+
+
+@frappe.whitelist()
+def add_covers(booking, covers):
+    """A party grew. Seats have to be there for the extra chairs."""
+    doc = frappe.get_doc("Restaurant Booking", booking)
+    extra = int(covers or 0)
+    if extra <= 0:
+        frappe.throw(frappe._("How many more guests?"))
+    if doc.status != "Open":
+        frappe.throw(frappe._("That party has already left"))
+
+    seats = table_seats(doc.table)
+    if seats["free"] is not None and extra > seats["free"]:
+        frappe.throw(frappe._("Only {0} seat(s) free on {1}.").format(
+            seats["free"], seats["description"]))
+
+    doc.no_of_people = int(doc.no_of_people or 0) + extra
+    doc.save(ignore_permissions=True)
+
+    if frappe.db.has_column("Table Order", "booking"):
+        for o in frappe.get_all("Table Order", filters={
+                "booking": doc.name, "status": ["not in", ["Cancelled", "Invoiced"]]}):
+            frappe.db.set_value("Table Order", o.name, "dinners", doc.no_of_people,
+                                update_modified=False)
+    frappe.db.commit()
+    return table_seats(doc.table)
+
+
+@frappe.whitelist()
+def release_party(booking, status="Cancelled"):
+    """Give a party's seats back without a sale — a walk-out, or a mis-seat."""
+    doc = frappe.db.get_value("Restaurant Booking", booking, ["name", "table", "status"], as_dict=True)
+    if not doc:
+        frappe.throw(frappe._("Unknown party"))
+    frappe.db.set_value("Restaurant Booking", booking,
+                        {"status": status, "left_at": frappe.utils.now_datetime()},
+                        update_modified=False)
+    frappe.db.commit()
+    return table_seats(doc.table) if doc.table else {"table": None}
+
+
+@frappe.whitelist()
+def claim_party(booking, waiter, pin=None, token=None):
+    """Give one party to a waiter. A shared table has one owner per party."""
+    row = _authorised(waiter, pin, token)
+    if not house_shift():
+        frappe.throw(frappe._("The counter is closed. Open the day first."))
+    doc = frappe.db.get_value("Restaurant Booking", booking, ["name", "table", "status"], as_dict=True)
+    if not doc:
+        frappe.throw(frappe._("Unknown party"))
+    if doc.status != "Open":
+        frappe.throw(frappe._("That party has already left"))
+
+    frappe.db.set_value("Restaurant Booking", booking, "waiter", waiter, update_modified=False)
+    if frappe.db.has_column("Table Order", "booking"):
+        for o in frappe.get_all("Table Order", filters={
+                "booking": booking, "status": ["not in", ["Cancelled", "Invoiced"]]}):
+            frappe.db.set_value("Table Order", o.name, "waiter", waiter, update_modified=False)
+    frappe.db.commit()
+
+    return {"booking": booking, "waiter": waiter, "waiter_name": row.waiter_name,
+            "initials": _initials(row.waiter_name), "table": doc.table}
+
+
+# ---- opening the day -------------------------------------------------------
+# The pad used to fall through to erpnext's create_opening_voucher(), so the
+# first waiter to ring a dish opened the drawer with a float nobody counted.
+
+
+def _default_profile():
+    company = _company()
+    return (frappe.db.get_value("POS Profile", {"company": company, "disabled": 0}, "name")
+            or frappe.db.get_value("POS Profile", {"disabled": 0}, "name"))
+
+
+@frappe.whitelist()
+def opening_floats(pos_profile=None):
+    """The float rows a manager counts into the drawer before service."""
+    profile = pos_profile or _default_profile()
+    if not profile:
+        frappe.throw(frappe._("No POS Profile is set up"))
+    prof = frappe.get_doc("POS Profile", profile)
+    return {
+        "profile": prof.name,
+        "company": prof.company,
+        "currency": frappe.db.get_value("Company", prof.company, "default_currency"),
+        "modes": [p.mode_of_payment for p in prof.payments] or ["Cash"],
+    }
+
+
+@frappe.whitelist()
+def open_day(pos_profile=None, balances=None):
+    """Open the selling day with a counted float. Manager's act, never automatic."""
+    profile = pos_profile or _default_profile()
+    if not profile:
+        frappe.throw(frappe._("No POS Profile is set up"))
+
+    standing = _open_shift_doc(profile)
+    if standing:
+        if frappe.utils.getdate(standing.period_start_date) < frappe.utils.getdate():
+            frappe.throw(frappe._("A shift from {0} is still open. Close the day first.").format(
+                frappe.utils.formatdate(standing.period_start_date)))
+        return {"opened": None, "shift": standing.name,
+                "message": frappe._("The counter is already open")}
+
+    if isinstance(balances, str):
+        balances = frappe.parse_json(balances or "{}")
+    balances = balances or {}
+
+    prof = frappe.get_doc("POS Profile", profile)
+    modes = [p.mode_of_payment for p in prof.payments] or ["Cash"]
+
+    doc = frappe.get_doc({
+        "doctype": "POS Opening Entry",
+        "company": prof.company,
+        "pos_profile": prof.name,
+        "user": frappe.session.user,
+        "period_start_date": frappe.utils.now_datetime(),
+        "posting_date": frappe.utils.today(),
+        "balance_details": [
+            {"mode_of_payment": m, "opening_amount": frappe.utils.flt(balances.get(m) or 0)}
+            for m in modes
+        ],
+    })
+    doc.insert(ignore_permissions=True)
+    doc.submit()
+    frappe.db.commit()
+
+    return {"opened": doc.name, "shift": doc.name, "profile": prof.name,
+            "float": sum(frappe.utils.flt(balances.get(m) or 0) for m in modes),
+            "currency": frappe.db.get_value("Company", prof.company, "default_currency")}
+
+
+def _end_of_day_sweep():
+    """Close what service left behind: sections and parties are shift-long.
+
+    A badge left on a table outlives the shift that granted it, and a party
+    still open once the shift is banked has no way to be billed.
+    """
+    now = frappe.utils.now_datetime()
+    left = []
+    for b in frappe.get_all("Restaurant Booking", filters={"status": "Open"}, fields=["name"]):
+        frappe.db.set_value("Restaurant Booking", b.name,
+                            {"status": "Success", "left_at": now}, update_modified=False)
+        left.append(b.name)
+
+    cleared = []
+    if frappe.db.has_column("Restaurant Object", "waiter"):
+        for t in frappe.get_all("Restaurant Object",
+                                filters={"type": "Table", "waiter": ["is", "set"]}, fields=["name"]):
+            frappe.db.set_value("Restaurant Object", t.name, "waiter", None, update_modified=False)
+            cleared.append(t.name)
+
+    frappe.db.commit()
+    return {"parties_closed": left, "sections_cleared": cleared}

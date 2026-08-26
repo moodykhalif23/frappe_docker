@@ -1,5 +1,5 @@
-// Closing the selling day from the floor. A shift left open bills into
-// yesterday and then refuses today's sales, which reads as a broken till.
+// Opening and closing the selling day from the floor. A shift left open bills
+// into yesterday and then refuses today's sales, which reads as a broken till.
 (() => {
   if (window.RM_close_day) return;
 
@@ -16,10 +16,11 @@
         frappe.msgprint({
           title: __("Day closed"),
           indicator: "green",
-          message: __("{0} banked {1} sale(s). Open a new day when you next serve.",
-            [res.closed, res.invoices]),
+          message: __("{0} banked {1} sale(s). {2} table section(s) released. Open the day again when you next serve.",
+            [res.closed, res.invoices, res.sections_cleared]),
         });
         RM_close_day.badge();
+        window.RM_seats && RM_seats.refresh();
       });
 
   window.RM_close_day = {
@@ -29,16 +30,71 @@
       if (this.mounted || !rm.page || !rm.page.add_inner_button) return;
       this.mounted = true;
       this.rm = rm;
+      rm.page.add_inner_button(__("Open day"), () => RM_close_day.open_day());
       rm.page.add_inner_button(__("Close day"), () => RM_close_day.open());
       this.badge();
     },
 
+    button(re) {
+      return $(".page-actions button").filter((i, b) => re.test($(b).text())).first();
+    },
+
     badge() {
       call("day_summary").then((s) => {
-        const btn = $(".page-actions button").filter((i, b) => /Close day/.test($(b).text())).first();
-        if (!btn.length || !s) return;
+        const close = this.button(/Close day/);
+        const open = this.button(/Open day/);
+        if (!s) return;
         // A day still open from before today is the thing that breaks billing.
-        btn.text(s.open && s.stale ? __("Close day (yesterday)") : __("Close day"));
+        if (close.length) close.text(s.open && s.stale ? __("Close day (yesterday)") : __("Close day")).toggle(!!s.open);
+        if (open.length) open.toggle(!s.open);
+      });
+    },
+
+    open_day() {
+      const profile = (window.cur_pos && cur_pos.pos_profile) || "";
+      call("day_summary", { pos_profile: profile }).then((s) => {
+        if (s && s.open) {
+          frappe.msgprint({
+            title: __("Already open"),
+            indicator: "blue",
+            message: __("The counter has been open since {0}.", [(s.opened_at || "").slice(0, 16)]),
+          });
+          RM_close_day.badge();
+          return;
+        }
+
+        call("opening_floats", { pos_profile: profile }).then((f) => {
+          if (!f) return;
+          const d = new frappe.ui.Dialog({
+            title: __("Open the selling day"),
+            fields: [
+              { fieldtype: "HTML", options: `<p class="text-muted small">${
+                __("Count the float into the drawer, then open. Nothing can be billed until you do.")}</p>` },
+            ].concat(f.modes.map((m, i) => ({
+              fieldname: `mode_${i}`, fieldtype: "Currency", label: __("{0} float", [m]),
+              default: 0, description: i === 0 ? __("Counted, not guessed") : "",
+            }))),
+            primary_action_label: __("Open the day"),
+            primary_action: (values) => {
+              const balances = {};
+              f.modes.forEach((m, i) => { balances[m] = values[`mode_${i}`] || 0; });
+              d.hide();
+              call("open_day", { pos_profile: f.profile, balances: JSON.stringify(balances) })
+                .then((res) => {
+                  if (!res) return;
+                  frappe.msgprint({
+                    title: res.opened ? __("Day open") : __("Already open"),
+                    indicator: "green",
+                    message: res.opened
+                      ? __("Shift {0} is open with a float of {1}.", [res.opened, money(res.float, res.currency)])
+                      : __("The counter is already open."),
+                  });
+                  RM_close_day.badge();
+                });
+            },
+          });
+          d.show();
+        });
       });
     },
 
@@ -49,8 +105,9 @@
           frappe.msgprint({
             title: __("Nothing to close"),
             indicator: "blue",
-            message: __("The counter is not open. It opens itself when the first order is rung up."),
+            message: __("The counter is not open. Use Open day to start service."),
           });
+          RM_close_day.badge();
           return;
         }
 
@@ -64,6 +121,7 @@
             [s.open_checks, money(s.open_checks_value, s.currency)])}</b>`);
           lines.push(__("Closing now leaves those tables with no way to bill."));
         }
+        lines.push(__("Closing also clears every table section and closes any party still sitting."));
 
         const d = new frappe.ui.Dialog({
           title: __("Close the selling day?"),

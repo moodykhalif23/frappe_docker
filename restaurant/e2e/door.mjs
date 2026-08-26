@@ -122,6 +122,10 @@ const removed = await page.evaluate(async (guest) => {
     { doctype: 'Customer', filters: { customer_name: guest }, fields: ['name'], limit_page_length: 0 });
   let n = 0;
   for (const c of (cs.message || [])) {
+    // A party's check links to its booking, so the check goes first.
+    const os = await frappe.call('frappe.client.get_list',
+      { doctype: 'Table Order', filters: { customer: c.name }, fields: ['name'], limit_page_length: 0 });
+    for (const o of (os.message || [])) await del('Table Order', o.name);
     const bs = await frappe.call('frappe.client.get_list',
       { doctype: 'Restaurant Booking', filters: { customer: c.name }, fields: ['name'], limit_page_length: 0 });
     for (const b of (bs.message || [])) n += await del('Restaurant Booking', b.name);

@@ -1,0 +1,40 @@
+
+/* rm-party-badges: who is on the table, and how many of them */
+.rm-party-badges {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
+  gap: 3px;
+  z-index: 2;
+  pointer-events: none;
+}
+.rm-party {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 22px;
+  letter-spacing: 0.02em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.rm-party i {
+  font-style: normal;
+  opacity: 0.75;
+  font-size: 10px;
+}
+.rm-party i::before {
+  content: "\00b7\00a0";
+}
+.d-table.rm-full .d-table-seats {
+  background-color: #97264f;
+  color: #fff;
+}
+.d-table.rm-shared .d-table-seats {
+  outline: 1px dashed rgba(255, 255, 255, 0.5);
+}

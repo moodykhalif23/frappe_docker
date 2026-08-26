@@ -167,7 +167,11 @@ if (await orderBtn.count()) {
 // 7. badge on the floor
 await page.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded', timeout: 60000 });
 await page.waitForTimeout(10000);
-const badges = await page.locator('.d-waiter-badge').count();
+// A table with a party on it badges each party; an empty one badges the section.
+// The party badges are painted from a server call, so wait for them.
+const badge = page.locator('.d-waiter-badge, .rm-party').first();
+await badge.waitFor({ state: 'attached', timeout: 20000 }).catch(() => {});
+const badges = await page.locator('.d-waiter-badge, .rm-party').count();
 await shot('floor-with-badge');
 ok('waiter initials badge on the tile', badges > 0, `${badges} badge(s)`);
 

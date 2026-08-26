@@ -33,6 +33,9 @@ def run():
 				frappe.db.set_value("Restaurant Object", o.table, "customer", None)
 			removed["order"] = removed.get("order", 0) + 1
 		for b in frappe.get_all("Restaurant Booking", filters={"customer": cust}, fields=["name"]):
+			# An invoiced check still links to its party and would block the delete.
+			for o in frappe.get_all("Table Order", filters={"booking": b.name}, fields=["name"]):
+				frappe.db.set_value("Table Order", o.name, "booking", None, update_modified=False)
 			frappe.db.set_value("Restaurant Booking", b.name, "table", None)
 			frappe.delete_doc("Restaurant Booking", b.name, force=1, ignore_permissions=True)
 			removed["booking"] += 1
