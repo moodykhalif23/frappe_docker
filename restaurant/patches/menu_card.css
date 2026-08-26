@@ -4,11 +4,20 @@
    the grid out in a fixed 3 columns. Rebuilt as a flex card in an auto-fitting
    grid. Selectors are .pos-items — there is no .product wrapper. */
 
+/* The pad reuses a desk page layout whose main section is 80% wide, to leave room
+   for a sidebar the pad never renders — that is the white gap beside the menu. */
+.product-list .items-wrapper.layout-main-section-wrapper,
+.product-list .layout-main-section-wrapper {
+  width: 100% !important;
+  max-width: 100% !important;
+  flex: 0 0 100% !important;
+}
+
 /* Grid follows the panel width, not the viewport: the pad is a resizable panel. */
 .pos-items .widget-group-body {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr)) !important;
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)) !important;
+  gap: 10px;
   align-items: stretch;
 }
 
@@ -24,11 +33,11 @@
 .pos-items .small-box.item {
   display: flex !important;
   flex-direction: column;
-  gap: 4px;
+  gap: 9px;
   height: 100%;
   min-height: 96px;
   margin: 0 !important;
-  padding: 9px !important;
+  padding: 11px 12px !important;
   border-radius: 4px !important;
   background: var(--card-bg, var(--fg-color, #fff)) !important;
   border: 1px solid var(--border-color, #e2e8f0) !important;
@@ -100,11 +109,11 @@
   line-height: 1 !important;
 }
 
-/* One footer row: quantity left, Add right. */
+/* Quantity on its own line, price on a full-width button: nothing clips. */
 .pos-items .small-box.item .small-box-footer {
   display: flex !important;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   margin-top: auto !important;
   padding: 0 !important;
@@ -120,43 +129,44 @@
   display: flex !important;
   flex-wrap: nowrap !important;
   width: auto !important;
-  border-radius: 3px !important;
+  align-self: flex-start;
+  min-height: 32px;
+  border-radius: 6px !important;
   background: var(--control-bg, #f4f5f6) !important;
   align-items: center;
   overflow: hidden;
 }
 .pos-items .small-box.item .input-group > * { flex: 0 0 auto; }
 .pos-items .small-box.item .input-group .input-group-text {
-  padding: 0 7px;
-  font-size: 0.72rem;
-  line-height: 26px;
+  padding: 0 11px;
+  font-size: 0.86rem;
+  line-height: 32px;
+  cursor: pointer;
 }
 /* Bootstrap's .custom-file is width:100%, which wraps the +/- onto new rows. */
 .pos-items .small-box.item .input-group .custom-file {
   width: auto !important;
-  min-width: 16px !important;
+  min-width: 26px !important;
   padding-top: 0 !important;
   text-align: center;
   position: static !important;
-  line-height: 26px;
+  line-height: 32px;
 }
-.pos-items .small-box.item .add-qty { font-size: 0.85rem; font-weight: 600; }
+.pos-items .small-box.item .add-qty { font-size: 0.88rem; font-weight: 600; }
 
 .pos-items .small-box.item .add-item {
   float: none !important;
-  border-radius: 3px !important;
-  min-height: 28px;
+  border-radius: 6px !important;
+  min-height: 34px;
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 0 8px;
-  font-size: 0.7rem;
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 0 12px;
+  font-size: 0.74rem;
   font-weight: 600;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 .pos-items .small-box.item .small-box-footer .form-group { flex: 0 0 auto; }
 

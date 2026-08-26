@@ -23,7 +23,8 @@
       this.mounted = true;
       // The floor is still wiring itself up; do not compete with it.
       setTimeout(() => RM_seats.refresh(), 1500);
-      this.timer = setInterval(() => RM_seats.refresh(), 10000);
+      // Polling every ten seconds showed up as a slow floor; realtime carries it.
+      this.timer = setInterval(() => RM_seats.refresh(), 60000);
       // Checks moving usually means seats moved with them.
       frappe.realtime.on("synchronize_order_data", () => RM_seats.soon());
     },

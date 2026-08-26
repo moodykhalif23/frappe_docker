@@ -48,3 +48,21 @@
 .d-table.rm-shared .d-table-seats {
   outline: 1px dashed rgba(255, 255, 255, 0.5);
 }
+
+/* The stock "has a customer" marker is an 80px yellow person glyph across the
+   middle of the tile. A small corner dot says the same without the noise. */
+.restaurant-manage .floor-map .d-table .has-customer {
+  top: 6px !important;
+  left: auto !important;
+  right: 6px !important;
+  margin: 0 !important;
+  width: 9px !important;
+  height: 9px !important;
+  font-size: 0 !important;
+  border-radius: 50% !important;
+  opacity: 1 !important;
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25) !important;
+  z-index: 3;
+}
+.restaurant-manage .floor-map .d-table .has-customer .has-customer-icon { display: none !important; }

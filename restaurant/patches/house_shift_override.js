@@ -13,7 +13,20 @@ window.RM_house_shift = function (pos, pos_profile) {
           indicator: "red",
           message: __("A manager opens the day from the floor, with the float counted into the drawer. Nothing can be billed until then."),
         });
-        return resolve(null);
+        // The pad still has to be set up, or its menu never loads and the floor
+        // looks broken. Billing stays refused: there is no opening entry to bill into.
+        return frappe.call("restaurant_management.house.opening_floats", { pos_profile: profile })
+          .then(({ message: floats }) => {
+            if (floats) {
+              pos.prepare_app_defaults({
+                name: null,
+                company: floats.company,
+                pos_profile: floats.profile,
+                period_start_date: frappe.datetime.now_datetime(),
+              });
+            }
+            resolve(null);
+          }, () => resolve(null));
       }
 
       if (message.stale) {

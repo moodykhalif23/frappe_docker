@@ -200,6 +200,13 @@ RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restauran
 COPY --chown=frappe:frappe restaurant/patches/report/restock_list apps/restaurant_management/restaurant_management/restaurant_management/report/restock_list
 COPY --chown=frappe:frappe restaurant/patches/report/consumption_variance apps/restaurant_management/restaurant_management/restaurant_management/report/consumption_variance
 
+# an unset POS Profile print format renders the receipt dialog blank
+COPY restaurant/patches/print_format_fallback.py /tmp/print_format_fallback.py
+RUN python3 /tmp/print_format_fallback.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+# ...and the PDF embed it renders into never laid out, so the modal was blank
+COPY restaurant/patches/print_receipt.py /tmp/print_receipt.py
+RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+
 # the order pad's menu opens before its DOM lands and renders nothing
 COPY restaurant/patches/items_tree_race.py /tmp/items_tree_race.py
 RUN python3 /tmp/items_tree_race.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/items-tree-class.js

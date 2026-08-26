@@ -470,6 +470,11 @@ def free_table(table, status="Success", booking=None):
         frappe.db.set_value("Restaurant Booking", b.name,
                             {"status": status, "left_at": now}, update_modified=False)
         closed.append(b.name)
+    # The last party out clears the table, or its name and avatar linger on the tile.
+    if closed and not parties_at(table):
+        frappe.db.set_value("Restaurant Object", table,
+                            {"customer": None, "current_user": None}, update_modified=False)
+
     if closed:
         frappe.db.commit()
     return {"table": table, "closed": closed}
@@ -901,15 +906,87 @@ def table_seats(table, doc=None):
 
 @frappe.whitelist()
 def table_occupancy(room=None):
-    """Seat counts for the whole floor, keyed by table — one call per repaint."""
+    """Seat counts for the whole floor, keyed by table — one call per repaint.
+
+    Deliberately bulk: per-table lookups meant forty-odd queries a repaint, and
+    the floor polls this, so it showed up as a slow floor.
+    """
     filters = {"type": "Table"}
     if room:
         filters["room"] = room
 
     tables = frappe.get_all(
         "Restaurant Object", filters=filters,
-        fields=["name", "description", "room", "company", "no_of_seats"])
-    return {t.name: table_seats(t.name, t) for t in tables}
+        fields=["name", "description", "room", "company", "no_of_seats", "waiter"])
+    if not tables:
+        return {}
+
+    names = [t.name for t in tables]
+    parties = frappe.get_all(
+        "Restaurant Booking",
+        filters={"table": ["in", names], "status": "Open"},
+        fields=_party_fields() + ["table"],
+        order_by="creation asc",
+    )
+
+    orders = frappe.get_all(
+        "Table Order",
+        filters={"table": ["in", names], "show_in_pos": 1,
+                 "status": ["not in", ["Cancelled", "Invoiced", "Opened"]]},
+        fields=["name", "table"] + (["booking"] if frappe.db.has_column("Table Order", "booking") else []),
+    )
+
+    customers = {c.name: c.customer_name for c in frappe.get_all(
+        "Customer", filters={"name": ["in", list({p.customer for p in parties if p.customer})] or [""]},
+        fields=["name", "customer_name"])}
+    colours = {w.name: w.colour for w in frappe.get_all("Restaurant Waiter", fields=["name", "colour"])}
+
+    by_table = {}
+    for p in parties:
+        by_table.setdefault(p.table, []).append(p)
+    orders_by_booking, busy = {}, set()
+    for o in orders:
+        busy.add(o.table)
+        if o.get("booking"):
+            orders_by_booking[o.booking] = o.name
+
+    out = {}
+    for t in tables:
+        rows = []
+        capacity = int(t.get("no_of_seats") or 0)
+        occupied = 0
+        for p in by_table.get(t.name, []):
+            occupied += int(p.no_of_people or 0)
+            waiter = p.get("waiter")
+            rows.append({
+                "booking": p.name,
+                "guest": customers.get(p.customer) or p.customer or "Guest",
+                "customer": p.customer,
+                "covers": int(p.no_of_people or 0),
+                "waiter": waiter,
+                "initials": _initials(waiter) if waiter else "",
+                "colour": (colours.get(waiter) or "#4b5563") if waiter else "#4b5563",
+                "seated_at": str(p.get("seated_at") or p.get("reservation_time") or ""),
+                "minutes": _waited_minutes(p.get("seated_at") or p.get("reservation_time")),
+                "order": orders_by_booking.get(p.name),
+            })
+
+        if not rows and t.name in busy:
+            occupied = capacity
+            rows = [{"booking": None, "guest": frappe._("Open check"), "customer": None,
+                     "covers": 0, "waiter": t.get("waiter"), "initials": "", "colour": "#4b5563",
+                     "seated_at": "", "minutes": 0, "order": None, "unseated": True}]
+
+        out[t.name] = {
+            "table": t.name,
+            "description": t.get("description") or t.name,
+            "room": t.get("room"),
+            "capacity": capacity,
+            "occupied": occupied,
+            "free": max(capacity - occupied, 0) if capacity else None,
+            "parties": rows,
+        }
+    return out
 
 
 def free_seats(table):
@@ -994,6 +1071,9 @@ def release_party(booking, status="Cancelled"):
     frappe.db.set_value("Restaurant Booking", booking,
                         {"status": status, "left_at": frappe.utils.now_datetime()},
                         update_modified=False)
+    if doc.table and not parties_at(doc.table):
+        frappe.db.set_value("Restaurant Object", doc.table,
+                            {"customer": None, "current_user": None}, update_modified=False)
     frappe.db.commit()
     return table_seats(doc.table) if doc.table else {"table": None}
 
