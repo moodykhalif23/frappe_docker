@@ -200,10 +200,14 @@ RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restauran
 COPY --chown=frappe:frappe restaurant/patches/report/restock_list apps/restaurant_management/restaurant_management/restaurant_management/report/restock_list
 COPY --chown=frappe:frappe restaurant/patches/report/consumption_variance apps/restaurant_management/restaurant_management/restaurant_management/report/consumption_variance
 
-# an unset POS Profile print format renders the receipt dialog blank
-COPY restaurant/patches/print_format_fallback.py /tmp/print_format_fallback.py
-RUN python3 /tmp/print_format_fallback.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
-# ...and the PDF embed it renders into never laid out, so the modal was blank
+# a table named "Table 1" breaks every jQuery id selector built from its name
+COPY restaurant/patches/id_selector_spaces.py /tmp/id_selector_spaces.py
+RUN python3 /tmp/id_selector_spaces.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/menu-manage-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js
+
+# the receipt modal embedded a PDF that never laid out, so it opened blank
 COPY restaurant/patches/print_receipt.py /tmp/print_receipt.py
 RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
 
