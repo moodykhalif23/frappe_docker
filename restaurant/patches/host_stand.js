@@ -72,6 +72,11 @@
     },
 
     open() {
+      // Seating belongs to a waiter: sign in once, then straight back here.
+      if (window.RM_waiter && !RM_waiter.current) {
+        frappe.show_alert({ message: __("Sign in first — the guests you seat are yours"), indicator: "blue" });
+        return RM_waiter.open(() => RM_host_stand.open());
+      }
       const dialog = new frappe.ui.Dialog({
         title: __("Seat a guest"),
         fields: [

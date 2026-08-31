@@ -91,9 +91,10 @@
       load_colours();
     },
 
-    open() {
+    open(then) {
       const who = session();
-      if (who) return this.signed_in(who);
+      // `then` lets another flow demand a sign-in and continue where it was.
+      if (who) return then ? then(who) : this.signed_in(who);
       frappe.call("restaurant_management.house.waiters").then(({ message }) => {
         const list = message || [];
         if (!list.length) {
@@ -124,6 +125,7 @@
               remember(signed);
               dialog.hide();
               frappe.show_alert({ message: __("Signed in as {0}", [signed.waiter_name]), indicator: "green" });
+              if (then) return then(signed);
               RM_waiter.signed_in(signed);
             });
           },
