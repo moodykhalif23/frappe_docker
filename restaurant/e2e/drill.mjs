@@ -186,6 +186,17 @@ const [w1, w2, w3, c1, c2, k1, k2, adm] = await Promise.all([
 ]);
 ok('eight sessions signed in', true);
 
+// a dirty floor poisons every later assertion — refuse to run on one
+const pre = await adm.p.evaluate(async () => {
+  const n = async (dt, f) => (await frappe.call('frappe.client.get_count', { doctype: dt, filters: f || {} })).message;
+  return { checks: await n('Table Order', { status: ['not in', ['Cancelled', 'Invoiced']] }),
+           parties: await n('Restaurant Booking', { status: 'Open' }) };
+});
+if (pre.checks || pre.parties) {
+  console.log('ABORT: floor not clean before drill:', JSON.stringify(pre));
+  process.exit(2);
+}
+
 // ---------------------------------------------------------------- day + boards
 await floor(c1);
 let shift = await api(c1, 'house_shift');

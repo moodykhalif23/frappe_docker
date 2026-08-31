@@ -206,6 +206,18 @@ def ensure_custom_fields():
 		],
 	}, ignore_validate=True)
 
+	# The pad's client flow reads these before an item can land; without them a
+	# waiter's add-to-cart dies as a silent 403 and the check stays empty.
+	from frappe.permissions import add_permission
+	for dt in ("Item", "Item Price", "Item Group", "UOM", "POS Profile", "POS Settings",
+			   "Stock Settings", "Selling Settings", "Company", "Price List",
+			   "Restaurant Settings", "Restaurant Menu", "Mode of Payment",
+			   "Sales Taxes and Charges Template"):
+		try:
+			add_permission(dt, "Restaurant User", 0)
+		except Exception:
+			pass
+
 	# Two parties on one table means two open checks on it.
 	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)
 
