@@ -175,3 +175,7 @@
   .pos-items .small-box.item .add-item { min-height: 44px; padding: 0 16px; }
   .pos-items .small-box.item .input-group { min-height: 40px; }
 }
+
+/* clusterize's scroll spacers are grid items too; on their own row they cannot
+   stretch the last cards to the spacer's height. */
+.pos-items .widget-group-body .clusterize-extra-row { grid-column: 1 / -1; }

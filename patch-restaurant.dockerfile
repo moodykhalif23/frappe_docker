@@ -210,6 +210,12 @@ RUN python3 /tmp/id_selector_spaces.py \
 # the receipt modal embedded a PDF that never laid out, so it opened blank
 COPY restaurant/patches/print_receipt.py /tmp/print_receipt.py
 RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+# the kitchen ticket and the table bill used the same blank modal
+COPY restaurant/patches/print_ticket.py /tmp/print_ticket.py
+RUN python3 /tmp/print_ticket.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js
 
 # the order pad's menu opens before its DOM lands and renders nothing
 COPY restaurant/patches/items_tree_race.py /tmp/items_tree_race.py

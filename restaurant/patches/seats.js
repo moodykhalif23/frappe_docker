@@ -7,7 +7,12 @@
   const call = (m, args) => frappe.call("restaurant_management.house." + m, args || {}).then(r => r.message);
 
   const party_badge = (p) => {
-    const who = p.initials || (p.unseated ? "?" : "");
+    // A check with nobody seated through the door is a thing, not a person.
+    if (p.unseated) {
+      return `<span class="rm-party" style="background-color:#4b5563" title="${
+        frappe.utils.escape_html(__("An unpaid order is open on this table"))}"><span class="fa fa-cutlery"></span>&nbsp;${__("open check")}</span>`;
+    }
+    const who = p.initials || "";
     const title = `${p.guest} · ${p.covers || "?"} ${__("covers")}${p.waiter ? " · " + p.waiter : ""}`;
     return `<span class="rm-party" style="background-color:${p.colour}" title="${frappe.utils.escape_html(title)}">${
       frappe.utils.escape_html(who)}<i>${p.covers || "?"}</i></span>`;
@@ -21,6 +26,9 @@
     mount(rm) {
       if (this.mounted) return;
       this.mounted = true;
+      if (rm && rm.page && rm.page.add_inner_button) {
+        rm.page.add_inner_button(__("Release"), () => RM_seats.release_dialog());
+      }
       // The floor is still wiring itself up; do not compete with it.
       setTimeout(() => RM_seats.refresh(), 1500);
       // Polling every ten seconds showed up as a slow floor; realtime carries it.
@@ -70,6 +78,40 @@
       el.find(".d-waiter-badge").toggle(!seats.parties.length);
       if (!seats.parties.length) return;
       box.append(`<span class="rm-party-badges">${seats.parties.map(party_badge).join("")}</span>`);
+    },
+
+    release_dialog() {
+      this.refresh().then((map) => {
+        const held = Object.values(map || {}).filter(s => s.parties.length);
+        if (!held.length) {
+          frappe.msgprint({ title: __("Nothing to release"), indicator: "blue",
+            message: __("No table is holding a party or an open check.") });
+          return;
+        }
+        const label = (s) => `${s.description} — ${s.parties.map(p =>
+          p.unseated ? __("open check") : `${p.guest} · ${p.covers}`).join(", ")}`;
+        const d = new frappe.ui.Dialog({
+          title: __("Release a table"),
+          fields: [
+            { fieldname: "table", fieldtype: "Select", label: __("Table"), reqd: 1,
+              options: held.map(s => ({ value: s.table, label: label(s) })) },
+            { fieldtype: "HTML", options: `<p class="text-muted small">${
+              __("Cancels the table's unpaid checks and closes its seatings. Paid sales are never touched.")}</p>` },
+          ],
+          primary_action_label: __("Release"),
+          primary_action: ({ table }) => {
+            d.hide();
+            call("release_table", { table }).then((r) => {
+              frappe.show_alert({ message: __("{0} released — {1} check(s), {2} seating(s) closed",
+                [table, (r && r.orders || []).length, (r && r.bookings || []).length]), indicator: "green" });
+              RM_seats.refresh();
+            });
+          },
+          secondary_action_label: __("Keep it"),
+          secondary_action: () => d.hide(),
+        });
+        d.show();
+      });
     },
 
     pick_check(om, done) {

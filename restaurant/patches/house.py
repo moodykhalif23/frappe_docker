@@ -184,6 +184,10 @@ def ensure_custom_fields():
 
 	# Two parties on one table means two open checks on it.
 	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)
+
+	# frappe 417s a PDF whose print format never chose a generator.
+	for pf in frappe.get_all("Print Format", filters={"pdf_generator": ["is", "not set"]}, pluck="name"):
+		frappe.db.set_value("Print Format", pf, "pdf_generator", "wkhtmltopdf", update_modified=False)
 	frappe.db.commit()
 	return "ok"
 
@@ -929,11 +933,13 @@ def table_occupancy(room=None):
         order_by="creation asc",
     )
 
+    # A fresh check sits in status "Opened": it must link to its party, but it
+    # does not make a table busy — that matches the app's own orders_count.
     orders = frappe.get_all(
         "Table Order",
         filters={"table": ["in", names], "show_in_pos": 1,
-                 "status": ["not in", ["Cancelled", "Invoiced", "Opened"]]},
-        fields=["name", "table"] + (["booking"] if frappe.db.has_column("Table Order", "booking") else []),
+                 "status": ["not in", ["Cancelled", "Invoiced"]]},
+        fields=["name", "table", "status"] + (["booking"] if frappe.db.has_column("Table Order", "booking") else []),
     )
 
     customers = {c.name: c.customer_name for c in frappe.get_all(
@@ -946,7 +952,8 @@ def table_occupancy(room=None):
         by_table.setdefault(p.table, []).append(p)
     orders_by_booking, busy = {}, set()
     for o in orders:
-        busy.add(o.table)
+        if o.status != "Opened":
+            busy.add(o.table)
         if o.get("booking"):
             orders_by_booking[o.booking] = o.name
 
@@ -1076,6 +1083,15 @@ def release_party(booking, status="Cancelled"):
                             {"customer": None, "current_user": None}, update_modified=False)
     frappe.db.commit()
     return table_seats(doc.table) if doc.table else {"table": None}
+
+
+@frappe.whitelist()
+def ticket_order(identifier):
+    """The Table Order behind one kitchen-board item, for printing its ticket."""
+    parent = frappe.db.get_value("Order Entry Item", {"identifier": identifier}, "parent")
+    if not parent:
+        frappe.throw(frappe._("That ticket no longer exists"))
+    return parent
 
 
 @frappe.whitelist()
