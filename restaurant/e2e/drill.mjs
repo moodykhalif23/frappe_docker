@@ -156,13 +156,27 @@ const openPadOnTable = async (a, guest) => {
     const opts = await d.locator('select[data-fieldname="order"] option').all();
     let value = null;
     for (const o of opts) if ((await o.textContent()).includes(guest)) value = await o.getAttribute('value');
-    ok(`${a.name}: shared table asks whose check (${guest})`, value !== null,
-       `${opts.length} checks listed`);
     if (value) {
       await d.locator('select[data-fieldname="order"]').selectOption(value);
       await d.getByRole('button', { name: 'Open' }).click();
       await a.p.waitForTimeout(4000);
+      return;
     }
+  }
+  // no picker on plain pad-open: a human taps the check's chip in the rail
+  const order = await a.p.evaluate(async (g) => {
+    const r = await frappe.call('frappe.client.get_list', { doctype: 'Table Order',
+      filters: { customer: g, status: ['not in', ['Cancelled', 'Invoiced']] },
+      fields: ['name'], limit_page_length: 1 });
+    return (r.message || [])[0] && r.message[0].name;
+  }, guest);
+  if (!order) { ok(`${a.name}: found ${guest}'s check to select`, false); return; }
+  const chip = a.p.locator('.order-manage .btn-app.btn-order').filter({ hasText: order.slice(8) }).first();
+  if (await chip.count()) {
+    await chip.click({ force: true });
+    await a.p.waitForTimeout(4000);
+  } else {
+    ok(`${a.name}: chip for ${guest} (${order.slice(8)}) visible`, false);
   }
 };
 

@@ -858,6 +858,7 @@ def close_day(pos_profile=None, force=0):
         frappe.throw(frappe._("{0} check(s) are still open. Settle them first, or close anyway.")
                      .format(summary["open_checks"]))
 
+    _heal_series("POS Closing Entry", "POS-CLO%")
     closing = make_closing_entry_from_opening(shift)
     closing.posting_date = frappe.utils.today()
     closing.posting_time = frappe.utils.nowtime()
@@ -1182,6 +1183,17 @@ def claim_party(booking, waiter, pin=None, token=None):
 # first waiter to ring a dish opened the drawer with a float nobody counted.
 
 
+def _heal_series(doctype, like):
+    """A naming counter behind a surviving document collides on insert; heal it
+    against what actually exists before creating anything."""
+    for series in frappe.db.sql_list("select name from tabSeries where name like %s", like):
+        last = frappe.db.sql(
+            "select max(cast(substring_index(name, '-', -1) as unsigned)) "
+            "from `tab{0}` where name like %s".format(doctype), series + "%")[0][0] or 0
+        frappe.db.sql("update tabSeries set current = greatest(current, %s) where name = %s",
+                      (last, series))
+
+
 def _default_profile():
     company = _company()
     return (frappe.db.get_value("POS Profile", {"company": company, "disabled": 0}, "name")
@@ -1229,15 +1241,7 @@ def open_day(pos_profile=None, balances=None):
     prof = frappe.get_doc("POS Profile", profile)
     modes = [p.mode_of_payment for p in prof.payments] or ["Cash"]
 
-    # A naming counter behind a surviving document collides on insert and the
-    # day refuses to open; heal the series against what actually exists.
-    for series in frappe.db.sql_list(
-            "select name from tabSeries where name like 'POS-OPE%%'"):
-        last = frappe.db.sql(
-            "select max(cast(substring_index(name, '-', -1) as unsigned)) "
-            "from `tabPOS Opening Entry` where name like %s", series + "%")[0][0] or 0
-        frappe.db.sql("update tabSeries set current = greatest(current, %s) where name = %s",
-                      (last, series))
+    _heal_series("POS Opening Entry", "POS-OPE%")
 
     doc = frappe.get_doc({
         "doctype": "POS Opening Entry",
