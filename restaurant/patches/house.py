@@ -474,13 +474,13 @@ def free_table(table, status="Success", booking=None):
         frappe.db.set_value("Restaurant Booking", b.name,
                             {"status": status, "left_at": now}, update_modified=False)
         closed.append(b.name)
-    # The last party out clears the table, or its name and avatar linger on the tile.
-    if closed and not parties_at(table):
+    # Nobody left sitting clears the tile — even when this call closed no booking:
+    # a check paid on a bookingless table used to leave its guest's name behind.
+    if not parties_at(table):
         frappe.db.set_value("Restaurant Object", table,
                             {"customer": None, "current_user": None}, update_modified=False)
 
-    if closed:
-        frappe.db.commit()
+    frappe.db.commit()
     return {"table": table, "closed": closed}
 
 
