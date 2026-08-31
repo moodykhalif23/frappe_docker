@@ -47,8 +47,9 @@
     },
 
     refresh() {
-      return call("table_occupancy").then((m) => {
+      return Promise.all([call("table_occupancy"), call("floor_waiters")]).then(([m, w]) => {
         RM_seats.map = m || {};
+        RM_seats.holders = w || {};
         RM_seats.paint();
         return RM_seats.map;
       });
@@ -74,14 +75,30 @@
       const box = el.find(".resize-handle-container").first();
       if (!box.length) return;
       box.find(".rm-party-badges").remove();
-      // The section badge is whose table it is; the party badges are who is on it.
-      el.find(".d-waiter-badge").toggle(!seats.parties.length);
+
+      // The section badge lives on live data, not the tile's first render — a
+      // released table must lose its initials without waiting for a reload.
+      const holder = (this.holders || {})[name];
+      let badge = el.find(".d-waiter-badge");
+      if (!seats.parties.length && holder) {
+        if (!badge.length) {
+          box.append(`<span class="d-waiter-badge"></span>`);
+          badge = el.find(".d-waiter-badge");
+        }
+        badge.attr("data-waiter", holder.waiter).attr("title", holder.waiter)
+          .css("background-color", holder.colour || "#4b5563")
+          .text(holder.initials || "").show();
+      } else {
+        badge.remove();
+      }
+
       if (!seats.parties.length) return;
       box.append(`<span class="rm-party-badges">${seats.parties.map(party_badge).join("")}</span>`);
     },
 
     release_dialog() {
-      Promise.all([this.refresh(), call("floor_waiters")]).then(([map, holders]) => {
+      this.refresh().then((map) => {
+        const holders = RM_seats.holders || {};
         const held = Object.values(map || {}).filter(s => s.parties.length);
         // A waiter can hold a section on an empty table; that hold releases too.
         const seated = new Set(held.map(s => s.table));

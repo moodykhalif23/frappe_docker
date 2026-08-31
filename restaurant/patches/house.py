@@ -762,6 +762,13 @@ def release_table(table):
                         {"customer": None, "current_user": None, "waiter": None},
                         update_modified=False)
     frappe.db.commit()
+
+    # Tell every open floor the tile changed, or the old badge waits for a reload.
+    try:
+        frappe.get_doc("Restaurant Object", table)._on_update()
+    except Exception:
+        frappe.log_error(title="release_table synchronize")
+
     return {"table": table, "orders": closed_orders, "bookings": closed_bookings}
 
 
