@@ -161,6 +161,9 @@ RUN python3 /tmp/fix_table_delete.py \
 # the table trash was bound to a double-click and gave no feedback on a single tap
 COPY restaurant/patches/table_delete_single_click.py /tmp/table_delete_single_click.py
 RUN python3 /tmp/table_delete_single_click.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
+COPY restaurant/patches/room_delete_single_click.py /tmp/room_delete_single_click.py
+RUN python3 /tmp/room_delete_single_click.py \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 
 # the pay form read this.actions before make() created it, so checkout threw
 COPY restaurant/patches/fix_pay_form_init.py /tmp/fix_pay_form_init.py
@@ -210,6 +213,11 @@ RUN python3 /tmp/id_selector_spaces.py \
 # the receipt modal embedded a PDF that never laid out, so it opened blank
 COPY restaurant/patches/print_receipt.py /tmp/print_receipt.py
 RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+# splitting a check crashed on the customization fields divide() never sent
+COPY restaurant/patches/fix_divide_split.py /tmp/fix_divide_split.py
+RUN python3 /tmp/fix_divide_split.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
+
 # the kitchen ticket and the table bill used the same blank modal
 COPY restaurant/patches/print_ticket.py /tmp/print_ticket.py
 RUN python3 /tmp/print_ticket.py \

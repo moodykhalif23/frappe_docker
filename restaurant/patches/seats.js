@@ -81,15 +81,24 @@
     },
 
     release_dialog() {
-      this.refresh().then((map) => {
+      Promise.all([this.refresh(), call("floor_waiters")]).then(([map, holders]) => {
         const held = Object.values(map || {}).filter(s => s.parties.length);
+        // A waiter can hold a section on an empty table; that hold releases too.
+        const seated = new Set(held.map(s => s.table));
+        Object.entries(holders || {}).forEach(([table, w]) => {
+          if (!seated.has(table)) held.push({ table,
+            description: (map[table] || {}).description || table,
+            parties: [], section: w.waiter });
+        });
         if (!held.length) {
           frappe.msgprint({ title: __("Nothing to release"), indicator: "blue",
-            message: __("No table is holding a party or an open check.") });
+            message: __("No table is holding a party, an open check or a section.") });
           return;
         }
-        const label = (s) => `${s.description} — ${s.parties.map(p =>
-          p.unseated ? __("open check") : `${p.guest} · ${p.covers}`).join(", ")}`;
+        const label = (s) => s.section
+          ? `${s.description} — ${__("section")}: ${s.section}`
+          : `${s.description} — ${s.parties.map(p =>
+              p.unseated ? __("open check") : `${p.guest} · ${p.covers}`).join(", ")}`;
         const d = new frappe.ui.Dialog({
           title: __("Release a table"),
           fields: [

@@ -758,7 +758,9 @@ def release_table(table):
         frappe.db.set_value("Restaurant Booking", b.name, values, update_modified=False)
         closed_bookings.append(b.name)
 
-    frappe.db.set_value("Restaurant Object", table, "customer", None)
+    frappe.db.set_value("Restaurant Object", table,
+                        {"customer": None, "current_user": None, "waiter": None},
+                        update_modified=False)
     frappe.db.commit()
     return {"table": table, "orders": closed_orders, "bookings": closed_bookings}
 

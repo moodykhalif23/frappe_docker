@@ -52,12 +52,13 @@
             title: __("Give tables to {0}", [who.waiter_name]),
             fields: [{
               fieldname: "tables", fieldtype: "MultiCheck", label: __("Tables"), columns: 2,
-              options: (tables || []).map(t => ({
-                label: held[t.name] && held[t.name].waiter
-                  ? `${t.description || t.name} — ${held[t.name].waiter}`
-                  : (t.description || t.name),
-                value: t.name,
-              })),
+              options: (tables || []).map(t => {
+                const s = window.RM_seats && RM_seats.map ? RM_seats.map[t.name] : null;
+                const seats = s && s.capacity
+                  ? ` · ${Math.max(s.capacity - s.occupied, 0)}/${s.capacity} ${__("seats free")}` : "";
+                const holder = held[t.name] && held[t.name].waiter ? ` — ${held[t.name].waiter}` : "";
+                return { label: `${t.description || t.name}${seats}${holder}`, value: t.name };
+              }),
             }],
             primary_action_label: __("Assign"),
             primary_action: ({ tables: picked }) => {
