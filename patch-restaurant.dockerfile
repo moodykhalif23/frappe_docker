@@ -213,6 +213,11 @@ RUN python3 /tmp/id_selector_spaces.py \
 # the receipt modal embedded a PDF that never laid out, so it opened blank
 COPY restaurant/patches/print_receipt.py /tmp/print_receipt.py
 RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+# a @property reached through api.call fired on getattr, then got called
+COPY restaurant/patches/api_property_call.py /tmp/api_property_call.py
+RUN python3 /tmp/api_property_call.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/api.py').read())"
+
 # splitting a check crashed on the customization fields divide() never sent
 COPY restaurant/patches/fix_divide_split.py /tmp/fix_divide_split.py
 RUN python3 /tmp/fix_divide_split.py \

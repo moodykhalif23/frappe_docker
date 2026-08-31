@@ -1,0 +1,7 @@
+# Two gunicorn workers served the whole restaurant; eight terminals saturated
+# them and 3ms calls took 6 seconds. Sized for the box's ~4.5GB headroom.
+services:
+  backend:
+    environment:
+      GUNICORN_WORKERS: "4"
+      GUNICORN_THREADS: "8"
