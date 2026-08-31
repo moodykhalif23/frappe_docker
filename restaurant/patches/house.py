@@ -739,6 +739,11 @@ def table_blockers(table):
 def release_table(table):
     """Close the unpaid checks and seatings holding a table. Never touches an
     invoiced order — that is a sale, and the table is part of its record."""
+    # Voiding checks hides sales, so it belongs to whoever can bank the day —
+    # a waiter must not order, pocket cash, and release the evidence.
+    if not frappe.has_permission("POS Closing Entry", ptype="create"):
+        frappe.throw(frappe._("Releasing a table is the cashier's or manager's job."),
+                     frappe.PermissionError)
     closed_orders, closed_bookings = [], []
 
     for o in frappe.get_all("Table Order", filters={"table": table, "status": OPEN_ORDER_STATES},
@@ -826,6 +831,10 @@ def close_day(pos_profile=None, force=0):
     from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import (
         make_closing_entry_from_opening,
     )
+
+    if not frappe.has_permission("POS Closing Entry", ptype="create"):
+        frappe.throw(frappe._("Closing the day is the cashier's or manager's job."),
+                     frappe.PermissionError)
 
     shift = _open_shift_doc(pos_profile)
     if not shift:
@@ -1184,6 +1193,10 @@ def opening_floats(pos_profile=None):
 @frappe.whitelist()
 def open_day(pos_profile=None, balances=None):
     """Open the selling day with a counted float. Manager's act, never automatic."""
+    # The insert below bypasses roles, so the door is guarded here instead.
+    if not frappe.has_permission("POS Opening Entry", ptype="create"):
+        frappe.throw(frappe._("Opening the day is the cashier's or manager's job."),
+                     frappe.PermissionError)
     profile = pos_profile or _default_profile()
     if not profile:
         frappe.throw(frappe._("No POS Profile is set up"))
