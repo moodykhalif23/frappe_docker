@@ -181,7 +181,30 @@ copy the roles from the station account that matches the job.
 
 ---
 
-# 9. Money rules worth knowing
+# 9. Billing a shared table — four guests, four waiters, one table
+
+The table tile shows every party: `7/10` with a badge per party (`AM·2`,
+`MO·3`…). Each party has **its own check, owned by the waiter who seated
+them** — four different waiters on one table is normal, and *Sales by Waiter*
+credits each correctly.
+
+**The cashier settles them one at a time:**
+
+1. Tap the table. The pad **asks "Whose check is this?"** — every party is
+   listed with the guest's name, covers and waiter. Pick one.
+2. **Complete** → take the payment (cash, M-Pesa, or several lines mixed) →
+   the receipt prints.
+3. Paying frees **only that party's seats** — the tile drops from `7/10` to
+   `5/10` and the other parties keep eating undisturbed.
+4. Tap the table again for the next party. The check chips in the pad's left
+   rail (00001, 00002…) switch between parties at any time.
+
+A table with a single party skips the question — its check is selected the
+moment the pad opens.
+
+---
+
+# 10. Money rules worth knowing
 
 - **Split bills**: on the check → **Divide** → tick the items moving to the
   new check → each check pays separately, each gets its own numbered receipt.
@@ -194,11 +217,50 @@ copy the roles from the station account that matches the job.
 
 ---
 
-# 10. When something looks wrong
+# 11. Suppliers and reordering — the full loop
+
+The system ships **ready to buy**: supplier shelves are pre-built (Produce,
+Butchery & Meat, Dairy, Dry Goods, Beverages, Gas & Fuel, Packaging, Services)
+and stock **asks to be re-bought by itself** the moment an ingredient dips
+below its reorder level.
+
+**a) Add each supplier once** — search `Supplier` → *Add*:
+
+1. Name, then pick the **Supplier Group** from the pre-built list.
+2. Phone/M-Pesa details under contact — that's all a purchase needs.
+
+**b) Tell each ingredient who supplies it and when to re-buy** — open the
+ingredient's Item:
+
+1. Under **Supplier Items**: add the supplier (their item code optional).
+2. Under **Reorder**: warehouse *Stores - ETH*, **Reorder Level** (e.g. 10 kg),
+   **Reorder Qty** (e.g. 50 kg — two bales), type *Purchase*.
+
+**c) From there the loop runs itself:**
+
+1. Sales consume stock through the recipes (section 5).
+2. The moment flour dips below 10 kg, the system raises a **Material Request**
+   overnight — no one types anything.
+3. Morning routine: search `Material Request` → open the day's requests →
+   **Create → Purchase Order** — supplier and quantities are pre-filled from
+   (b). One order per supplier, a few taps.
+4. Goods arrive: open the PO → **Create → Purchase Receipt** → confirm counts →
+   Submit. **Stock goes up, valuation updates** — the bale is now 25 counted kg.
+5. The supplier's bill: PO → **Create → Purchase Invoice** → Submit when paid.
+   Supplier statements live at `Accounts Payable`.
+
+**Restock List** (section 3) stays the manager's daily glance: everything
+under its level, how short, and who supplies it — the same list the automatic
+requests are built from.
+
+---
+
+# 12. When something looks wrong
 
 | Symptom | Cause and fix |
 |---|---|
 | "Billing refused" / counter closed message | The day isn't open, or yesterday's is still open. **Open day** / **Close day** as cashier. |
+| Cashier taps Complete, gets "Not order Selected" | No check picked on a shared table — tap the table again and answer "Whose check?", or tap the check chip in the left rail. |
 | A dish is missing from the pad | It's not on the Restaurant Menu — add it via Menu → New Item, or check its Veg/Non-Veg tab. |
 | A table shows occupied but nobody's there | An unpaid check is holding it — **Release** (cashier). |
 | Stock reports are empty | Recipes/opening counts not loaded yet — section 5. |

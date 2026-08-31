@@ -213,6 +213,11 @@ RUN python3 /tmp/id_selector_spaces.py \
 # the receipt modal embedded a PDF that never laid out, so it opened blank
 COPY restaurant/patches/print_receipt.py /tmp/print_receipt.py
 RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+# a pad opened on a shared table selected nothing, so Complete refused
+COPY restaurant/patches/pad_pick_on_open.py /tmp/pad_pick_on_open.py
+RUN python3 /tmp/pad_pick_on_open.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
+
 # a @property reached through api.call fired on getattr, then got called
 COPY restaurant/patches/api_property_call.py /tmp/api_property_call.py
 RUN python3 /tmp/api_property_call.py \

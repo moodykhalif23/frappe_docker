@@ -1,6 +1,28 @@
 // Seats, not tables: two parties on one six-top, each with its own check and
 // waiter, and a counter that only a manager opens.
 import { chromium } from 'playwright';
+// the floor demands a signed-in waiter before seating; answer the PIN pad
+const answerGate = async (pg, dlg) => {
+  const title = await dlg.locator('.modal-title').innerText().catch(() => '');
+  if (!title.includes("Who's on")) return dlg;
+  await pg.evaluate(async () => {
+    const found = await frappe.call('frappe.client.get_list', { doctype: 'Restaurant Waiter',
+      filters: { waiter_name: 'Test Waiter' }, fields: ['name'], limit_page_length: 1 });
+    if ((found.message || []).length) {
+      await frappe.call('frappe.client.set_value', { doctype: 'Restaurant Waiter',
+        name: found.message[0].name, fieldname: { pin: '4821', active: 1 } });
+    } else {
+      await frappe.call('frappe.client.insert', { doc: { doctype: 'Restaurant Waiter',
+        waiter_name: 'Test Waiter', pin: '4821', active: 1, colour: '#2563eb' } });
+    }
+  });
+  await dlg.locator('select').first().selectOption('Test Waiter');
+  await dlg.locator('input[type="password"]').fill('4821');
+  await dlg.getByRole('button', { name: 'Sign in' }).click();
+  await pg.waitForTimeout(3500);
+  return pg.locator('.modal.show').last();
+};
+
 import { mkdirSync } from 'fs';
 
 const BASE = process.env.BASE || 'http://pos.localhost:8080';
@@ -92,7 +114,8 @@ await page.waitForTimeout(800);
 const seatParty = async (guest, covers) => {
   await page.getByRole('button', { name: 'Seat guest' }).click();
   await page.waitForTimeout(2000);
-  const d = page.locator('.modal.show').last();
+  let d = page.locator('.modal.show').last();
+  d = await answerGate(page, d);
   await d.locator('input[data-fieldname="guest_name"]').fill(guest);
   await d.locator('input[data-fieldname="covers"]').fill(String(covers));
   await d.locator('input[data-fieldname="covers"]').press('Tab');

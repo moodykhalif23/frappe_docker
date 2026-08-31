@@ -143,7 +143,12 @@
     pick_check(om, done) {
       const orders = om.child_values || [];
       if (!orders.length) return false;
+      // one question at a time, however many code paths ask it
+      if (om.__picking) return true;
+      om.__picking = true;
+      setTimeout(() => { om.__picking = false; }, 15000);
       if (orders.length === 1) {
+        om.__picking = false;
         orders[0].select();
         setTimeout(done, 300);
         return true;
@@ -169,6 +174,7 @@
           }],
           primary_action_label: __("Open"),
           primary_action: ({ order }) => {
+            om.__picking = false;
             d.hide();
             const chosen = om.get_order(order);
             if (chosen) {

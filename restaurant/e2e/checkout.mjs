@@ -1,6 +1,28 @@
 // The money path: seat a party, ring a dish, take payment, and prove the table
 // came back free with a turn recorded against it. Writes real records.
 import { chromium } from 'playwright';
+// the floor demands a signed-in waiter before seating; answer the PIN pad
+const answerGate = async (pg, dlg) => {
+  const title = await dlg.locator('.modal-title').innerText().catch(() => '');
+  if (!title.includes("Who's on")) return dlg;
+  await pg.evaluate(async () => {
+    const found = await frappe.call('frappe.client.get_list', { doctype: 'Restaurant Waiter',
+      filters: { waiter_name: 'Test Waiter' }, fields: ['name'], limit_page_length: 1 });
+    if ((found.message || []).length) {
+      await frappe.call('frappe.client.set_value', { doctype: 'Restaurant Waiter',
+        name: found.message[0].name, fieldname: { pin: '4821', active: 1 } });
+    } else {
+      await frappe.call('frappe.client.insert', { doc: { doctype: 'Restaurant Waiter',
+        waiter_name: 'Test Waiter', pin: '4821', active: 1, colour: '#2563eb' } });
+    }
+  });
+  await dlg.locator('select').first().selectOption('Test Waiter');
+  await dlg.locator('input[type="password"]').fill('4821');
+  await dlg.getByRole('button', { name: 'Sign in' }).click();
+  await pg.waitForTimeout(3500);
+  return pg.locator('.modal.show').last();
+};
+
 import { mkdirSync } from 'fs';
 
 const BASE = process.env.BASE || 'http://pos.localhost:8080';
@@ -56,7 +78,8 @@ ok('the floor has a free table to seat', freeBefore > 0, `${freeBefore} free, ${
 // seat a party
 await page.getByRole('button', { name: 'Seat guest' }).click();
 await page.waitForTimeout(2000);
-const seat = page.locator('.modal.show').last();
+let seat = page.locator('.modal.show').last();
+seat = await answerGate(page, seat);
 await seat.locator('input[data-fieldname="guest_name"]').fill(GUEST);
 await seat.locator('input[data-fieldname="covers"]').fill('2');
 await seat.locator('input[data-fieldname="covers"]').press('Tab');

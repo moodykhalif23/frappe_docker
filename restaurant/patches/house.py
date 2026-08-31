@@ -161,6 +161,25 @@ BOOKING_FIELD = {"fieldname": "booking", "fieldtype": "Link", "options": "Restau
 				 "label": "Party", "read_only": 1}
 
 
+def _ensure_procurement():
+	"""Reordering out of the box: supplier shelves ready to fill, and stock that
+	asks to be re-bought the moment an ingredient dips below its reorder level."""
+	root = (frappe.db.exists("Supplier Group", "All Supplier Groups") and "All Supplier Groups") \
+		or frappe.db.get_value("Supplier Group", {"is_group": 1}, "name")
+	for group in ("Produce", "Butchery & Meat", "Dairy", "Dry Goods", "Beverages",
+				  "Gas & Fuel", "Packaging", "Services"):
+		if root and not frappe.db.exists("Supplier Group", group):
+			frappe.get_doc({"doctype": "Supplier Group", "supplier_group_name": group,
+							"parent_supplier_group": root}).insert(ignore_permissions=True)
+
+	# erpnext's scheduler raises a Material Request when stock hits reorder level
+	frappe.db.set_single_value("Stock Settings", "auto_indent", 1)
+	# suppliers named by their name, and no order/receipt demanded before a bill
+	frappe.db.set_single_value("Buying Settings", "supp_master_name", "Supplier Name")
+	frappe.db.set_single_value("Buying Settings", "po_required", "No")
+	frappe.db.set_single_value("Buying Settings", "pr_required", "No")
+
+
 def _ensure_receipt_format():
 	"""A receipt that prints clean: browsers draw their URL header in the page
 	margin, so a zero-margin format leaves the paper showing only the bill."""
@@ -226,6 +245,8 @@ def ensure_custom_fields():
 	for p in frappe.get_all("POS Profile", pluck="name"):
 		if not frappe.db.get_value("POS Profile", p, "print_format"):
 			frappe.db.set_value("POS Profile", p, "print_format", receipt, update_modified=False)
+
+	_ensure_procurement()
 
 	# frappe 417s a PDF whose print format never chose a generator.
 	for pf in frappe.get_all("Print Format", filters={"pdf_generator": ["is", "not set"]}, pluck="name"):

@@ -45,7 +45,11 @@ const provisioned = await page.evaluate(async ([name, pin]) => {
   const found = await frappe.call('frappe.client.get_list', {
     doctype: 'Restaurant Waiter', filters: { waiter_name: name },
     fields: ['name'], limit_page_length: 0 });
-  if ((found.message || []).length) return 'existing';
+  if ((found.message || []).length) {
+    await frappe.call('frappe.client.set_value', { doctype: 'Restaurant Waiter',
+      name: found.message[0].name, fieldname: { pin, active: 1 } });
+    return 'existing, pin reset';
+  }
   await frappe.call('frappe.client.insert', { doc: {
     doctype: 'Restaurant Waiter', waiter_name: name, pin, active: 1, colour: '#2563eb' } });
   return 'created';
