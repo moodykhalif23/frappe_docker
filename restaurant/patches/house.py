@@ -161,6 +161,30 @@ BOOKING_FIELD = {"fieldname": "booking", "fieldtype": "Link", "options": "Restau
 				 "label": "Party", "read_only": 1}
 
 
+def _ensure_receipt_format():
+	"""A receipt that prints clean: browsers draw their URL header in the page
+	margin, so a zero-margin format leaves the paper showing only the bill."""
+	name = "Etham Receipt"
+	if frappe.db.exists("Print Format", name):
+		# An earlier build created it without custom_format, which frappe ignores.
+		frappe.db.set_value("Print Format", name, "custom_format", 1, update_modified=False)
+		return name
+
+	import json
+	import os
+
+	src = os.path.join(frappe.get_app_path("erpnext"), "accounts", "print_format",
+					   "pos_invoice", "pos_invoice.json")
+	html = json.load(open(src))["html"]
+	frappe.get_doc({
+		"doctype": "Print Format", "name": name, "doc_type": "POS Invoice",
+		"module": "Accounts", "print_format_type": "Jinja", "standard": "No",
+		"pdf_generator": "wkhtmltopdf", "disabled": 0, "font_size": 12, "custom_format": 1,
+		"html": "<style>@page { margin: 0 } .print-format { padding: 6mm 8mm }</style>\n" + html,
+	}).insert(ignore_permissions=True)
+	return name
+
+
 def ensure_custom_fields():
 	"""Idempotent: hangs the waiter link on the table, its orders and its invoices."""
 	from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
@@ -184,6 +208,11 @@ def ensure_custom_fields():
 
 	# Two parties on one table means two open checks on it.
 	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)
+
+	receipt = _ensure_receipt_format()
+	for p in frappe.get_all("POS Profile", pluck="name"):
+		if not frappe.db.get_value("POS Profile", p, "print_format"):
+			frappe.db.set_value("POS Profile", p, "print_format", receipt, update_modified=False)
 
 	# frappe 417s a PDF whose print format never chose a generator.
 	for pf in frappe.get_all("Print Format", filters={"pdf_generator": ["is", "not set"]}, pluck="name"):
