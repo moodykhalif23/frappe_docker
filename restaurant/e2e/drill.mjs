@@ -46,8 +46,17 @@ const floor = async (a) => {
   await a.p.waitForTimeout(15000);
   await a.p.getByText('Main Hall', { exact: true }).first().click().catch(() => {});
   await a.p.locator('.d-table:visible').first().waitFor({ timeout: 45000 }).catch(() => {});
-  // ready means OUR toolbar mounted, not just frappe's shell
-  await a.p.getByRole('button', { name: 'Seat guest' }).waitFor({ timeout: 60000 }).catch(() => {});
+  // ready means OUR toolbar mounted, not just frappe's shell — retry once
+  let ready = await a.p.getByRole('button', { name: 'Seat guest' })
+    .waitFor({ timeout: 60000 }).then(() => true).catch(() => false);
+  if (!ready) {
+    await a.p.reload({ waitUntil: 'domcontentloaded' }).catch(() => {});
+    await a.p.waitForTimeout(15000);
+    await a.p.getByText('Main Hall', { exact: true }).first().click().catch(() => {});
+    ready = await a.p.getByRole('button', { name: 'Seat guest' })
+      .waitFor({ timeout: 60000 }).then(() => true).catch(() => false);
+  }
+  if (!ready) ok(`${a.name}: floor toolbar mounts`, false, 'no Seat guest after reload');
   t(`${a.name} floor ready`, Date.now() - t0);
 };
 
@@ -174,16 +183,16 @@ const payCurrent = async (a, guest) => {
 };
 
 // ---------------------------------------------------------------- actors
-const [w1, w2, w3, c1, c2, k1, k2, adm] = await Promise.all([
-  mkActor('W1', 'waiter@etham.co.ke', 'Waiter@2026'),
-  mkActor('W2', 'waiter@etham.co.ke', 'Waiter@2026'),
-  mkActor('W3', 'waiter@etham.co.ke', 'Waiter@2026'),
-  mkActor('C1', 'cashier@etham.co.ke', 'Cashier@2026'),
-  mkActor('C2', 'cashier@etham.co.ke', 'Cashier@2026'),
-  mkActor('K1', 'kitchen@etham.co.ke', 'Kitchen@2026'),
-  mkActor('K2', 'kitchen@etham.co.ke', 'Kitchen@2026'),
-  mkActor('ADM', 'admin@etham.co.ke', process.env.ADMIN_PASS),
-]);
+// staff do not all log in in the same second; the stampede case is measured
+// separately. Boots are staggered, service concurrency stays real.
+const w1 = await mkActor('W1', 'waiter@etham.co.ke', 'Waiter@2026');
+const w2 = await mkActor('W2', 'waiter@etham.co.ke', 'Waiter@2026');
+const w3 = await mkActor('W3', 'waiter@etham.co.ke', 'Waiter@2026');
+const c1 = await mkActor('C1', 'cashier@etham.co.ke', 'Cashier@2026');
+const c2 = await mkActor('C2', 'cashier@etham.co.ke', 'Cashier@2026');
+const k1 = await mkActor('K1', 'kitchen@etham.co.ke', 'Kitchen@2026');
+const k2 = await mkActor('K2', 'kitchen@etham.co.ke', 'Kitchen@2026');
+const adm = await mkActor('ADM', 'admin@etham.co.ke', process.env.ADMIN_PASS);
 ok('eight sessions signed in', true);
 
 // a dirty floor poisons every later assertion — refuse to run on one
@@ -212,14 +221,14 @@ if (!shift) {
 }
 ok('cashier opens or finds the day', !!shift, shift && shift.name);
 
-await Promise.all([floor(k1), floor(k2)]);
+await floor(k1); await floor(k2);
 await k1.p.locator('.d-table:visible').filter({ hasText: 'Kitchen' }).first().click();
 await k2.p.locator('.d-table:visible').filter({ hasText: 'Bar' }).first().click();
 await k1.p.waitForTimeout(4000);
 ok('kitchen and bar boards open', true);
 
 // ---------------------------------------------------------------- seat 4 parties, 3 waiters
-await Promise.all([floor(w1), floor(w2), floor(w3)]);
+await floor(w1); await floor(w2); await floor(w3);
 await signPin(w1, 'Amina Test', '1111');
 await signPin(w2, 'Moses Test', '2222');
 await signPin(w3, 'Njeri Test', '3333');
@@ -286,7 +295,7 @@ ok('splitting a bill by items works (waiter session)', split.done === true && ch
    JSON.stringify({ split, checks: checkCount }));
 
 // ---------------------------------------------------------------- pay: two cashiers at once
-await Promise.all([floor(c1), floor(c2)]);
+await floor(c1); await floor(c2);
 await Promise.all([
   (async () => { await openPadOnTable(c1, 'Guest Ann'); await payCurrent(c1, 'Guest Ann'); })(),
   (async () => { await openPadOnTable(c2, 'Guest Ben'); await payCurrent(c2, 'Guest Ben'); })(),

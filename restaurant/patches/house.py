@@ -210,9 +210,10 @@ def ensure_custom_fields():
 	# waiter's add-to-cart dies as a silent 403 and the check stays empty.
 	from frappe.permissions import add_permission
 	for dt in ("Item", "Item Price", "Item Group", "UOM", "POS Profile", "POS Settings",
-			   "Stock Settings", "Selling Settings", "Company", "Price List",
-			   "Restaurant Settings", "Restaurant Menu", "Mode of Payment",
-			   "Sales Taxes and Charges Template"):
+			   "Stock Settings", "Selling Settings", "Accounts Settings", "Company",
+			   "Price List", "Restaurant Settings", "Restaurant Menu", "Mode of Payment",
+			   "Sales Taxes and Charges Template", "Account", "Cost Center", "Warehouse",
+			   "Customer", "Customer Group", "Territory"):
 		try:
 			add_permission(dt, "Restaurant User", 0)
 		except Exception:
