@@ -46,6 +46,8 @@ const floor = async (a) => {
   await a.p.waitForTimeout(15000);
   await a.p.getByText('Main Hall', { exact: true }).first().click().catch(() => {});
   await a.p.locator('.d-table:visible').first().waitFor({ timeout: 45000 }).catch(() => {});
+  // ready means OUR toolbar mounted, not just frappe's shell
+  await a.p.getByRole('button', { name: 'Seat guest' }).waitFor({ timeout: 60000 }).catch(() => {});
   t(`${a.name} floor ready`, Date.now() - t0);
 };
 
@@ -97,7 +99,19 @@ const orderAndFire = async (a, guest) => {
   const dishes = await add.count();
   if (!dishes) { ok(`${a.name}: menu on the pad for ${guest}`, false, '0 dishes'); return null; }
   await add.nth(0).click({ force: true });
-  await a.p.waitForTimeout(3500);
+  await a.p.waitForTimeout(2500);
+  // On a shared table the first tap asks whose check this is — answer it.
+  const picker = a.p.locator('.modal.show').filter({ hasText: 'Whose check' }).last();
+  if (await picker.count()) {
+    const opts = await picker.locator('select[data-fieldname="order"] option').all();
+    let value = null;
+    for (const o of opts) if ((await o.textContent()).includes(guest)) value = await o.getAttribute('value');
+    if (value) { await picker.locator('select[data-fieldname="order"]').selectOption(value); }
+    await picker.getByRole('button', { name: 'Open' }).click();
+    await a.p.waitForTimeout(3500);
+    await add.nth(0).click({ force: true });
+    await a.p.waitForTimeout(2500);
+  }
   await add.nth(2).click({ force: true }).catch(() => {});
   await a.p.waitForTimeout(3500);
   const fired = Date.now();
@@ -105,6 +119,15 @@ const orderAndFire = async (a, guest) => {
   await a.p.waitForTimeout(5000);
   await closeStrayModals(a.p);
   t(`${a.name} orders+fires for ${guest}`, Date.now() - t0);
+  const landed = await a.p.evaluate(async (g) => {
+    const r = await frappe.call('frappe.client.get_list', { doctype: 'Table Order',
+      filters: { customer: g, status: ['not in', ['Cancelled', 'Invoiced']] },
+      fields: ['name', 'status', 'amount'], limit_page_length: 1 });
+    return (r.message || [])[0];
+  }, guest);
+  ok(`${a.name}: ${guest}'s check really has food on it`,
+     landed && landed.amount > 0 && landed.status !== 'Opened',
+     JSON.stringify(landed));
   return fired;
 };
 
@@ -114,6 +137,12 @@ const openPadOnTable = async (a, guest) => {
   await a.p.waitForTimeout(5000);
   const d = a.p.locator('.modal.show').last();
   const title = await d.locator('.modal-title').innerText().catch(() => '');
+  const body = await d.innerText().catch(() => '');
+  if (/Assigned to another User/i.test(body)) {
+    ok(`${a.name}: table handoff to ${guest}`, false, 'blocked: assigned to another user');
+    await closeStrayModals(a.p);
+    return;
+  }
   if (title.includes('Whose check')) {
     const opts = await d.locator('select[data-fieldname="order"] option').all();
     let value = null;
@@ -159,8 +188,18 @@ ok('eight sessions signed in', true);
 
 // ---------------------------------------------------------------- day + boards
 await floor(c1);
-const shift = await api(c1, 'house_shift');
-ok('cashier finds the day open (already opened earlier)', !!shift, shift && shift.name);
+let shift = await api(c1, 'house_shift');
+if (!shift) {
+  await c1.p.getByRole('button', { name: 'Open day', exact: true }).click();
+  await c1.p.waitForTimeout(3000);
+  const od = c1.p.locator('.modal.show').last();
+  await od.locator('input[data-fieldname="mode_0"]').fill('5000');
+  await od.getByRole('button', { name: 'Open the day' }).click();
+  await c1.p.waitForTimeout(6000);
+  await closeStrayModals(c1.p);
+  shift = await api(c1, 'house_shift');
+}
+ok('cashier opens or finds the day', !!shift, shift && shift.name);
 
 await Promise.all([floor(k1), floor(k2)]);
 await k1.p.locator('.d-table:visible').filter({ hasText: 'Kitchen' }).first().click();
@@ -203,7 +242,9 @@ ok('four parties seated and ordered on one table', seats && seats.parties.length
 // kitchen actually shows them
 const boardHas = async (a) => a.p.evaluate((tbl) => document.body.innerText.includes(tbl), TABLE);
 let kitchenSees = false;
-for (let i = 0; i < 15 && !kitchenSees; i++) { kitchenSees = await boardHas(k1); if (!kitchenSees) await k1.p.waitForTimeout(2000); }
+const kt0 = Date.now();
+for (let i = 0; i < 20 && !kitchenSees; i++) { kitchenSees = await boardHas(k1); if (!kitchenSees) await k1.p.waitForTimeout(2000); }
+t('dispatch -> kitchen board shows it', Date.now() - kt0);
 ok('kitchen board shows the table tickets', kitchenSees);
 
 // pick_check: reopening the shared table asks whose check
@@ -267,6 +308,11 @@ ok('table fully clear after all payments', seats && seats.occupied === 0 && seat
    seats && `${seats.occupied}/${seats.capacity}, parties ${seats.parties.length}`);
 
 // ---------------------------------------------------------------- admin: the numbers
+for (let i = 0; i < 3; i++) {
+  const s0 = Date.now();
+  await api(adm, 'table_occupancy');
+  t(`occupancy under load, sample ${i + 1}`, Date.now() - s0);
+}
 const day = await api(adm, 'day_summary');
 const invoices = await adm.p.evaluate(async () =>
   (await frappe.call('frappe.client.get_count', { doctype: 'POS Invoice', filters: { docstatus: 1 } })).message);
@@ -296,7 +342,10 @@ await floor(c1);
 await c1.p.getByRole('button', { name: /^Close day/ }).click();
 await c1.p.waitForTimeout(3500);
 const cd = c1.p.locator('.modal.show').last();
-await cd.getByRole('button', { name: /Close the day|Close anyway/ }).click({ force: true });
+const anyway = await cd.getByRole('button', { name: 'Close anyway' }).count();
+ok('nothing left open at close time', anyway === 0,
+   anyway ? 'the close dialog warns about open checks' : 'clean');
+await cd.getByRole('button', { name: /Close the day|Close anyway/ }).first().click({ force: true });
 await c1.p.waitForTimeout(9000);
 const after = await api(adm, 'day_summary');
 ok('cashier closes the day clean', after && after.open === false, JSON.stringify(after));

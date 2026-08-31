@@ -1216,6 +1216,16 @@ def open_day(pos_profile=None, balances=None):
     prof = frappe.get_doc("POS Profile", profile)
     modes = [p.mode_of_payment for p in prof.payments] or ["Cash"]
 
+    # A naming counter behind a surviving document collides on insert and the
+    # day refuses to open; heal the series against what actually exists.
+    for series in frappe.db.sql_list(
+            "select name from tabSeries where name like 'POS-OPE%%'"):
+        last = frappe.db.sql(
+            "select max(cast(substring_index(name, '-', -1) as unsigned)) "
+            "from `tabPOS Opening Entry` where name like %s", series + "%")[0][0] or 0
+        frappe.db.sql("update tabSeries set current = greatest(current, %s) where name = %s",
+                      (last, series))
+
     doc = frappe.get_doc({
         "doctype": "POS Opening Entry",
         "company": prof.company,
