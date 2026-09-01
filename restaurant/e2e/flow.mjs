@@ -58,7 +58,9 @@ ok('a waiter exists to sign in as', !!provisioned, `${WAITER} (${provisioned})`)
 
 // 2. the floor
 await page.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded', timeout: 60000 });
-await page.waitForTimeout(11000);
+// a cold cache can take far longer than a fixed sleep — wait for a real tile
+await page.locator('.d-table').first().waitFor({ state: 'attached', timeout: 60000 }).catch(() => {});
+await page.waitForTimeout(4000);
 await shot('floor');
 const tables = await page.locator('.d-table').count();
 ok('floor renders tables', tables > 0, `${tables} tables`);

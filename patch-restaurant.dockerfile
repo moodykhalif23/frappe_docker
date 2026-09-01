@@ -213,6 +213,17 @@ RUN python3 /tmp/id_selector_spaces.py \
 # the receipt modal embedded a PDF that never laid out, so it opened blank
 COPY restaurant/patches/print_receipt.py /tmp/print_receipt.py
 RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+# the floor remembered an empty room and looked broken
+COPY restaurant/patches/skip_empty_room.py /tmp/skip_empty_room.py
+RUN python3 /tmp/skip_empty_room.py \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+
+# the kitchen board never said which waiter to hand the plate to
+COPY restaurant/patches/kitchen_ticket_waiter.py /tmp/kitchen_ticket_waiter.py
+RUN python3 /tmp/kitchen_ticket_waiter.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())" \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js
+
 # a closed counter still accepted new checks through the pad's + button
 COPY restaurant/patches/gate_orders_when_closed.py /tmp/gate_orders_when_closed.py
 RUN python3 /tmp/gate_orders_when_closed.py \

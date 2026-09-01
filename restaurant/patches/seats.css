@@ -70,3 +70,16 @@
 /* Station views: a waiter tablet holds tables, a kitchen screen holds boards. */
 body.rm-station-waiter .floor-map .d-table.p-center { display: none !important; }
 body.rm-station-kitchen .floor-map .d-table:not(.p-center) { display: none !important; }
+
+/* rm-ticket-waiter: whose plate this is, on the kitchen board */
+.rm-ticket-waiter {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 9px;
+  background: var(--gray-800, #313b46);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
