@@ -171,6 +171,19 @@ badge per party, each with its own check and its own waiter.
 | `cashier@etham.co.ke` | the till | payments, open/close day, release tables | edit the menu |
 | `admin@etham.co.ke` | you | everything | — |
 
+**Two layers, and only devices log in.** Each tablet or screen signs into the
+site **once** with its station account and stays signed in: waiter tablets as
+`waiter@`, the kitchen screen as `kitchen@`, the till as `cashier@`. The
+**people** never log in — a waiter identifies on the shared tablet with their
+name + PIN (floor → *Waiter*), once per shift. That PIN is what puts their name
+on parties, orders and the sales report. Kitchen and cashier need no PIN — the
+station login is their identity.
+
+When setting a PIN on the Restaurant Waiter form, the field shows dots — tap
+the **eye icon** to see what you typed before saving; a hidden typo is the
+usual cause of "Wrong PIN". (The little "Weak" meter next to the PIN is
+cosmetic — a 4-digit PIN is expected.)
+
 These are enforced by the server, not by hiding buttons — a waiter who taps
 *Complete* is refused, with the action logged under their session. **Change
 all passwords on first use**: avatar (bottom-left) → *My Settings* → *Reset
