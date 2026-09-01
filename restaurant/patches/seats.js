@@ -18,6 +18,13 @@
       frappe.utils.escape_html(who)}<i>${p.covers || "?"}</i></span>`;
   };
 
+  const CAPS = (frappe.boot && frappe.boot.user && frappe.boot.user.can_create) || [];
+  const CAN_BANK = CAPS.indexOf("POS Closing Entry") !== -1;
+  const CAN_BILL = CAPS.indexOf("POS Invoice") !== -1;
+  const ROLES = frappe.user_roles || [];
+  const IS_KITCHEN_STATION = ROLES.indexOf("Kitchen Station") !== -1;
+  const IS_WAITER_STATION = ROLES.indexOf("Waiter Station") !== -1;
+
   window.RM_seats = {
     map: {},
     mounted: false,
@@ -26,8 +33,22 @@
     mount(rm) {
       if (this.mounted) return;
       this.mounted = true;
-      if (rm && rm.page && rm.page.add_inner_button) {
+      // Release banks-level people only; a kitchen screen keeps only its boards.
+      if (rm && rm.page && rm.page.add_inner_button && CAN_BANK) {
         rm.page.add_inner_button(__("Release"), () => RM_seats.release_dialog());
+      }
+      document.body.classList.toggle("rm-station-kitchen", IS_KITCHEN_STATION);
+      document.body.classList.toggle("rm-station-waiter", IS_WAITER_STATION);
+      if (IS_KITCHEN_STATION) {
+        setTimeout(() => $(".page-actions button").filter(function () {
+          return /Seat guest|^Waiter|^Door|Release|Open day|Close day/.test($(this).text());
+        }).hide(), 1500);
+      }
+      if (!CAN_BILL) {
+        // the money button never shows on a station that cannot take money
+        setInterval(() => $(".order-manage button, .order-manage .pad-btn").filter(function () {
+          return /^\s*Complete\s*$/.test($(this).text());
+        }).hide(), 2000);
       }
       // The floor is still wiring itself up; do not compete with it.
       setTimeout(() => RM_seats.refresh(), 1500);

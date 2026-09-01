@@ -30,6 +30,8 @@
       if (this.mounted || !rm.page || !rm.page.add_inner_button) return;
       this.mounted = true;
       this.rm = rm;
+      const caps = (frappe.boot && frappe.boot.user && frappe.boot.user.can_create) || [];
+      if (caps.indexOf("POS Closing Entry") === -1) return;
       rm.page.add_inner_button(__("Open day"), () => RM_close_day.open_day());
       rm.page.add_inner_button(__("Close day"), () => RM_close_day.open());
       this.badge();

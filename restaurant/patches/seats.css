@@ -66,3 +66,7 @@
   z-index: 3;
 }
 .restaurant-manage .floor-map .d-table .has-customer .has-customer-icon { display: none !important; }
+
+/* Station views: a waiter tablet holds tables, a kitchen screen holds boards. */
+body.rm-station-waiter .floor-map .d-table.p-center { display: none !important; }
+body.rm-station-kitchen .floor-map .d-table:not(.p-center) { display: none !important; }

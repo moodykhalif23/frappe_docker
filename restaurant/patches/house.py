@@ -249,6 +249,10 @@ def ensure_custom_fields():
 		if not frappe.db.get_value("POS Profile", p, "print_format"):
 			frappe.db.set_value("POS Profile", p, "print_format", receipt, update_modified=False)
 
+	for role in ("Kitchen Station", "Waiter Station"):
+		if not frappe.db.exists("Role", role):
+			frappe.get_doc({"doctype": "Role", "role_name": role, "desk_access": 1}).insert(ignore_permissions=True)
+
 	_ensure_procurement()
 
 	# frappe 417s a PDF whose print format never chose a generator.
