@@ -83,3 +83,11 @@ body.rm-station-kitchen .floor-map .d-table:not(.p-center) { display: none !impo
   font-weight: 600;
   letter-spacing: 0.02em;
 }
+
+/* Only a manager edits the floor plan: hide the pencil, the add/remove controls
+   and the per-tile tools from anyone the server would refuse anyway. */
+body.rm-no-floor-edit .general-editor-button,
+body.rm-no-floor-edit .add-room,
+body.rm-no-floor-edit .d-toll-box,
+body.rm-no-floor-edit .resize-handle,
+body.rm-no-floor-edit .floor-map-tool-box { display: none !important; }

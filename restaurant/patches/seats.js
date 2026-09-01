@@ -43,6 +43,10 @@
       }
       document.body.classList.toggle("rm-station-kitchen", IS_KITCHEN_STATION);
       document.body.classList.toggle("rm-station-waiter", IS_WAITER_STATION);
+      // Editing the floor plan is a manager's job: without the permission the
+      // server refuses anyway, so do not offer the pencil at all.
+      const CAN_EDIT_FLOOR = (CAPS.indexOf("Restaurant Object") !== -1);
+      document.body.classList.toggle("rm-no-floor-edit", !CAN_EDIT_FLOOR);
       if (IS_KITCHEN_STATION) {
         const hideFront = () => $(".page-actions button").filter(function () {
           return /Seat guest|Waiter|Door|Release|Open day|Close day/.test($(this).text().trim());
