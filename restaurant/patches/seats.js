@@ -58,6 +58,8 @@
       this.timer = setInterval(() => RM_seats.refresh(), 60000);
       // Checks moving usually means seats moved with them.
       frappe.realtime.on("synchronize_order_data", () => RM_seats.soon());
+
+      this.watch_floor();
     },
 
     soon() {
@@ -78,26 +80,71 @@
       });
     },
 
+    watch_floor() {
+      if (this.observer || typeof MutationObserver === "undefined") return;
+      const target = document.querySelector(".restaurant-manage") || document.body;
+      this.observer = new MutationObserver(() => {
+        if (RM_seats.painting) return;
+        clearTimeout(RM_seats.repaint_timer);
+        RM_seats.repaint_timer = setTimeout(() => RM_seats.paint(), 400);
+      });
+      this.observer.observe(target, { childList: true, subtree: true });
+    },
+
     paint() {
-      Object.keys(this.map).forEach((name) => RM_seats.paint_table(name));
+      // our own writes are mutations too — do not chase them
+      this.painting = true;
+      try {
+        Object.keys(this.map).forEach((name) => RM_seats.paint_table(name));
+      } finally {
+        setTimeout(() => { RM_seats.painting = false; }, 150);
+      }
     },
 
     paint_table(name) {
       const seats = this.map[name];
-      const obj = window.RM && RM.object && RM.object(name);
-      if (!seats || !obj || !obj.obj || !obj.obj.obj) return;
+      if (!seats) return;
 
-      if (obj.no_of_seats && seats.capacity) {
-        obj.no_of_seats.val(seats.occupied ? `${seats.occupied}/${seats.capacity}` : seats.capacity);
+      // Find the tile in the live document: a room re-render replaces the nodes
+      // the cached RestaurantObject still points at, so its JSHtml writes vanish.
+      let el = null;
+      $(".floor-map .d-table").each(function () {
+        const label = $(this).find(".d-label").first().text().trim();
+        if (label === seats.description || label === name) el = $(this);
+      });
+      if (!el || !el.length) {
+        const obj = window.RM && RM.object && RM.object(name);
+        if (!obj || !obj.obj || !obj.obj.obj) return;
+        el = $(obj.obj.obj);
       }
 
-      const el = $(obj.obj.obj);
+      const pill = el.find(".d-table-seats").first();
+      if (pill.length && seats.capacity) {
+        const text = seats.occupied ? `${seats.occupied}/${seats.capacity}` : String(seats.capacity);
+
+        if (pill.text().trim() !== text) {
+          const icon = pill.find(".fa").first();
+          pill.text(" " + text);
+          if (icon.length) pill.prepend(icon);
+        }
+      }
       el.toggleClass("rm-full", seats.free === 0 && !!seats.capacity);
       el.toggleClass("rm-shared", seats.parties.length > 1);
 
       const box = el.find(".resize-handle-container").first();
       if (!box.length) return;
-      box.find(".rm-party-badges").remove();
+
+      const wanted = seats.parties.length
+        ? `<span class="rm-party-badges">${seats.parties.map(party_badge).join("")}</span>` : "";
+      const existing = box.find(".rm-party-badges");
+      const unchanged = wanted
+        ? (existing.length === 1 && existing[0].outerHTML === wanted)
+        : existing.length === 0;
+      if (unchanged) {
+        el.find(".d-waiter-badge").toggle(!seats.parties.length);
+        return;
+      }
+      existing.remove();
 
       // The section badge lives on live data, not the tile's first render — a
       // released table must lose its initials without waiting for a reload.
@@ -116,7 +163,7 @@
       }
 
       if (!seats.parties.length) return;
-      box.append(`<span class="rm-party-badges">${seats.parties.map(party_badge).join("")}</span>`);
+      box.append(wanted);
     },
 
     release_dialog() {
