@@ -30,6 +30,9 @@ def run():
 
 	_cleanup()
 	house.ensure_custom_fields()
+	# seating now refuses on a closed counter, so the suite opens the day
+	if not house.house_shift():
+		house.open_day(balances='{"Cash": 1000}')
 
 	# --- walk-in: seated, occupies a table, releases it on payment ---
 	free_before = house.free_tables(2)

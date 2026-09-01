@@ -91,6 +91,9 @@ def run():
         results.append((bool(cond), label, detail))
 
     _cleanup()
+    from restaurant_management import house
+    if not house.house_shift():
+        house.open_day(balances='{"Cash": 1000}')
     inv.ensure_fields()
     store = inv._store()
     check("a store warehouse is resolved", store, str(store))

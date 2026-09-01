@@ -120,6 +120,9 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None):
 		frappe.throw(frappe._("A guest name is required"))
 	if not table:
 		frappe.throw(frappe._("Pick a table"))
+	# A closed counter seats nobody: the kitchen must never cook what cannot bill.
+	if not house_shift():
+		frappe.throw(frappe._("The counter is closed. Open the day before seating guests."))
 
 	obj = frappe.db.get_value("Restaurant Object", table, ["name", "room", "company"], as_dict=True)
 	if not obj:
@@ -454,6 +457,8 @@ def seat_from_waitlist(booking, table, waiter=None):
     obj = frappe.db.get_value("Restaurant Object", table, ["name", "room", "company"], as_dict=True)
     if not obj:
         frappe.throw(frappe._("Unknown table"))
+    if not house_shift():
+        frappe.throw(frappe._("The counter is closed. Open the day before seating guests."))
     _seats_or_throw(obj.name, doc.no_of_people)
 
     now = frappe.utils.now_datetime()

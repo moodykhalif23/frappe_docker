@@ -213,6 +213,11 @@ RUN python3 /tmp/id_selector_spaces.py \
 # the receipt modal embedded a PDF that never laid out, so it opened blank
 COPY restaurant/patches/print_receipt.py /tmp/print_receipt.py
 RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+# a closed counter still accepted new checks through the pad's + button
+COPY restaurant/patches/gate_orders_when_closed.py /tmp/gate_orders_when_closed.py
+RUN python3 /tmp/gate_orders_when_closed.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())"
+
 # a pad opened on a shared table selected nothing, so Complete refused
 COPY restaurant/patches/pad_pick_on_open.py /tmp/pad_pick_on_open.py
 RUN python3 /tmp/pad_pick_on_open.py \
