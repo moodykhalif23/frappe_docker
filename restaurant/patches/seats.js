@@ -22,8 +22,11 @@
   const CAN_BANK = CAPS.indexOf("POS Closing Entry") !== -1;
   const CAN_BILL = CAPS.indexOf("POS Invoice") !== -1;
   const ROLES = frappe.user_roles || [];
-  const IS_KITCHEN_STATION = ROLES.indexOf("Kitchen Station") !== -1;
-  const IS_WAITER_STATION = ROLES.indexOf("Waiter Station") !== -1;
+  // Administrator holds every role, so a station role alone would strip its own
+  // floor bare. A real station is one that cannot bank the day.
+  const IS_STATION = !CAN_BANK && frappe.session.user !== "Administrator";
+  const IS_KITCHEN_STATION = IS_STATION && ROLES.indexOf("Kitchen Station") !== -1;
+  const IS_WAITER_STATION = IS_STATION && ROLES.indexOf("Waiter Station") !== -1;
 
   window.RM_seats = {
     map: {},
@@ -33,9 +36,10 @@
     mount(rm) {
       if (this.mounted) return;
       this.mounted = true;
-      // Release banks-level people only; a kitchen screen keeps only its boards.
-      if (rm && rm.page && rm.page.add_inner_button && CAN_BANK) {
-        rm.page.add_inner_button(__("Release"), () => RM_seats.release_dialog());
+      // Release is rare and cashier-only, so it lives in the page menu: a sixth
+      // toolbar button pushes every one-tap control into an overflow dropdown.
+      if (rm && rm.page && rm.page.add_menu_item && CAN_BANK) {
+        rm.page.add_menu_item(__("Release a table"), () => RM_seats.release_dialog());
       }
       document.body.classList.toggle("rm-station-kitchen", IS_KITCHEN_STATION);
       document.body.classList.toggle("rm-station-waiter", IS_WAITER_STATION);

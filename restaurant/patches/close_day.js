@@ -32,8 +32,11 @@
       this.rm = rm;
       const caps = (frappe.boot && frappe.boot.user && frappe.boot.user.can_create) || [];
       if (caps.indexOf("POS Closing Entry") === -1) return;
-      rm.page.add_inner_button(__("Open day"), () => RM_close_day.open_day());
-      rm.page.add_inner_button(__("Close day"), () => RM_close_day.open());
+      // One button, not two: a sixth toolbar item pushes the rest into an
+      // overflow menu, and the floor's buttons must stay one tap away.
+      this.day_btn = rm.page.add_inner_button(__("Day"), () => {
+        call("day_summary").then((s) => (s && s.open ? RM_close_day.open() : RM_close_day.open_day()));
+      });
       this.badge();
     },
 
@@ -43,12 +46,11 @@
 
     badge() {
       call("day_summary").then((s) => {
-        const close = this.button(/Close day/);
-        const open = this.button(/Open day/);
-        if (!s) return;
+        const btn = this.button(/^\s*(Day|Open day|Close day)/);
+        if (!s || !btn.length) return;
         // A day still open from before today is the thing that breaks billing.
-        if (close.length) close.text(s.open && s.stale ? __("Close day (yesterday)") : __("Close day")).toggle(!!s.open);
-        if (open.length) open.toggle(!s.open);
+        btn.text(!s.open ? __("Open day")
+          : s.stale ? __("Close day (yesterday)") : __("Close day"));
       });
     },
 
