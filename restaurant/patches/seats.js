@@ -40,9 +40,11 @@
       document.body.classList.toggle("rm-station-kitchen", IS_KITCHEN_STATION);
       document.body.classList.toggle("rm-station-waiter", IS_WAITER_STATION);
       if (IS_KITCHEN_STATION) {
-        setTimeout(() => $(".page-actions button").filter(function () {
-          return /Seat guest|^Waiter|^Door|Release|Open day|Close day/.test($(this).text());
-        }).hide(), 1500);
+        const hideFront = () => $(".page-actions button").filter(function () {
+          return /Seat guest|Waiter|Door|Release|Open day|Close day/.test($(this).text().trim());
+        }).hide();
+        setTimeout(hideFront, 1500);
+        setTimeout(hideFront, 5000);
       }
       if (!CAN_BILL) {
         // the money button never shows on a station that cannot take money
