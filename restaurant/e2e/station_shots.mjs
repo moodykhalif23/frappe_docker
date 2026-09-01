@@ -58,8 +58,16 @@ const billed = await c.p.evaluate(() => {
 });
 await c.p.screenshot({ path: `${OUT}/cashier-floor.png` });
 ok('cashier sees tables AND boards', s.tables > 0 && s.boards > 0, JSON.stringify({ tables: s.tables, boards: s.boards }));
-ok('cashier has the money buttons', s.buttons.some(x => /Close day/.test(x)) && s.buttons.some(x => /Release/.test(x)),
-   JSON.stringify(s.buttons));
+const menuHasRelease = await c.p.evaluate(async () => {
+  const toggle = document.querySelector('.menu-btn-group .menu-more-button, .menu-btn-group button');
+  if (toggle) toggle.click();
+  await new Promise(r => setTimeout(r, 800));
+  return [...document.querySelectorAll('.menu-btn-group a, .dropdown-menu a')]
+    .some(a => /Release a table/i.test(a.textContent));
+});
+ok('cashier has the day button and Release in the menu',
+   s.buttons.some(x => /Close day|Open day/.test(x)) && menuHasRelease,
+   JSON.stringify({ toolbar: s.buttons, releaseInMenu: menuHasRelease }));
 ok('cashier sees the table to be billed', billed.length > 0, JSON.stringify(billed));
 await c.ctx.close();
 await b.close();
