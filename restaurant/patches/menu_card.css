@@ -1,8 +1,8 @@
-
 /* rm-menu-card: the stock card hangs a 100x100 placeholder letter behind the
    title as a watermark, floats Add, absolutely positions the stepper, and lays
-   the grid out in a fixed 3 columns. Rebuilt as a flex card in an auto-fitting
-   grid. Selectors are .pos-items — there is no .product wrapper. */
+   the grid out in a fixed 3 columns. Rebuilt as a photo-first card in an
+   auto-fitting grid: photo on top, name, then price left and a - n + pill right.
+   Selectors are .pos-items — there is no .product wrapper. */
 
 /* The pad reuses a desk page layout whose main section is 80% wide, to leave room
    for a sidebar the pad never renders — that is the white gap beside the menu. */
@@ -13,13 +13,26 @@
   flex: 0 0 100% !important;
 }
 
+.pos-items {
+  --rm-teal: #0e9f8e;
+  --rm-teal-soft: #e6f5f2;
+  --rm-card-radius: 14px;
+  --rm-ink: #1f2933;
+  --rm-muted: #6b7785;
+}
+
 /* Grid follows the panel width, not the viewport: the pad is a resizable panel. */
 .pos-items .widget-group-body {
   display: grid !important;
-  grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)) !important;
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) !important;
+  gap: 16px !important;
   align-items: stretch;
+  padding: 4px 2px 12px;
 }
+
+/* clusterize's scroll spacers are grid items too; on their own row they cannot
+   stretch the last cards to the spacer's height. */
+.pos-items .widget-group-body .clusterize-extra-row { grid-column: 1 / -1; }
 
 /* The widget wrapper adds its own card chrome; the .small-box is our card. */
 .pos-items .shortcut-widget-box {
@@ -27,73 +40,39 @@
   border: 0 !important;
   padding: 0 !important;
   background: transparent !important;
+  border-radius: var(--rm-card-radius) !important;
   height: 100%;
 }
 
 .pos-items .small-box.item {
   display: flex !important;
   flex-direction: column;
-  gap: 9px;
+  gap: 10px;
   height: 100%;
-  min-height: 96px;
   margin: 0 !important;
-  padding: 11px 12px !important;
-  border-radius: 4px !important;
-  background: var(--card-bg, var(--fg-color, #fff)) !important;
-  border: 1px solid var(--border-color, #e2e8f0) !important;
-  box-shadow: none !important;
+  padding: 12px 14px 14px !important;
+  border-radius: var(--rm-card-radius) !important;
+  background: #fff !important;
+  border: 1px solid rgba(15, 23, 42, 0.06) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.06) !important;
   overflow: hidden;
   position: relative;
 }
 
-.pos-items .small-box.item .inner {
-  padding: 0 !important;
-  padding-right: 46px !important;
-  margin: 0;
-}
-
-.pos-items .small-box.item .inner .title {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin: 0;
-  font-size: 0.83rem;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--text-color, #1f272e);
-}
-.pos-items .small-box.item .inner .title .fa-circle {
-  font-size: 8px;
-  flex: 0 0 auto;
-  transform: translateY(-2px);
-}
-
-.pos-items .small-box.item .inner p {
-  margin: 2px 0 0;
-  font-size: 0.68rem;
-  line-height: 1.35;
-  color: var(--text-muted, #7c7c7c);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.pos-items .small-box.item .inner p:empty { display: none; }
-
-/* Photo or initials: a 46px corner badge, not a watermark. */
+/* The photo comes first: it is what a waiter recognises before any word. */
 .pos-items .small-box.item .icon {
-  position: absolute !important;
-  top: 8px !important;
-  right: 8px !important;
-  width: 38px !important;
-  height: 38px !important;
-  border-radius: 3px !important;
+  order: -1;
+  position: static !important;
+  width: 100% !important;
+  height: 150px !important;
+  border-radius: 10px !important;
   overflow: hidden !important;
   opacity: 1 !important;
   display: flex !important;
   align-items: center;
   justify-content: center;
-  background: var(--control-bg, #f4f5f6) !important;
+  background: var(--rm-teal-soft) !important;
+  flex: 0 0 auto;
 }
 .pos-items .small-box.item .icon > img {
   width: 100% !important;
@@ -101,122 +80,165 @@
   object-fit: cover;
   display: block;
 }
+/* No photo yet: big soft initials on the teal tint, never a bracket. */
 .pos-items .small-box.item .icon .no-image {
-  font-size: 0.72rem !important;
+  font-size: 2rem !important;
   font-weight: 700 !important;
-  letter-spacing: 0.02em;
-  color: var(--text-muted, #7c7c7c) !important;
+  letter-spacing: 0.04em;
+  color: var(--rm-teal) !important;
   line-height: 1 !important;
+  white-space: nowrap;
 }
 
-/* Quantity on its own line, price on a full-width button: nothing clips. */
-.pos-items .small-box.item .small-box-footer {
-  display: flex !important;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  margin-top: auto !important;
+.pos-items .small-box.item .inner {
   padding: 0 !important;
-  background: transparent !important;
-  height: auto !important;
+  margin: 0;
+  flex: 1 1 auto;
 }
-.pos-items .small-box.item .small-box-footer .form-group {
-  position: static !important;
-  margin: 0 !important;
-}
-.pos-items .small-box.item .input-group {
-  opacity: 1 !important;
-  display: flex !important;
-  flex-wrap: nowrap !important;
-  width: auto !important;
-  align-self: flex-start;
-  min-height: 32px;
-  border-radius: 6px !important;
-  background: var(--control-bg, #f4f5f6) !important;
-  align-items: center;
-  overflow: hidden;
-}
-.pos-items .small-box.item .input-group > * { flex: 0 0 auto; }
-.pos-items .small-box.item .input-group .input-group-text {
-  padding: 0 11px;
-  font-size: 0.86rem;
-  line-height: 32px;
-  cursor: pointer;
-}
-/* Bootstrap's .custom-file is width:100%, which wraps the +/- onto new rows. */
-.pos-items .small-box.item .input-group .custom-file {
-  width: auto !important;
-  min-width: 26px !important;
-  padding-top: 0 !important;
-  text-align: center;
-  position: static !important;
-  line-height: 32px;
-}
-.pos-items .small-box.item .add-qty { font-size: 0.88rem; font-weight: 600; }
-
-.pos-items .small-box.item .add-item {
-  float: none !important;
-  border-radius: 6px !important;
-  min-height: 34px;
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 100%;
-  padding: 0 12px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.pos-items .small-box.item .small-box-footer .form-group { flex: 0 0 auto; }
-
-/* Touch-sized on a phone, and at phone width on any device. */
-@media (pointer: coarse), (max-width: 640px) {
-  .pos-items .small-box.item .add-item { min-height: 44px; padding: 0 16px; }
-  .pos-items .small-box.item .input-group { min-height: 40px; }
-}
-
-/* clusterize's scroll spacers are grid items too; on their own row they cannot
-   stretch the last cards to the spacer's height. */
-.pos-items .widget-group-body .clusterize-extra-row { grid-column: 1 / -1; }
-
-/* Bigger cards read faster in service: wider minimum, larger name and price,
-   taller touch targets — still auto-fitting, so a narrow tablet shows fewer. */
-.pos-items .widget-group-body {
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
-  gap: 12px !important;
-}
-.pos-items .small-box.item { padding: 13px 14px !important; gap: 10px !important; }
-.pos-items .small-box.item .inner .title { font-size: 0.95rem; line-height: 1.3; }
-.pos-items .small-box.item .inner p { font-size: 0.74rem; }
-.pos-items .small-box.item .input-group { min-height: 38px; }
-.pos-items .small-box.item .input-group .input-group-text {
-  padding: 0 13px !important; font-size: 1rem !important; line-height: 38px !important;
-}
-.pos-items .small-box.item .input-group .custom-file { min-width: 30px !important; line-height: 38px !important; }
-.pos-items .small-box.item .add-qty { font-size: 1rem !important; }
-.pos-items .small-box.item .add-item { min-height: 40px; font-size: 0.82rem !important; }
-.pos-items .small-box.item .icon { width: 44px !important; height: 44px !important; }
-
-/* The photo is what a waiter recognises first: give it real size, keep it square,
-   and let the title wrap beside it instead of running under it. */
-.pos-items .small-box.item .icon {
-  width: 62px !important;
-  height: 62px !important;
-  top: 10px !important;
-  right: 10px !important;
-  border-radius: 6px !important;
-}
-.pos-items .small-box.item .inner { padding-right: 74px !important; }
-.pos-items .small-box.item .icon .no-image {
-  font-size: 1.05rem !important;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-}
-/* a long name gets two clean lines rather than colliding with the photo */
 .pos-items .small-box.item .inner .title {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--rm-ink);
+  /* a long name gets two clean lines, never a third */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+.pos-items .small-box.item .inner .title .fa-circle {
+  font-size: 7px;
+  vertical-align: 3px;
+  margin-right: 4px;
+}
+.pos-items .small-box.item .inner p {
+  margin: 3px 0 0;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: var(--rm-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pos-items .small-box.item .inner p:empty { display: none; }
+
+/* Footer: price on the left, the - n + pill on the right. */
+.pos-items .small-box.item .small-box-footer {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto !important;
+  padding: 2px 0 0 !important;
+  background: transparent !important;
+  height: auto !important;
+}
+.pos-items .small-box.item .rm-price {
+  /* the template appends the price after the pill; flex order puts it first */
+  order: -1;
+  margin-right: auto;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--rm-teal);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* The old pending-quantity stepper is retired; the pill counts the cart. */
+.pos-items .small-box.item .small-box-footer .form-group {
+  position: static !important;
+  margin: 0 !important;
+  flex: 0 0 auto;
+}
+.pos-items .small-box.item .input-group {
+  opacity: 1 !important;
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  width: auto !important;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  min-height: 44px;
+  border-radius: 999px !important;
+  background: #fff !important;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+.pos-items .small-box.item .input-group .minus-btn,
+.pos-items .small-box.item .input-group .add-btn,
+.pos-items .small-box.item .input-group .custom-file,
+.pos-items .small-box.item .input-group .add-qty { display: none !important; }
+
+/* jQuery hides this when the cart is empty; the pill must always read 0. */
+.pos-items .small-box.item .input-group .items-in-cart {
+  display: inline-flex !important;
+  align-items: center;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+.pos-items .small-box.item .input-group .items-in-cart .input-group-text {
+  background: transparent !important;
+  border: 0 !important;
+  color: var(--rm-ink) !important;
+  padding: 0 !important;
+}
+.pos-items .small-box.item .input-group .items-in-cart .fa-shopping-cart::before { content: none; }
+.pos-items .small-box.item .qty-in-cart {
+  display: inline-block;
+  min-width: 26px;
+  text-align: center;
+  padding: 0 2px !important;
+  font-size: 1rem;
+  font-weight: 600;
+  font-family: var(--font-stack, inherit);
+  color: var(--rm-ink);
+}
+
+/* Round controls: minus outlined, plus teal-filled once something is in the cart. */
+.pos-items .small-box.item .rm-cart-minus,
+.pos-items .small-box.item .add-item {
+  float: none !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.pos-items .small-box.item .rm-cart-minus {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  color: var(--rm-ink);
+}
+.pos-items .small-box.item .add-item {
+  background: #f1f4f6 !important;
+  border: 1px solid transparent !important;
+  color: var(--rm-ink) !important;
+  box-shadow: none !important;
+}
+.pos-items .small-box.item.rm-has-qty .add-item {
+  background: var(--rm-teal) !important;
+  color: #fff !important;
+}
+.pos-items .small-box.item .add-item .sr-only { position: absolute; }
+.pos-items .small-box.item .rm-cart-minus:active,
+.pos-items .small-box.item .add-item:active { transform: scale(0.94); }
+
+/* Touch-sized on a phone, and at phone width on any device. */
+@media (pointer: coarse), (max-width: 640px) {
+  .pos-items .small-box.item .rm-cart-minus,
+  .pos-items .small-box.item .add-item { width: 42px; height: 42px; min-height: 42px; }
+  .pos-items .small-box.item .input-group { min-height: 50px; }
+  .pos-items .small-box.item .icon { height: 130px !important; }
 }

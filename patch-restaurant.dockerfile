@@ -233,6 +233,10 @@ RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/res
 COPY restaurant/patches/card_initials.py /tmp/card_initials.py
 RUN python3 /tmp/card_initials.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
+# photo-first card with a - n + pill; runs after card_initials, which it anchors on
+COPY restaurant/patches/card_layout.py /tmp/card_layout.py
+RUN python3 /tmp/card_layout.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
 
 # the floor remembered an empty room and looked broken
 COPY restaurant/patches/skip_empty_room.py /tmp/skip_empty_room.py
