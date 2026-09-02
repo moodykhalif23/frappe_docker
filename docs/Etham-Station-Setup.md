@@ -86,15 +86,19 @@ roles from the station account that matches the job. The roles that matter:
 
 | Role | Grants |
 |---|---|
-| `Restaurant User` + `Restaurant Manager` | see and work the floor |
+| `Restaurant User` | see and work the floor — seat, order, send to kitchen |
 | `Waiter Station` | hide the Kitchen/Bar boards |
 | `Kitchen Station` | hide the tables and the front-of-house buttons |
 | `Accounts User` | take payments |
 | `Sales Manager` | open and close the day, release tables |
+| `Restaurant Manager` | **edit the floor plan** — add, rename and delete tables |
 
-Give a waiter tablet the first two plus `Waiter Station`. Give a kitchen screen
-the first two plus `Kitchen Station`. Give a till everything except the station
-roles.
+Give a waiter tablet `Restaurant User` + `Waiter Station`. Give a kitchen screen
+`Restaurant User` + `Kitchen Station`. Give a till those two payment roles plus
+`Restaurant Manager`, and no station role.
+
+> Do **not** give a waiter tablet or kitchen screen `Restaurant Manager`: that
+> is the role that lets a screen add and delete tables.
 
 **Passwords:** avatar (bottom-left) → *My Settings* → *Reset Password*. Change
 all three station passwords on first use.
@@ -143,6 +147,7 @@ under `⋯`.
 | Symptom | Fix |
 |---|---|
 | Waiter tablet shows Kitchen/Bar tiles | The account is missing the `Waiter Station` role — add it (section 4). |
+| A station shows an empty floor — no rooms at all | It is missing `Restaurant User`, or the site has rows under **Restaurant Permissions** that do not list this user. Clear those rows (unused by design) or add the user to them. |
 | Kitchen screen shows tables | Missing the `Kitchen Station` role. |
 | Cashier has no day button | Missing `Sales Manager`. |
 | "Wrong PIN" | The stored PIN differs from what was typed. Open `Restaurant Waiter`, tap the **eye icon** on the PIN field to see it before saving. |

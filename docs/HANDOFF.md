@@ -1,4 +1,48 @@
-# Where this repo is (2026-08-26)
+# Where this repo is (2026-09-02)
+
+## Handover state, 2 September 2026
+
+Accounts on the live site: `admin@etham.co.ke` (everything), `geff@etham.co.ke`
+(the manager — menu, recipes, stock, suppliers, staff, reports, the day),
+`cashier@`, `waiter@`, `kitchen@` (stations). Rooms: **Main Hall** (Table 1, 2,
+4, 5, 6) and **R 2** (Table 7–10, four seats each). One waiter on the PIN list:
+`sharon` (PIN verified server-side).
+
+The handover drill (`restaurant/e2e/drill2.mjs`: manager + two waiters by PIN +
+kitchen screen + till, working R 2) found and fixed, in this order:
+
+1. **Stations saw an empty floor.** Anyone without Restaurant Manager was filtered
+   through the empty `Restaurant Permission` table — no rooms, a pad that never
+   loaded its menu. Broken on live since Restaurant Manager was taken off the
+   stations (54c1852). `floor_visibility.py`.
+2. **A second waiter's taps did nothing** on a shared table: the pad opened with
+   no check selected and a swallowed "whose check?" dialog blocked input for 15 s.
+   The pad now opens on the check the waiter just seated. `pad_pick_on_open.py`,
+   `host_stand.js`, `seats.js`.
+3. **The kitchen ticket read `undefined`** and never named the waiter: the
+   dispatch payload is built separately from the board's fetch.
+   `kitchen_ticket_waiter.py`.
+4. **The day could not be banked** once a waiter had been deleted (dead Link on
+   every invoice; erpnext masks the real error). Waiters with history can no
+   longer be deleted, and `close_day` restores a missing one before banking.
+5. **A manager could not price a new dish** (Item Price wanted Sales Master
+   Manager) and **nobody could add a Supplier or a BOM** — roles granted on live,
+   `menu_price_perm.py` for the price.
+6. A kitchen screen that landed on R 2 (tables only) showed nothing — it now
+   opens where the boards are. `seats.js` + `house.board_room`.
+
+7. **The order pad's cards** were rebuilt to the client's reference: photo on
+   top, name, price left, a `− n +` pill right where n is what is on the check.
+   `+` is the app's own add-item control; `−` takes one off the way the cart's
+   trash does. `card_layout.py` + `menu_card.css`; `card_shots.mjs` proves it.
+
+The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
+invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
+0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.
+
+---
+
+# Where this repo was (2026-08-26)
 
 Written for whoever opens a session **inside `/home/patch/frappe_docker`**. The
 Sokisoko platform is a different repo and a different conversation; nothing here

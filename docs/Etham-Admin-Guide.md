@@ -80,6 +80,11 @@ menu (⋮) → *Export* for Excel.
 3. To change a price: tap the **price pill** on any card, edit, Save.
 4. **Remove** on a card takes it off the menu (the item's sales history stays).
 
+**On the order pad** every dish is a card: photo, name, price, and a `− n +`
+pill. **+** puts one on the check (the pill turns green and counts), **−** takes
+one off. The number on the pill is what is on the check right now, so a waiter
+can see at a glance what this table has ordered from each card.
+
 **Rules that save you a phone call:**
 
 - A dish only appears on the order pad if it is on the **Restaurant Menu**
@@ -106,7 +111,8 @@ This is what turns on the three stock reports. Order matters:
 type **Material Receipt** → warehouse *Stores - ETH* → one row per ingredient
 with today's counted quantity and what it cost → Save → Submit.
 
-**c) Give each dish its recipe** — search `BOM` → *Add BOM*:
+**c) Give each dish its recipe** — search `BOM` → *Add BOM*
+(needs the `Manufacturing Manager` role — `admin@` and `geff@` have it):
 
 1. **Item** = the dish (e.g. *Chapati*). Quantity = 1.
 2. Under items, one row per ingredient with the amount **one plate** uses
@@ -166,9 +172,10 @@ badge per party, each with its own check and its own waiter.
 
 | Login | For | Can | Cannot |
 |---|---|---|---|
-| `waiter@etham.co.ke` | waiter tablets | seat, order, send to kitchen | take money, open/close day, void tables, edit menu |
+| `waiter@etham.co.ke` | waiter tablets | seat, order, send to kitchen | take money, open/close day, void tables, add or delete tables, edit menu |
 | `kitchen@etham.co.ke` | kitchen/bar screens | see and advance tickets | everything above |
-| `cashier@etham.co.ke` | the till | payments, open/close day, release tables | edit the menu |
+| `cashier@etham.co.ke` | the till | payments, open/close day, release tables, edit the floor plan | edit the menu |
+| `geff@etham.co.ke` | Geff, the manager | everything in this guide — menu, recipes, stock, suppliers, staff, reports, the day | change system settings or other users' roles |
 | `admin@etham.co.ke` | you | everything | — |
 
 **Two layers, and only devices log in.** Each tablet or screen signs into the
@@ -238,6 +245,9 @@ and stock **asks to be re-bought by itself** the moment an ingredient dips
 below its reorder level.
 
 **a) Add each supplier once** — search `Supplier` → *Add*:
+
+> If a new user cannot see *Add* on the Supplier list, they are missing the
+> `Purchase Master Manager` role; `admin@` and `geff@` already have it.
 
 1. Name, then pick the **Supplier Group** from the pre-built list.
 2. Phone/M-Pesa details under contact — that's all a purchase needs.

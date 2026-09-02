@@ -90,6 +90,24 @@ what is shipped and what is deliberately not. Read it before touching anything.
 - v16 renamed `get_item_details`' kwarg `args`→`ctx` — unpatched, every add-to-cart 500s and the cart silently stays at 0.
 - Kitchen/Bar production-center boards are **empty until an order is dispatched** — and dispatching is a **double-click** on the pad's green Order button (single click does nothing by design).
 
+- **Restaurant Permissions are an empty whitelist.** `Restaurant Settings.restaurant_access()`
+  filters rooms, tables, order counts and `can_access()` through the `Restaurant Permission`
+  table for anyone without System Manager / Restaurant Manager — and nobody ever fills that table
+  in, so a station holding only `Restaurant User` saw a floor with **no rooms**, a pad that
+  died before its menu loaded, and `Cannot read properties of undefined (reading 'select')`.
+  It is why the stations were first given Restaurant Manager (which let them delete tables).
+  `floor_visibility.py` makes an empty table mean "unrestricted"; the fences stay on DocPerms.
+- **Deleting a waiter poisons the books.** `waiter` is a Link on POS Invoice, and closing
+  the day re-saves every invoice during consolidation, so one deleted waiter = the shift can
+  never bank — and erpnext rolls the closing entry back then fails to comment on it, so the
+  till only ever saw the *masking* `Could not find Reference Name: POS-CLO-…`. The waiter
+  controller now refuses the delete (`waiter_not_deletable.py`) and `close_day` restores a
+  missing waiter (inactive) before it banks.
+- **Two payloads build a kitchen ticket.** The board's own fetch (`get_command_data`) and
+  the one pushed at dispatch (`TableOrder.send` rows) — a field added to one is missing from
+  the other, and upstream's `table_info` returns a one-item *tuple*. Patch both or the
+  ticket says `undefined` until the board reloads.
+
 ## Kit features (added by this fork, shipped via the patch layer)
 
 - **Guest order tracker**: `/assets/restaurant_management/order-status.html?order=<Table Order name>` — no login; polls `restaurant_management.api.order_status` (allow_guest) every 5s and shows per-item progress (Sent → Preparing → Ready → Served). Exposes item names/qty/status only. Order names are sequential — treat links as semi-private; add a token before offering it publicly.
