@@ -31,6 +31,16 @@ whether the page runs.
 | `turn_test.py` | seat → sit → pay → free, and the Table Turns report | server |
 | `staff_test.py` | waiter ↔ Employee, PIN writes attendance, roster reads it | server |
 | `stock_test.py` | sale → recipe → issue, idempotent, waste, restock, variance | server |
+| `seats.mjs` | two parties share a table, each with its own check and waiter | browser |
+| `drill2.mjs` | the handover drill: manager + two waiters by PIN + kitchen + till, in the second room, every fence, close-day lockout | browser |
+| `card_shots.mjs` | the menu card: photo, name, price, `- n +` pill driving the check | browser |
+| `drill.mjs` | the eight-terminal live drill (four parties, one table, split, concurrent payments) | browser |
+
+Test-site helpers: `mirror_stations.py` recreates the live station accounts,
+waiters and a second room on a local site; `reset_floor.py` cancels every open
+check and party (refuses on a non-local site); `probe_shared.mjs` watches the
+pad while a second party is seated. `run-all.sh` runs the seven suites and
+prints one verdict.
 
 ```bash
 BASE=https://pos.example.com PASS=... node door.mjs
