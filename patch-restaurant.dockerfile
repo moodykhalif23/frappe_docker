@@ -258,6 +258,11 @@ RUN python3 /tmp/gate_orders_when_closed.py \
 COPY restaurant/patches/pad_pick_on_open.py /tmp/pad_pick_on_open.py
 RUN python3 /tmp/pad_pick_on_open.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
+# the Order button trusted a stale server count and sat disabled on a fresh pad
+COPY restaurant/patches/order_counts_locally.py /tmp/order_counts_locally.py
+RUN python3 /tmp/order_counts_locally.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
 
 # a @property reached through api.call fired on getattr, then got called
 COPY restaurant/patches/api_property_call.py /tmp/api_property_call.py
