@@ -121,6 +121,14 @@ RUN { echo ';'; cat /tmp/waiter_pad.js; } >> apps/restaurant_management/restaura
 RUN grep -q 'RM_waiter.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  || sed -i 's|RM_host_stand.mount(this);|RM_host_stand.mount(this); window.RM_waiter \&\& RM_waiter.mount(this); window.RM_door \&\& RM_door.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+# seating into a room this user cannot see threw and froze the floor
+COPY restaurant/patches/navigate_guard.py /tmp/navigate_guard.py
+RUN python3 /tmp/navigate_guard.py \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+# a station without Restaurant Manager was shown a floor with no rooms at all
+COPY restaurant/patches/floor_visibility.py /tmp/floor_visibility.py
+RUN python3 /tmp/floor_visibility.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_settings/restaurant_settings.py').read())"
 COPY restaurant/patches/seats.js /tmp/seats.js
 RUN { echo ';'; cat /tmp/seats.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
 RUN grep -q 'RM_seats.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
