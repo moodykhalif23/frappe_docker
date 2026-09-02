@@ -1242,6 +1242,12 @@ def ticket_order(identifier):
 
 
 @frappe.whitelist()
+def board_room():
+    """The room the production centres live in — where a kitchen screen belongs."""
+    return frappe.db.get_value("Restaurant Object", {"type": "Production Center"}, "room")
+
+
+@frappe.whitelist()
 def claim_party(booking, waiter, pin=None, token=None):
     """Give one party to a waiter. A shared table has one owner per party."""
     row = _authorised(waiter, pin, token)

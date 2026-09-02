@@ -53,6 +53,14 @@
         }).hide();
         setTimeout(hideFront, 1500);
         setTimeout(hideFront, 5000);
+        // A kitchen screen hides tables, so a room of tables leaves it blank.
+        // Open where the boards actually are, whatever room that is.
+        setTimeout(() => call("board_room").then((room) => {
+          if (!room || !window.RM || !RM.objects || !RM.objects[room]) return;
+          const cur = RM.current_room && RM.current_room.data;
+          if (cur && cur.name === room) return;
+          RM.objects[room].select();
+        }), 3800);
       }
       if (!CAN_BILL) {
         // the money button never shows on a station that cannot take money
