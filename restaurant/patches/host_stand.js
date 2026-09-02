@@ -47,6 +47,8 @@
         // Mark the table, then select its room: rendering a room opens the marked
         // table's pad. A route with a query string is not a route in v16.
         RM.navigate_table = message.table;
+        // so the pad opens on this party's check, not on a "whose check?" prompt
+        RM.navigate_order = message.order;
         const room = window.RM && RM.object && RM.object(message.room);
         if (room && room.select) return room.select();
         RM.navigate_room = message.room;

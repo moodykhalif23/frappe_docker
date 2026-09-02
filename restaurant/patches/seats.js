@@ -237,8 +237,12 @@
     pick_check(om, done) {
       const orders = om.child_values || [];
       if (!orders.length) return false;
-      // one question at a time, however many code paths ask it
-      if (om.__picking) return true;
+      // One question at a time, however many code paths ask it — but a dialog
+      // that got dismissed must not swallow every tap that follows.
+      if (om.__picking) {
+        if (om.__pick_dialog && om.__pick_dialog.$wrapper.is(":visible")) return true;
+        om.__picking = false;
+      }
       om.__picking = true;
       setTimeout(() => { om.__picking = false; }, 15000);
       if (orders.length === 1) {
@@ -277,6 +281,8 @@
             }
           },
         });
+        om.__pick_dialog = d;
+        d.onhide = () => { om.__picking = false; };
         d.show();
       });
       return true;
