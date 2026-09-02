@@ -103,6 +103,12 @@ what is shipped and what is deliberately not. Read it before touching anything.
   till only ever saw the *masking* `Could not find Reference Name: POS-CLO-…`. The waiter
   controller now refuses the delete (`waiter_not_deletable.py`) and `close_day` restores a
   missing waiter (inactive) before it banks.
+- **The Order button trusts a stale server count.** `TableOrder.order()` and the button badge read
+  `data.products_not_ordered`, computed by the server when the check was last fetched. On a freshly
+  opened pad it is 0 until the next realtime sync, so the button sits disabled and a double-click is
+  a silent no-op — every time on the live site (internet latency), never locally (the sync wins the
+  race). `order_counts_locally.py` counts the check's own unsent lines. Any "works locally, not
+  live" pad symptom: suspect a server-computed field the client reads before the sync lands.
 - **Two payloads build a kitchen ticket.** The board's own fetch (`get_command_data`) and
   the one pushed at dispatch (`TableOrder.send` rows) — a field added to one is missing from
   the other, and upstream's `table_info` returns a one-item *tuple*. Patch both or the

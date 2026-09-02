@@ -36,6 +36,11 @@ kitchen screen + till, working R 2) found and fixed, in this order:
    `+` is the app's own add-item control; `−` takes one off the way the cart's
    trash does. `card_layout.py` + `menu_card.css`; `card_shots.mjs` proves it.
 
+8. **Order was a silent no-op on a fresh pad — on live only.** The button and its
+   badge trust `products_not_ordered`, a server count that is 0 until the next
+   realtime sync; on the internet the tap beats the sync, locally it never did.
+   Found by `live_smoke.mjs` after the deploy. `order_counts_locally.py`.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.
