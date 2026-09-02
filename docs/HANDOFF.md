@@ -66,7 +66,7 @@ They are trading. Treat every change as production.
 | pins | frappe v16.31.0, erpnext v16.32.3, hrms v16.16.0, restaurant_management master `c55ac4ae` |
 | site | `frappe.ikobriq.com`, company **Etham Eatery** (abbr `ETH`), currency KES |
 | data | 170 menu items, 13 tables, 5 rooms, 1 POS profile (`Etham`) |
-| rollback | `.env.before-v16.32.3` on the box + image `custom-erpnext:v16.6.0` |
+| rollback | `.env.before-v16.32.3` on the box. No older image remains on the server (the v16.6.0 one is gone; dangling layers were pruned 2 Sep) — roll back by checking out the previous commit and rebaking, ~5 min |
 
 Server access: SSH as **`sokisoko@194.163.136.175`** (key auth works). That user
 **cannot read `/home/frappe/frappe_docker`** — it is `0750 frappe:frappe` — but it
