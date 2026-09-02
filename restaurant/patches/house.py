@@ -920,6 +920,34 @@ def day_summary(pos_profile=None):
     }
 
 
+def _heal_waiter_links():
+    """A waiter deleted from the desk leaves their name as a dead Link on every
+    check they served, and closing the day re-saves each invoice — so the shift
+    could never bank. Bring the record back, inactive, and the books hold."""
+    live = set(frappe.get_all("Restaurant Waiter", pluck="name"))
+    healed = []
+    for doctype in ("POS Invoice", "Sales Invoice", "Table Order", "Restaurant Booking"):
+        if not frappe.db.has_column(doctype, "waiter"):
+            continue
+        for row in frappe.get_all(doctype, filters={"waiter": ["is", "set"]},
+                                  fields=["name", "waiter"]):
+            if row.waiter in live:
+                continue
+            try:
+                doc = frappe.get_doc({"doctype": "Restaurant Waiter", "waiter_name": row.waiter,
+                                      "pin": "0000", "active": 0})
+                doc.flags.ignore_permissions = True
+                doc.insert(ignore_permissions=True)
+                if doc.name != row.waiter:
+                    frappe.rename_doc("Restaurant Waiter", doc.name, row.waiter, force=True)
+                live.add(row.waiter)
+                healed.append(row.waiter)
+            except Exception:
+                frappe.db.set_value(doctype, row.name, "waiter", None, update_modified=False)
+                healed.append("%s (link cleared)" % row.waiter)
+    return healed
+
+
 @frappe.whitelist()
 def close_day(pos_profile=None, force=0):
     """Close the selling day: bank the shift so tomorrow can open a fresh one.
@@ -945,17 +973,26 @@ def close_day(pos_profile=None, force=0):
                      .format(summary["open_checks"]))
 
     _heal_series("POS Closing Entry", "POS-CLO%")
+    healed = _heal_waiter_links()
     closing = make_closing_entry_from_opening(shift)
     closing.posting_date = frappe.utils.today()
     closing.posting_time = frappe.utils.nowtime()
     closing.period_end_date = frappe.utils.now_datetime()
-    closing.insert(ignore_permissions=True)
-    closing.submit()
+    try:
+        closing.insert(ignore_permissions=True)
+        closing.submit()
+    except Exception:
+        # erpnext rolls the closing entry back and then fails to comment on it,
+        # so the real reason never reaches the till. Keep it, and say so.
+        frappe.log_error(title="close_day could not bank the shift")
+        frappe.throw(frappe._(
+            "The day could not be banked. Nothing was changed — the reason is in"
+            " Error Log under 'close_day could not bank the shift'."))
     frappe.db.commit()
 
     swept = _end_of_day_sweep()
 
-    return {"closed": closing.name, "shift": shift.name,
+    return {"closed": closing.name, "shift": shift.name, "waiters_restored": healed,
             "invoices": summary["invoices"], "sales": summary["sales"],
             "open_checks_left": summary["open_checks"],
             "parties_closed": len(swept["parties_closed"]),
