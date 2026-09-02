@@ -4,7 +4,8 @@
 P = "apps/restaurant_management/restaurant_management/api.py"
 
 src = open(P).read()
-if "if not callable(attr)" in src:
+# the retry wrapper writes the same guard with a different lead-in
+if "not callable(attr)" in src:
     print("api property: already applied")
     raise SystemExit
 

@@ -160,8 +160,10 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None):
 WAITER_FIELD = {"fieldname": "waiter", "fieldtype": "Link", "options": "Restaurant Waiter", "label": "Waiter"}
 SEATED_FIELD = {"fieldname": "seated_at", "fieldtype": "Datetime", "label": "Seated At", "read_only": 1}
 LEFT_FIELD = {"fieldname": "left_at", "fieldtype": "Datetime", "label": "Left At", "read_only": 1}
+# Hidden, not merely read-only: the machine sets it, and a visible read-only
+# link still joins client-side form validation ("Missing Values Required: Party").
 BOOKING_FIELD = {"fieldname": "booking", "fieldtype": "Link", "options": "Restaurant Booking",
-				 "label": "Party", "read_only": 1}
+				 "label": "Party", "read_only": 1, "hidden": 1, "no_copy": 1}
 
 
 def _ensure_procurement():
@@ -290,6 +292,12 @@ def ensure_custom_fields():
 
 	# Two parties on one table means two open checks on it.
 	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)
+
+	# an earlier bake created these visible; a form then demanded them
+	for dt in ("Table Order", "POS Invoice"):
+		cf = frappe.db.get_value("Custom Field", {"dt": dt, "fieldname": "booking"}, "name")
+		if cf:
+			frappe.db.set_value("Custom Field", cf, {"hidden": 1, "reqd": 0}, update_modified=False)
 
 	receipt = _ensure_receipt_format()
 	_ensure_bill_format()

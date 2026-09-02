@@ -197,3 +197,26 @@
 .pos-items .small-box.item .add-qty { font-size: 1rem !important; }
 .pos-items .small-box.item .add-item { min-height: 40px; font-size: 0.82rem !important; }
 .pos-items .small-box.item .icon { width: 44px !important; height: 44px !important; }
+
+/* The photo is what a waiter recognises first: give it real size, keep it square,
+   and let the title wrap beside it instead of running under it. */
+.pos-items .small-box.item .icon {
+  width: 62px !important;
+  height: 62px !important;
+  top: 10px !important;
+  right: 10px !important;
+  border-radius: 6px !important;
+}
+.pos-items .small-box.item .inner { padding-right: 74px !important; }
+.pos-items .small-box.item .icon .no-image {
+  font-size: 1.05rem !important;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+/* a long name gets two clean lines rather than colliding with the photo */
+.pos-items .small-box.item .inner .title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

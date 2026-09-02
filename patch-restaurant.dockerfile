@@ -213,6 +213,11 @@ RUN python3 /tmp/id_selector_spaces.py \
 # the receipt modal embedded a PDF that never laid out, so it opened blank
 COPY restaurant/patches/print_receipt.py /tmp/print_receipt.py
 RUN python3 /tmp/print_receipt.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+# card initials abbreviated "Cappuccino (Double)" to a bracket
+COPY restaurant/patches/card_initials.py /tmp/card_initials.py
+RUN python3 /tmp/card_initials.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
+
 # the floor remembered an empty room and looked broken
 COPY restaurant/patches/skip_empty_room.py /tmp/skip_empty_room.py
 RUN python3 /tmp/skip_empty_room.py \
@@ -237,6 +242,11 @@ RUN python3 /tmp/pad_pick_on_open.py \
 # a @property reached through api.call fired on getattr, then got called
 COPY restaurant/patches/api_property_call.py /tmp/api_property_call.py
 RUN python3 /tmp/api_property_call.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/api.py').read())"
+
+# a database deadlock surfaced to the floor and left the item queued
+COPY restaurant/patches/retry_deadlock.py /tmp/retry_deadlock.py
+RUN python3 /tmp/retry_deadlock.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/api.py').read())"
 
 # splitting a check crashed on the customization fields divide() never sent
