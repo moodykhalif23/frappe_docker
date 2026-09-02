@@ -64,6 +64,7 @@
       setTimeout(() => RM_seats.refresh(), 1500);
       // Polling every ten seconds showed up as a slow floor; realtime carries it.
       this.timer = setInterval(() => RM_seats.refresh(), 60000);
+      this.backdrop_timer = setInterval(() => RM_seats.clear_orphan_backdrops(), 1500);
       // Checks moving usually means seats moved with them.
       frappe.realtime.on("synchronize_order_data", () => RM_seats.soon());
 
@@ -86,6 +87,21 @@
         RM_seats.paint();
         return RM_seats.map;
       });
+    },
+
+    // Paying stacks bootstrap backdrops that outlive their dialog, leaving the
+    // floor dimmed and unclickable until a hard refresh.
+    clear_orphan_backdrops() {
+      const open = document.querySelectorAll(".modal.show").length;
+      const backs = document.querySelectorAll(".modal-backdrop");
+      if (backs.length > open) {
+        for (let i = 0; i < backs.length - open; i++) backs[i].remove();
+      }
+      if (!open) {
+        document.querySelectorAll(".modal-backdrop").forEach((e) => e.remove());
+        document.body.classList.remove("modal-open");
+        document.body.style.removeProperty("padding-right");
+      }
     },
 
     watch_floor() {

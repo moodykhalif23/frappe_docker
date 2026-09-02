@@ -188,7 +188,13 @@ def _ensure_receipt_format():
 	margin, so a zero-margin format leaves the paper showing only the bill."""
 	name = "Etham Receipt"
 	if frappe.db.exists("Print Format", name):
-		# An earlier build created it without custom_format, which frappe ignores.
+		# An earlier build created it without custom_format, which frappe ignores;
+		# a later one stored A4 margins instead of the till's 80mm roll.
+		current = frappe.db.get_value("Print Format", name, "html") or ""
+		if "80mm auto" not in current:
+			base = current.split("</style>", 1)[-1] if "<style>" in current else current
+			frappe.db.set_value("Print Format", name, "html", _THERMAL_CSS + base,
+								update_modified=False)
 		frappe.db.set_value("Print Format", name, "custom_format", 1, update_modified=False)
 		return name
 
@@ -202,7 +208,48 @@ def _ensure_receipt_format():
 		"doctype": "Print Format", "name": name, "doc_type": "POS Invoice",
 		"module": "Accounts", "print_format_type": "Jinja", "standard": "No",
 		"pdf_generator": "wkhtmltopdf", "disabled": 0, "font_size": 12, "custom_format": 1,
-		"html": "<style>@page { margin: 0 } .print-format { padding: 6mm 8mm }</style>\n" + html,
+		"html": _THERMAL_CSS + html,
+	}).insert(ignore_permissions=True)
+	return name
+
+
+# A Posiflex till prints an 80mm roll: the paper is the page, so the format
+# carries the width and kills the margin the browser writes its URL into.
+_THERMAL_CSS = """<style>
+  @page { size: 80mm auto; margin: 0 }
+  html, body { width: 80mm; margin: 0 }
+  .print-format { width: 80mm; padding: 3mm 4mm; font-size: 11pt; line-height: 1.35 }
+  .print-format table { width: 100%; border-collapse: collapse }
+  .print-format td, .print-format th { padding: 1mm 0 }
+  .letter-head img { max-width: 26mm; height: auto }
+  @media screen { .print-format { margin: 0 auto } }
+</style>
+"""
+
+
+def _ensure_bill_format():
+	"""The waiter's bill, branded and without the browser's URL across the top."""
+	name = "Etham Order Bill"
+	base = frappe.db.get_value("Print Format", "Order Account", "html")
+	if not base:
+		return None
+
+	style = _THERMAL_CSS
+	if frappe.db.exists("Print Format", name):
+		current = frappe.db.get_value("Print Format", name, "html") or ""
+		if "80mm auto" not in current:
+			body = current.split("</style>", 1)[-1] if "<style>" in current else (base or current)
+			frappe.db.set_value("Print Format", name, "html", _THERMAL_CSS + body,
+								update_modified=False)
+		frappe.db.set_value("Print Format", name, {"custom_format": 1,
+							"pdf_generator": "wkhtmltopdf", "disabled": 0}, update_modified=False)
+		return name
+
+	frappe.get_doc({
+		"doctype": "Print Format", "name": name, "doc_type": "Table Order",
+		"module": "Restaurant Management", "print_format_type": "Jinja", "standard": "No",
+		"pdf_generator": "wkhtmltopdf", "disabled": 0, "font_size": 12, "custom_format": 1,
+		"html": style + base,
 	}).insert(ignore_permissions=True)
 	return name
 
@@ -245,6 +292,7 @@ def ensure_custom_fields():
 	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)
 
 	receipt = _ensure_receipt_format()
+	_ensure_bill_format()
 	for p in frappe.get_all("POS Profile", pluck="name"):
 		if not frappe.db.get_value("POS Profile", p, "print_format"):
 			frappe.db.set_value("POS Profile", p, "print_format", receipt, update_modified=False)

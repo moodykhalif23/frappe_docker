@@ -4,22 +4,21 @@ PAY = "apps/restaurant_management/restaurant_management/public/restaurant/js/pay
 PROCESS = "apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js"
 ORDER = "apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js"
 
-src = open(PAY).read()
-if "RM_print_ticket" in src:
-    print("ticket print: already applied")
-    raise SystemExit
-
 HELPER = '''
 // A kitchen ticket or a table bill opens as frappe's print view of the order.
 window.RM_print_ticket = function (order_name) {
+  const profile = (window.RM && RM.pos_profile) || {};
   const params = new URLSearchParams({
     doctype: "Table Order",
     name: order_name,
-    format: "Order Account",
-    no_letterhead: 1,
+    format: "Etham Order Bill",
+    // the letterhead is the branding; without it the bill prints anonymous
+    no_letterhead: profile.letter_head ? 0 : 1,
     trigger_print: 1,
   });
+  if (profile.letter_head) params.set("letterhead", profile.letter_head);
   if (window.RM && RM.lang) params.set("_lang", RM.lang);
+
   const win = window.open("/printview?" + params.toString(), "_blank");
   if (!win) {
     frappe.msgprint({
@@ -30,6 +29,31 @@ window.RM_print_ticket = function (order_name) {
   }
 };
 '''
+
+src = open(PAY).read()
+
+if "RM_print_ticket" in src:
+    # An earlier bake shipped the bill unbranded, with the browser's URL header.
+    if 'format: "Order Account"' in src:
+        src = src.replace('format: "Order Account",', 'format: "Etham Order Bill",', 1)
+        src = src.replace(
+            "    no_letterhead: 1,\n    trigger_print: 1,",
+            "    no_letterhead: (window.RM && RM.pos_profile && RM.pos_profile.letter_head) ? 0 : 1,\n"
+            "    trigger_print: 1,", 1)
+        src = src.replace(
+            '  if (window.RM && RM.lang) params.set("_lang", RM.lang);\n\n'
+            '  const win = window.open("/printview?"',
+            '  if (window.RM && RM.lang) params.set("_lang", RM.lang);\n'
+            '  if (window.RM && RM.pos_profile && RM.pos_profile.letter_head) {\n'
+            '    params.set("letterhead", RM.pos_profile.letter_head);\n'
+            '  }\n\n'
+            '  const win = window.open("/printview?"', 1)
+        open(PAY, "w").write(src)
+        print("ticket print: bill upgraded to the branded format")
+    else:
+        print("ticket print: already applied")
+    raise SystemExit
+
 open(PAY, "w").write(src + HELPER)
 
 # An ungrouped board knows only the item; the server names the order behind it.

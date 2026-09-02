@@ -179,3 +179,21 @@
 /* clusterize's scroll spacers are grid items too; on their own row they cannot
    stretch the last cards to the spacer's height. */
 .pos-items .widget-group-body .clusterize-extra-row { grid-column: 1 / -1; }
+
+/* Bigger cards read faster in service: wider minimum, larger name and price,
+   taller touch targets — still auto-fitting, so a narrow tablet shows fewer. */
+.pos-items .widget-group-body {
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
+  gap: 12px !important;
+}
+.pos-items .small-box.item { padding: 13px 14px !important; gap: 10px !important; }
+.pos-items .small-box.item .inner .title { font-size: 0.95rem; line-height: 1.3; }
+.pos-items .small-box.item .inner p { font-size: 0.74rem; }
+.pos-items .small-box.item .input-group { min-height: 38px; }
+.pos-items .small-box.item .input-group .input-group-text {
+  padding: 0 13px !important; font-size: 1rem !important; line-height: 38px !important;
+}
+.pos-items .small-box.item .input-group .custom-file { min-width: 30px !important; line-height: 38px !important; }
+.pos-items .small-box.item .add-qty { font-size: 1rem !important; }
+.pos-items .small-box.item .add-item { min-height: 40px; font-size: 0.82rem !important; }
+.pos-items .small-box.item .icon { width: 44px !important; height: 44px !important; }
