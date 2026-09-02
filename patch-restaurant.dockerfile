@@ -39,6 +39,10 @@ COPY restaurant/patches/api_append.py /tmp/api_append.py
 RUN grep -q 'def upsert_menu_item' apps/restaurant_management/restaurant_management/api.py \
  || cat /tmp/api_append.py >> apps/restaurant_management/restaurant_management/api.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/api.py').read())"
+# a manager holds Item Manager, not Sales Master Manager — pricing must not demand it
+COPY restaurant/patches/menu_price_perm.py /tmp/menu_price_perm.py
+RUN python3 /tmp/menu_price_perm.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/api.py').read())"
 COPY restaurant/patches/order-status.html apps/restaurant_management/restaurant_management/public/order-status.html
 COPY restaurant/patches/menu-item-editor.js apps/restaurant_management/restaurant_management/public/restaurant/js/menu-item-editor.js
 RUN grep -q 'menu-item-editor.js' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \

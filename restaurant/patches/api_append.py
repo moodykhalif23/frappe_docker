@@ -95,7 +95,7 @@ def upsert_menu_item(item_code=None, item_name=None, item_group=None, rate=None,
                 frappe.get_doc({
                     "doctype": "Item Price", "item_code": doc.name, "price_list": pl,
                     "price_list_rate": flt(rate), "selling": 1,
-                }).insert()
+                }).insert(ignore_permissions=True)
 
     if cint(add_to_menu):
         menu_name = _rm_default_menu()
