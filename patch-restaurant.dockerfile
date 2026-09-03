@@ -302,6 +302,10 @@ COPY restaurant/patches/order_counts_locally.py /tmp/order_counts_locally.py
 RUN python3 /tmp/order_counts_locally.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
+# firing an order names the waiter holding the tablet, per line
+COPY restaurant/patches/dispatch_identity.py /tmp/dispatch_identity.py
+RUN python3 /tmp/dispatch_identity.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js
 
 # a @property reached through api.call fired on getattr, then got called
 COPY restaurant/patches/api_property_call.py /tmp/api_property_call.py

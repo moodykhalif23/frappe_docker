@@ -54,7 +54,7 @@
     const who = window.RM_waiter && RM_waiter.current;
     frappe.call({
       method: "restaurant_management.house.seat_walkin",
-      args: Object.assign({}, values, { waiter: who ? who.waiter : null }),
+      args: Object.assign({}, values, { waiter: who ? who.waiter : null, token: who ? who.token : null }),
       freeze: true,
       freeze_message: __("Seating the party..."),
     }).then(({ message }) => {
@@ -93,10 +93,10 @@
     },
 
     open() {
-      // Seating belongs to a waiter: sign in once, then straight back here.
-      if (window.RM_waiter && !RM_waiter.current) {
-        frappe.show_alert({ message: __("Sign in first — the guests you seat are yours"), indicator: "blue" });
-        return RM_waiter.open(() => RM_host_stand.open());
+      // Seating belongs to a waiter: the PIN is confirmed before the dialog opens,
+      // so on a shared tablet the seat is credited to the person actually seating.
+      if (window.RM_waiter && RM_waiter.confirm && !this.__confirmed) {
+        return RM_waiter.confirm("seat").then(() => { this.__confirmed = true; this.open(); this.__confirmed = false; });
       }
       const dialog = new frappe.ui.Dialog({
         title: __("Seat a guest"),

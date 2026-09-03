@@ -111,7 +111,7 @@ def _walkin_customer(guest_name, contact=None):
 
 
 @frappe.whitelist()
-def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None, address=None):
+def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None, address=None, token=None, pin=None):
 	"""Seat a walk-in: a name goes in, a party is seated on a table.
 
 	The stock check-in demands an existing Customer and a reservation window,
@@ -125,6 +125,12 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None, add
 	# A closed counter seats nobody: the kitchen must never cook what cannot bill.
 	if not house_shift():
 		frappe.throw(frappe._("The counter is closed. Open the day before seating guests."))
+
+	# Every seating is somebody's: the party carries the waiter who took it, and
+	# that is what Sales by Waiter is built from. No anonymous seats.
+	if not waiter:
+		frappe.throw(frappe._("Sign in as a waiter first — the guests you seat are yours."))
+	_authorised(waiter, pin, token)
 
 	obj = frappe.db.get_value("Restaurant Object", table, ["name", "room", "company"], as_dict=True)
 	if not obj:
@@ -178,6 +184,10 @@ BOOKING_FIELD = {"fieldname": "booking", "fieldtype": "Link", "options": "Restau
 # Checks seated in this room are deliveries: flagged for the kitchen, fee added.
 DELIVERY_ROOM_FIELD = {"fieldname": "delivery_room", "fieldtype": "Link", "options": "Restaurant Object",
 					   "label": "Delivery Room"}
+# How long a tapped PIN stays good on a shared tablet before the next seat or
+# fire asks again. Blank means 90; 1 asks every time.
+RECHECK_FIELD = {"fieldname": "waiter_recheck_seconds", "fieldtype": "Int", "label": "Waiter PIN Recheck (seconds)",
+				 "default": "90", "description": "A waiter's PIN is asked again for a seat or an order after this many seconds. Blank = 90; 1 = every time."}
 
 
 def _ensure_procurement():
@@ -263,6 +273,37 @@ def asset_version():
 		return str(os.path.getmtime(path))
 	except OSError:
 		return None
+
+
+@frappe.whitelist()
+def waiter_policy():
+	"""How long a tapped PIN stays good on a shared tablet."""
+	# a fresh Int field on a Single reads 0, so blank/0 means the default; 1 asks every time
+	seconds = frappe.db.get_single_value("Restaurant Settings", "waiter_recheck_seconds")
+	return {"recheck_seconds": int(seconds) if seconds else 90}
+
+
+@frappe.whitelist()
+def dispatch(order, waiter, token=None, pin=None):
+	"""Fire a check's unsent lines to the kitchen — as a named waiter.
+
+	The seater owns the check; whoever fires each line owns the line. Both are
+	recorded, and the timeline says who fired what, from which station."""
+	who = _authorised(waiter, pin, token)
+	doc = frappe.get_doc("Table Order", order)
+	if not frappe.has_permission("Table Order", "write", doc):
+		frappe.throw(frappe._("You cannot fire orders on this check"), frappe.PermissionError)
+	lines = frappe.get_all("Order Entry Item", filters={"parent": order, "status": "Attending"},
+						   fields=["name", "item_name", "qty", "rate"])
+	if not lines:
+		frappe.throw(frappe._("Nothing new to send"))
+	if frappe.db.has_column("Order Entry Item", "waiter"):
+		for line in lines:
+			frappe.db.set_value("Order Entry Item", line.name, "waiter", who.name, update_modified=False)
+	total = sum((line.qty or 0) * (line.rate or 0) for line in lines)
+	doc.add_comment("Comment", frappe._("{0} fired {1} line(s) worth {2} from {3}").format(
+		who.waiter_name, len(lines), frappe.utils.fmt_money(total), frappe.session.user))
+	return doc.send
 
 
 @frappe.whitelist()
@@ -362,7 +403,9 @@ def ensure_custom_fields():
 			dict(SEATED_FIELD, insert_after="reservation_end_time"),
 			dict(LEFT_FIELD, insert_after="seated_at"),
 		],
-		"Restaurant Settings": [dict(DELIVERY_ROOM_FIELD, insert_after="multiple_pending_order")],
+		"Restaurant Settings": [dict(DELIVERY_ROOM_FIELD, insert_after="multiple_pending_order"),
+								dict(RECHECK_FIELD, insert_after="delivery_room")],
+		"Order Entry Item": [dict(WAITER_FIELD, insert_after="item_name", read_only=1)],
 	}, ignore_validate=True)
 
 	# The pad's client flow reads these before an item can land; without them a

@@ -83,6 +83,27 @@
     mounted: false,
     get current() { return session(); },
 
+    // Before a seat or a fire: who is doing this? A tapped PIN stays good for
+    // the admin's recheck window (Restaurant Settings, default 90 s); after
+    // that the shared tablet asks again, so a sale is never credited to whoever
+    // happened to sign in last. Blank means 90; 1 asks every time.
+    confirm(purpose) {
+      const ask = (fallback) => new Promise((resolve) => {
+        const who = session();
+        const fresh = who && who.confirmed_at && (Date.now() - who.confirmed_at) < fallback * 1000;
+        if (fresh) return resolve(who);
+        this.open((signed) => resolve(signed), true);
+      });
+      if (this.__policy !== undefined) return ask(this.__policy);
+      // a native Promise: the page's button handler calls .finally() on what it gets
+      return new Promise((resolve) => {
+        frappe.call("restaurant_management.house.waiter_policy").then(({ message }) => {
+          this.__policy = (message && message.recheck_seconds != null) ? message.recheck_seconds : 90;
+          ask(this.__policy).then(resolve);
+        }).catch(() => ask(90).then(resolve));
+      });
+    },
+
     mount(rm) {
       if (this.mounted || !rm.page || !rm.page.add_inner_button) return;
       this.mounted = true;
@@ -91,10 +112,11 @@
       load_colours();
     },
 
-    open(then) {
+    open(then, force) {
       const who = session();
-      // `then` lets another flow demand a sign-in and continue where it was.
-      if (who) return then ? then(who) : this.signed_in(who);
+      // `then` lets another flow demand a sign-in and continue where it was;
+      // `force` asks for the PIN even with a session (the recheck window ran out).
+      if (who && !force) return then ? then(who) : this.signed_in(who);
       frappe.call("restaurant_management.house.waiters").then(({ message }) => {
         const list = message || [];
         if (!list.length) {
@@ -111,6 +133,7 @@
             {
               fieldname: "waiter", fieldtype: "Select", label: __("Waiter"), reqd: 1,
               options: list.map(w => ({ value: w.name, label: w.waiter_name })),
+              default: who ? who.waiter : undefined,
             },
             { fieldname: "pin", fieldtype: "Password", label: __("PIN"), reqd: 1 },
           ],
@@ -122,6 +145,7 @@
               freeze: true,
             }).then(({ message: signed }) => {
               if (!signed) return;
+              signed.confirmed_at = Date.now();
               remember(signed);
               dialog.hide();
               frappe.show_alert({ message: __("Signed in as {0}", [signed.waiter_name]), indicator: "green" });
