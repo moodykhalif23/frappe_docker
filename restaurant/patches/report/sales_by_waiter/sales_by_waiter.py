@@ -34,6 +34,10 @@ def rows(filters):
 	if filters.get("pos_profile"):
 		conds.append("i.pos_profile = %(pos_profile)s")
 		values["pos_profile"] = filters.pos_profile
+	if filters.get("room"):
+		# the invoice knows its party; the party knows its room
+		conds.append("i.booking in (select name from `tabRestaurant Booking` where room = %(room)s)")
+		values["room"] = filters.room
 
 	sales = frappe.db.sql(
 		"""
@@ -56,6 +60,9 @@ def rows(filters):
 	if filters.get("to_date"):
 		ocond.append("date(o.creation) <= %(to_date)s")
 		ovalues["to_date"] = filters.to_date
+	if filters.get("room"):
+		ocond.append("o.room = %(room)s")
+		ovalues["room"] = filters.room
 
 	served = frappe.db.sql(
 		"""

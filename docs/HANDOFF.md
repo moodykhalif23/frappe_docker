@@ -66,6 +66,26 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     The record's values are now put back over the defaults.
     `form_keeps_record_values.py`.
 
+13. **Deliveries** (feature, 3 Sep): a *Delivery* room with three slots, an
+    income account and one `RM Delivery Charges` record the admin edits (fee 0
+    until set). A check seated on a Delivery slot is flagged, carries the typed
+    address and phone to both kitchen-ticket payloads, opens the pay screen as
+    a delivery with the fee filled in, and books the fee to its own account
+    line. Riders are waiters with PINs; *Sales by Waiter* gained a **Room**
+    filter for their commission base. Upstream's fee path keyed on an Address
+    field and a doctype that do not exist here — replaced. Delivery slots sort
+    last in the seat dialog, so a walk-in never defaults to one ("Delivery 1"
+    sorts before every "Table"). `delivery_ticket.py`, `house._ensure_delivery`,
+    `host_stand.js`.
+
+14. **160 of 170 dishes on the pad, and a screenful of blank under them.** The
+    card list is virtualised in blocks of 40 rows × 4; a four-column grid
+    rendered 160 cards and hid the rest behind a spacer sized for one card per
+    row. Every dish fetched now renders at once, and one limit (1,000) governs
+    both the fetch and the render — upstream's own fetch stopped at 400 per
+    view; categories and search refetch server-side beyond that. `all_cards.py`;
+    `menu_blank_probe.mjs` and `card_shots.mjs` assert it. Reported 3 Sep.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.

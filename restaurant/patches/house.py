@@ -86,8 +86,10 @@ def free_tables(covers=0, room=None, whole_table=0):
 			"fits": bool(seats["capacity"]) and (not covers or (free or 0) >= covers),
 		})
 
-	# Empty before shared, then the tightest fit.
-	out.sort(key=lambda t: (not t["fits"], t["shared"],
+	# Empty before shared, then the tightest fit — and delivery slots last, so a
+	# walk-in never defaults to one ("Delivery 1" sorts before every "Table").
+	delivery_room = frappe.db.get_single_value("Restaurant Settings", "delivery_room")
+	out.sort(key=lambda t: (bool(delivery_room) and t["room"] == delivery_room, not t["fits"], t["shared"],
 							t["free"] if t["free"] is not None else 9999, t["description"]))
 	return out
 
@@ -109,7 +111,7 @@ def _walkin_customer(guest_name, contact=None):
 
 
 @frappe.whitelist()
-def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None):
+def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None, address=None):
 	"""Seat a walk-in: a name goes in, a party is seated on a table.
 
 	The stock check-in demands an existing Customer and a reservation window,
@@ -153,6 +155,15 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None):
 
 	order = _open_check(booking, obj)
 
+	# A check seated in the Delivery room is a delivery: the kitchen ticket shows
+	# where it goes, and the fee the admin set rides on the bill.
+	if order and obj.room and obj.room == frappe.db.get_single_value("Restaurant Settings", "delivery_room"):
+		where = " · ".join(x for x in ((address or "").strip(), (contact or "").strip()) if x)
+		frappe.db.set_value("Table Order", order, {"is_delivery": 1, "delivery_notes": where or None,
+												 "charge_amount": _delivery_fee().default_rate or 0},
+							update_modified=False)
+		frappe.db.commit()
+
 	return {"booking": booking.name, "customer": booking.customer, "table": obj.name,
 			"room": obj.room, "order": order, "seats": table_seats(obj.name)}
 
@@ -164,6 +175,9 @@ LEFT_FIELD = {"fieldname": "left_at", "fieldtype": "Datetime", "label": "Left At
 # link still joins client-side form validation ("Missing Values Required: Party").
 BOOKING_FIELD = {"fieldname": "booking", "fieldtype": "Link", "options": "Restaurant Booking",
 				 "label": "Party", "read_only": 1, "hidden": 1, "no_copy": 1}
+# Checks seated in this room are deliveries: flagged for the kitchen, fee added.
+DELIVERY_ROOM_FIELD = {"fieldname": "delivery_room", "fieldtype": "Link", "options": "Restaurant Object",
+					   "label": "Delivery Room"}
 
 
 def _ensure_procurement():
@@ -183,6 +197,67 @@ def _ensure_procurement():
 	frappe.db.set_single_value("Buying Settings", "supp_master_name", "Supplier Name")
 	frappe.db.set_single_value("Buying Settings", "po_required", "No")
 	frappe.db.set_single_value("Buying Settings", "pr_required", "No")
+
+
+
+def _delivery_fee():
+	"""The admin's delivery fee: one RM Delivery Charges record per company."""
+	company = frappe.defaults.get_global_default("company")
+	row = frappe.db.get_value("RM Delivery Charges", {"company": company, "disabled": 0},
+							  ["name", "default_rate", "shipping_account", "cost_center"], as_dict=True)
+	return row or frappe._dict(name=None, default_rate=0, shipping_account=None, cost_center=None)
+
+
+def _ensure_delivery():
+	"""Deliveries out of the box: a Delivery room with slots, an income account
+	for the fee, and one fee record the admin edits — nothing hard-coded."""
+	company = frappe.defaults.get_global_default("company")
+	if not company:
+		return
+	abbr = frappe.db.get_value("Company", company, "abbr")
+
+	account = "Delivery Charges - %s" % abbr
+	if not frappe.db.exists("Account", account):
+		parent = frappe.db.get_value("Account", {"company": company, "is_group": 1,
+												  "account_name": "Direct Income"}, "name") \
+			or frappe.db.get_value("Account", {"company": company, "is_group": 1, "root_type": "Income"}, "name")
+		if parent:
+			frappe.get_doc({"doctype": "Account", "account_name": "Delivery Charges", "company": company,
+							"parent_account": parent, "account_type": "Income Account",
+							"root_type": "Income"}).insert(ignore_permissions=True)
+
+	if not frappe.db.exists("RM Delivery Charges", {"company": company}):
+		frappe.get_doc({"doctype": "RM Delivery Charges", "company": company, "default_rate": 0,
+						"shipping_account": account if frappe.db.exists("Account", account) else None,
+						"cost_center": frappe.db.get_value("Company", company, "cost_center"),
+						}).insert(ignore_permissions=True)
+
+	room = frappe.db.get_single_value("Restaurant Settings", "delivery_room")
+	if room and frappe.db.exists("Restaurant Object", room):
+		return
+	room = frappe.db.get_value("Restaurant Object", {"type": "Room", "description": "Delivery"}, "name")
+	if not room:
+		doc = frappe.get_doc({"doctype": "Restaurant Object", "type": "Room", "description": "Delivery",
+							  "company": company})
+		doc.flags.ignore_permissions = True
+		doc.insert(ignore_permissions=True)
+		room = doc.name
+		for i in range(3):
+			slot = frappe.get_doc({"doctype": "Restaurant Object", "type": "Table", "room": room,
+								   "description": "Delivery %d" % (i + 1), "no_of_seats": 4, "shape": "Square",
+								   "color": "#505a62", "company": company,
+								   "data_style": '{"x":"%d","y":"90","z-index":"%d","width":"200px","height":"130px"}'
+								   % (60 + i * 260, 60 + i)})
+			slot.flags.ignore_permissions = True
+			slot.insert(ignore_permissions=True)
+	frappe.db.set_single_value("Restaurant Settings", "delivery_room", room)
+
+
+@frappe.whitelist()
+def delivery_room():
+	"""Which room means 'delivery', and today's fee — for the seat dialog."""
+	return {"room": frappe.db.get_single_value("Restaurant Settings", "delivery_room"),
+			"fee": _delivery_fee().default_rate}
 
 
 def _ensure_receipt_format():
@@ -275,6 +350,7 @@ def ensure_custom_fields():
 			dict(SEATED_FIELD, insert_after="reservation_end_time"),
 			dict(LEFT_FIELD, insert_after="seated_at"),
 		],
+		"Restaurant Settings": [dict(DELIVERY_ROOM_FIELD, insert_after="multiple_pending_order")],
 	}, ignore_validate=True)
 
 	# The pad's client flow reads these before an item can land; without them a
@@ -301,6 +377,11 @@ def ensure_custom_fields():
 
 	receipt = _ensure_receipt_format()
 	_ensure_bill_format()
+	try:
+		_ensure_delivery()
+	except Exception:
+		# setup sugar must never block a deploy; the trace goes to Error Log
+		frappe.log_error(title="ensure delivery setup")
 	for p in frappe.get_all("POS Profile", pluck="name"):
 		if not frappe.db.get_value("POS Profile", p, "print_format"):
 			frappe.db.set_value("POS Profile", p, "print_format", receipt, update_modified=False)

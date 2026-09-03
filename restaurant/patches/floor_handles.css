@@ -1,0 +1,21 @@
+/* rm-floor-handles: the resize handles were 20px corners and 10px bars that
+   appear only once a tile is selected — a pull a few pixels off them is a move.
+   Bigger, clearly outlined, with the cursor saying what each one does. */
+.restaurant-manage .floor-map .d-table.selected .resize-handle {
+  opacity: 0.95 !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.35), 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.restaurant-manage .floor-map .d-table.selected .resize-handle.c { width: 28px !important; height: 28px !important; }
+.restaurant-manage .floor-map .d-table.selected .resize-handle.b.v { width: 14px !important; height: 44px !important; top: calc(50% - 22px) !important; }
+.restaurant-manage .floor-map .d-table.selected .resize-handle.b.h { width: 44px !important; height: 14px !important; left: calc(50% - 22px) !important; }
+.restaurant-manage .floor-map .d-table.selected .resize-handle.nw,
+.restaurant-manage .floor-map .d-table.selected .resize-handle.se { cursor: nwse-resize !important; }
+.restaurant-manage .floor-map .d-table.selected .resize-handle.ne,
+.restaurant-manage .floor-map .d-table.selected .resize-handle.sw { cursor: nesw-resize !important; }
+.restaurant-manage .floor-map .d-table.selected .resize-handle.e,
+.restaurant-manage .floor-map .d-table.selected .resize-handle.w { cursor: ew-resize !important; }
+.restaurant-manage .floor-map .d-table.selected .resize-handle.n,
+.restaurant-manage .floor-map .d-table.selected .resize-handle.s { cursor: ns-resize !important; }
+/* the body of a selected tile is for moving */
+.restaurant-manage.editing .floor-map .d-table.selected { cursor: move; }

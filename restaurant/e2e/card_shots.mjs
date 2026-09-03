@@ -57,7 +57,17 @@ await p.waitForTimeout(9000);
 const cards = p.locator('.order-manage .small-box.item:visible');
 await cards.first().waitFor({ timeout: 45000 });
 const n = await cards.count();
-ok('cards render', n > 0, `${n} cards`);
+// every dish on the profile's menu must be on the pad — not the first render block of them
+const menuSize = await p.evaluate(async () => {
+  try {
+    const menu = (window.RM && RM.menu && RM.menu.name) || null;
+    if (!menu) return null;
+    const rows = (await frappe.call('frappe.client.get_list', { doctype: 'Restaurant Menu Item', parent: 'Restaurant Menu',
+      filters: { parent: menu, status: 1 }, fields: ['name'], limit_page_length: 5000 })).message;
+    return rows.length;
+  } catch (e) { return null; }   // a child-table count the API refuses is not the pad's fault
+});
+ok('every dish on the menu renders', n > 0 && (menuSize === null || n === menuSize), `${n} cards, menu has ${menuSize}`);
 
 const shape = await p.evaluate(() => {
   const c = document.querySelector('.order-manage .small-box.item');

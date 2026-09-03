@@ -278,7 +278,53 @@ requests are built from.
 
 ---
 
-# 12. When something looks wrong
+# 12. Deliveries — orders that leave the restaurant
+
+Deliveries run through the floor like any other order, in a room of their own,
+so the kitchen, the till and the reports need nothing new.
+
+**How it is set up (already done):** a room called **Delivery** with three slots
+(*Delivery 1–3*); a **Delivery Charges** income account; and one fee record.
+
+**a) Set the delivery fee** — search `RM Delivery Charges` → open the record →
+**Default Rate** → Save. This is the fee added to every delivery bill. Change it
+whenever you like (rain, distance, peak hours); the till can also change the
+fee on a single bill before payment.
+
+**b) Riders are waiters.** Add each rider under `Restaurant Waiter` with a PIN,
+exactly like a waiter (section 6). They sign in on the tablet with **Waiter →
+name → PIN**. Every delivery they seat is credited to them.
+
+**c) Taking a delivery order** (rider or whoever answers the phone, signed in):
+
+1. **Seat guest** → the customer's name and **phone** → pick a **Delivery
+   slot** → the **Delivery address / directions** box appears → fill it →
+   *Seat & open order*.
+2. Ring the dishes and **Order** them as usual. The kitchen ticket shows the
+   customer's name, phone and address, and the slot number.
+3. The check stays open on its slot until it is paid.
+
+**d) Payment**, at the till, with **Complete** on the slot's check:
+
+| How the customer pays | What the till does |
+|---|---|
+| M-Pesa or card before the rider leaves | Complete → pay → receipt goes with the rider |
+| Cash on delivery | Leave the check open. When the rider returns with the cash, Complete → Cash. |
+
+The pay screen opens with **Is delivery** ticked and the fee filled in; the
+fee prints on the receipt as its own line ("Delivery") and lands in the
+Delivery Charges account.
+
+**e) Rider commission** — `Sales by Waiter` → set the dates → **Room = Delivery**.
+Each rider's row shows their deliveries and sales for the period; apply the
+agreed percentage to the Sales column.
+
+> A delivery slot is just a table: three slots means three deliveries out at
+> once. Add more with the pencil → **+ Table** in the Delivery room if you need them.
+
+---
+
+# 13. When something looks wrong
 
 | Symptom | Cause and fix |
 |---|---|

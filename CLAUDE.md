@@ -25,6 +25,11 @@ what is shipped and what is deliberately not. Read it before touching anything.
 
 1. **Verify fixes inside the image**, never by reading the dockerfile or a live container: `docker run --rm custom-erpnext:<tag> grep -c <fix> <file>`. Live-container seds evaporate on the next `compose up`; a sed that doesn't match exits 0 silently.
 2. **Every patch step must be idempotent** — the patch dockerfile builds FROM its own output, so steps run again on every rebake. Guard appends with `grep -q` on a *distinctive* token: `grep -q restaurant_manage` once matched `restaurant_management` and silently skipped a patch.
+   Mind the strip step too: appended blocks are cut and re-appended every bake, so **anything a
+   later patch appends after them is cut as well** — a helper `def` appended to the end of
+   `table_order.py` vanished on the first rebake while its guard marker (inside the class) stayed,
+   and every check open died with `NameError`. Insert helpers at the module head, and guard each
+   edit of a file by its own token.
 3. **Site name must equal the public domain** (`SITE=pos.example.com`). The nginx template rewrites the `Origin` header to the site name and frappe's websocket auth requires `Host == Origin` — mismatch = "Invalid origin", dead realtime/kitchen display. For local work use `SITE=pos.localhost` — **and** the websocket service must be able to `fetch("http://<site name>/api/...")` to authenticate each socket (it uses the rewritten Origin as the URL). Public domains resolve via real DNS; `*.localhost` needs `restaurant/compose.localhost.yaml` (deploy.sh adds it to COMPOSE_FILE automatically: frontend gets the site name as a network alias + nginx listens on :80). Never add that override on a public deployment — the alias would shadow real DNS and break the https auth fetch. Symptom of missing override: browser console shows `Error connecting to socket.io: Unauthorized: TypeError: fetch failed`, nothing on the floor live-updates.
 4. Rebuilding from `apps-restaurant.json` alone produces an **unpatched** image — always follow with the patch dockerfile build. `deploy.sh` does both.
 5. Commits: single-concern, author `moodykhalif23 <brian@sozuri.net>`, never add an AI co-author.
@@ -123,6 +128,11 @@ what is shipped and what is deliberately not. Read it before touching anything.
   numeric fields (it drops it for text). The app's forms bind controls to the record, so the
   loaded number is overwritten with null before the user sees it — then posted back as null.
   `form_keeps_record_values.py` re-applies the record's values after `make()`.
+- **The card list is clusterize'd for a one-column list.** `ProductItem.init_clusterize` renders 40
+  rows × 4 blocks = 160 cards and pads the rest with a spacer sized one-card-per-row; under the
+  four-column grid that is a screenful of blank and dishes 161+ only appear after scrolling through
+  it. Hiding the spacer in CSS would lose those dishes — `all_cards.py` renders every dish fetched,
+  and one `LIMIT` (1000) governs both `rows_in_block` and the fetch's `page_length` (upstream: 400).
 - **Two payloads build a kitchen ticket.** The board's own fetch (`get_command_data`) and
   the one pushed at dispatch (`TableOrder.send` rows) — a field added to one is missing from
   the other, and upstream's `table_info` returns a one-item *tuple*. Patch both or the
@@ -149,6 +159,13 @@ what is shipped and what is deliberately not. Read it before touching anything.
   then. `close_day()` banks the shift **and sweeps**: every table's waiter is
   cleared and every party still sitting is closed, because sections and parties
   are shift-long. That sweep is why leftover `W` badges used to survive the night.
+- **Deliveries**: `Restaurant Settings.delivery_room` names the room whose slots are deliveries
+  (`house._ensure_delivery()` creates *Delivery* + 3 slots, a *Delivery Charges* income account and one
+  `RM Delivery Charges` record — the admin sets `default_rate`, nothing is hard-coded). `seat_walkin`
+  flags a check seated there (`is_delivery`, `delivery_notes` = address · phone, `charge_amount` = fee);
+  `delivery_ticket.py` books the fee to the account at `make_invoice`, makes `get_delivery_address`
+  fall back to the typed text, and adds `is_delivery/customer/delivery_address` to **both** ticket
+  payloads. Riders are `Restaurant Waiter`s; *Sales by Waiter* has a Room filter for their commission.
 - **Menu item editor**: Menu Management screen has a "New Item" button and tapping a card's price pill opens an edit dialog (name, category, price, Veg/Non-Veg, photo). Backed by `restaurant_management.api.upsert_menu_item`/`get_menu_item` (appended via `restaurant/patches/api_append.py`); writes land on Item / Item Price / Restaurant Menu, so frappe stays the system of record.
 
 ## Working on it

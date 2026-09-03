@@ -16,6 +16,7 @@
     const whole_table = dialog.get_value("whole_table") ? 1 : 0;
     return frappe.call("restaurant_management.house.free_tables", { covers, whole_table }).then(({ message }) => {
       const tables = message || [];
+      dialog.__rooms = Object.fromEntries(tables.map(t => [t.name, t.room]));
       const field = dialog.get_field("table");
       field.df.options = tables.map(t => ({ value: t.name, label: label(t) }));
       field.refresh();
@@ -28,7 +29,25 @@
           : `<p class="text-danger small">${__("Nowhere seats {0} — free a table, or split the party.", [covers])}</p>`
       );
       if (tables.length) dialog.set_value("table", tables[0].name);
+      toggle_address(dialog);
     });
+  };
+
+  // A slot in the Delivery room takes an address; every other table hides it.
+  let delivery = null;
+  const toggle_address = (dialog) => {
+    const show = () => {
+      const room = (dialog.__rooms || {})[dialog.get_value("table")];
+      const on = !!(delivery && delivery.room && room === delivery.room);
+      dialog.set_df_property("address", "hidden", on ? 0 : 1);
+      dialog.set_df_property("address", "reqd", on ? 1 : 0);
+      if (on && delivery.fee) {
+        dialog.set_df_property("address", "description",
+          __("Delivery fee {0} is added to the bill — the till can change it.", [format_currency(delivery.fee)]));
+      }
+    };
+    if (delivery) return show();
+    frappe.call("restaurant_management.house.delivery_room").then(({ message }) => { delivery = message || {}; show(); });
   };
 
   const seat = (values, dialog) => {
@@ -92,7 +111,11 @@
             fieldname: "whole_table", fieldtype: "Check", label: __("Table to themselves"),
             change: () => free_tables(dialog),
           },
-          { fieldname: "table", fieldtype: "Select", label: __("Table"), reqd: 1 },
+          {
+            fieldname: "table", fieldtype: "Select", label: __("Table"), reqd: 1,
+            change: () => toggle_address(dialog),
+          },
+          { fieldname: "address", fieldtype: "Small Text", label: __("Delivery address / directions"), hidden: 1 },
           { fieldname: "hint", fieldtype: "HTML" },
         ],
         primary_action_label: __("Seat & open order"),

@@ -9,5 +9,10 @@ frappe.query_reports["Sales by Waiter"] = {
       default: frappe.datetime.get_today(), reqd: 1,
     },
     { fieldname: "pos_profile", label: __("POS Profile"), fieldtype: "Link", options: "POS Profile" },
+    {
+      // riders live in the Delivery room: filter to it for their commission base
+      fieldname: "room", label: __("Room"), fieldtype: "Link", options: "Restaurant Object",
+      get_query: () => ({ filters: { type: "Room" } }),
+    },
   ],
 };
