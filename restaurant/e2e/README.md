@@ -47,6 +47,7 @@ whether the page runs.
 | `resize_persists_live.mjs` | on a live floor: resize a tile, hard-reload, the size must still be there; then put it back | browser |
 | `build_watch_probe.mjs` | the floor's loaded script version matches the server's and the self-reload watcher is mounted | browser |
 | `revert_watch.mjs` | resize a live tile, then watch it for 20 s and log every realtime event that touches it — for "it snaps back" reports | browser |
+| `look_live.mjs` | read-only look check on a live site's Menu Management: 6px corners, flush photo, nothing overflowing, page ends at the last card | browser |
 | `live_smoke.mjs` | post-deploy proof on a live site that leaves the books untouched: PIN, seat, fire, kitchen ticket, till reaches pay, then Release | browser |
 
 Test-site helpers: `mirror_stations.py` recreates the live station accounts,
