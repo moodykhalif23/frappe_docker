@@ -86,6 +86,20 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     view; categories and search refetch server-side beyond that. `all_cards.py`;
     `menu_blank_probe.mjs` and `card_shots.mjs` assert it. Reported 3 Sep.
 
+15. **A resize or move could be lost, and the tile snapped back even when saved.**
+    `save_config()` returned silently whenever any other save was in flight
+    (`window.saving`) — on the internet those windows are long — so the gesture
+    never reached the server and a hard refresh showed the old size. And
+    `set_style` broadcast the tile it had loaded *before* writing, so every
+    floor snapped the tile back. Now a save waits its turn, and the broadcast
+    carries what was written. `tile_save_reliable.py`.
+16. **Old JavaScript served after a deploy, "new browser" or not.** The helper
+    scripts in `app_include_js` (drag.js, the form classes…) were emitted as
+    bare URLs; Cloudflare holds `/assets` for 4 h keyed on the URL, so a device
+    could get the pre-deploy `drag.js` — intermittent floor-editor behaviour.
+    Each bake now stamps those includes (`versioned_includes.py`), and
+    `redeploy.sh` purges the edge when `CF_ZONE_ID`/`CF_API_TOKEN` are in `.env`.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.

@@ -198,7 +198,12 @@ therefore serves the **pre-patch** body for four hours while `curl` against
 
     docker compose exec -T backend touch sites/assets/assets.json
 
-`redeploy.sh` does this. **Never append your own query string to an asset
+`redeploy.sh` does this. The `app_include_js`/`app_include_css` helpers are a
+second trap: frappe emits them as **bare** `/assets` URLs, so the edge served the
+pre-deploy `drag.js` and form classes for hours after every deploy —
+`versioned_includes.py` stamps them with the bake id in `hooks.py`, and
+`redeploy.sh` purges Cloudflare when `CF_ZONE_ID`/`CF_API_TOKEN` are in `.env`.
+**Never append your own query string to a `frappe.require` asset
 path** instead: `assets.extn()` reads the extension from *after* the `?`, so
 `x.js?v=1` resolves to no handler and the whole floor fails to load. Each bake
 stamps `window.RM_BUILD` purely so you can tell which build a browser has.
