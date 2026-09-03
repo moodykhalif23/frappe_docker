@@ -242,3 +242,28 @@
   .pos-items .small-box.item .input-group { min-height: 50px; }
   .pos-items .small-box.item .icon { height: 130px !important; }
 }
+
+/* Etham's look, second pass: nearly sharp corners on the card and everything in
+   it, the photo flush with the card's top edge, and a footer that wraps instead
+   of pushing the pill past the card on a narrow till. Same rules on the pad and
+   on Menu Management — both render the same card. */
+.pos-items { --rm-card-radius: 6px; }
+.pos-items .shortcut-widget-box,
+.pos-items .small-box.item { border-radius: 6px !important; }
+.pos-items .small-box.item { padding-top: 0 !important; }
+.pos-items .small-box.item .icon {
+  width: calc(100% + 28px) !important;
+  margin: 0 -14px 0 -14px;
+  border-radius: 6px 6px 0 0 !important;
+  height: 160px !important;
+}
+.pos-items .small-box.item .small-box-footer { flex-wrap: wrap; row-gap: 8px; }
+.pos-items .small-box.item .small-box-footer .form-group { margin-left: auto !important; }
+.pos-items .small-box.item .rm-price { font-size: 1.05rem; }
+/* Menu Management's Remove/Add and price pills: same modest corners as the card */
+.pos-items .small-box.item .widget-action,
+.pos-items .small-box.item .widget-action .btn,
+.pos-items .small-box.item .price-pill,
+.pos-items .small-box.item .small-box-footer .btn { border-radius: 6px !important; }
+/* the order pad's - n + stays a pill: that is the approved look */
+.pos-items .small-box.item .input-group { border-radius: 999px !important; }

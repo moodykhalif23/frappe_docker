@@ -88,7 +88,11 @@ const shape = await p.evaluate(() => {
   };
 });
 console.log('SHAPE', JSON.stringify(shape));
-ok('photo sits above the name, full width', shape.photoAboveTitle && shape.iconW >= shape.card - 40 && shape.iconH >= 120, `icon ${Math.round(shape.iconW)}x${Math.round(shape.iconH)} in a ${Math.round(shape.card)} card`);
+ok('photo sits above the name, flush with the card edges', shape.photoAboveTitle && Math.abs(shape.iconW - shape.card) <= 2 && shape.iconH >= 120, `icon ${Math.round(shape.iconW)}x${Math.round(shape.iconH)} in a ${Math.round(shape.card)} card`);
+const radius = await p.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.order-manage .small-box.item')).borderTopLeftRadius));
+ok('cards have nearly sharp corners', radius <= 8, `${radius}px`);
+const overflow = await p.evaluate(() => Array.from(document.querySelectorAll('.order-manage .small-box.item')).slice(0, 40).filter(c => { const r = c.getBoundingClientRect(); const g = c.querySelector('.input-group').getBoundingClientRect(); return g.right > r.right + 1; }).length);
+ok('no pill overflows its card', overflow === 0, `${overflow} cards overflow`);
 ok('price left, pill right', shape.priceLeftOfPill, shape.priceText);
 ok('plus is a round button showing only "+"', !!shape.plusRound && shape.visiblePlus === '+', `${shape.plusRound} text "${shape.visiblePlus}"`);
 if (shape.undefinedSrc.length) console.log('UNDEFINED SRC:', JSON.stringify(shape.undefinedSrc));
