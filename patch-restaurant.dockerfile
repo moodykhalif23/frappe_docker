@@ -133,6 +133,13 @@ RUN python3 /tmp/waiter_not_deletable.py \
 COPY restaurant/patches/navigate_guard.py /tmp/navigate_guard.py
 RUN python3 /tmp/navigate_guard.py \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+# a typed Description was silently reverted: the description names the record
+COPY restaurant/patches/rename_on_description.py /tmp/rename_on_description.py
+RUN python3 /tmp/rename_on_description.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())"
+COPY restaurant/patches/rename_refresh.py /tmp/rename_refresh.py
+RUN python3 /tmp/rename_refresh.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
 # a station without Restaurant Manager was shown a floor with no rooms at all
 COPY restaurant/patches/floor_visibility.py /tmp/floor_visibility.py
 RUN python3 /tmp/floor_visibility.py \
