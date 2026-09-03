@@ -19,19 +19,21 @@ window.RM_print_ticket = function (order_name) {
   if (profile.letter_head) params.set("letterhead", profile.letter_head);
   if (window.RM && RM.lang) params.set("_lang", RM.lang);
 
-  const win = window.open("/printview?" + params.toString(), "_blank");
-  if (!win) {
-    frappe.msgprint({
-      title: __("Allow pop-ups to print"),
-      indicator: "orange",
-      message: __("The ticket opens in a new tab. This browser blocked it — allow pop-ups for this site."),
-    });
-  }
+  RM_print_url("/printview?" + params.toString());
 };
 '''
 
 src = open(PAY).read()
 
+
+# an earlier bake opened a second tab and waited for a click on Print
+if '  const win = window.open("/printview?" + params.toString(), "_blank");' in src:
+    src = src.replace('  const win = window.open("/printview?" + params.toString(), "_blank");',
+                      '  RM_print_url("/printview?" + params.toString());', 1)
+    import re as _re
+    src = _re.sub(r'\n  if \(!win\) \{\n    frappe\.msgprint\(\{[^}]*\}\);\n  \}\n', '\n', src, count=1)
+    open(P if "P" in dir() else PAY, "w").write(src)
+    print("RM_print_ticket: prints from a hidden frame, no second tab")
 if "RM_print_ticket" in src:
     # An earlier bake shipped the bill unbranded, with the browser's URL header.
     if 'format: "Order Account"' in src:
