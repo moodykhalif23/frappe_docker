@@ -268,6 +268,12 @@ COPY restaurant/patches/kitchen_ticket_waiter.py /tmp/kitchen_ticket_waiter.py
 RUN python3 /tmp/kitchen_ticket_waiter.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())" \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js
+# deliveries: the fee rides on the bill, the address rides on both ticket payloads
+COPY restaurant/patches/delivery_ticket.py /tmp/delivery_ticket.py
+RUN python3 /tmp/delivery_ticket.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read()); ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())" \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
 
 # a closed counter still accepted new checks through the pad's + button
 COPY restaurant/patches/gate_orders_when_closed.py /tmp/gate_orders_when_closed.py
