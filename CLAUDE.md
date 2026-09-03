@@ -170,6 +170,11 @@ what is shipped and what is deliberately not. Read it before touching anything.
   `delivery_ticket.py` books the fee to the account at `make_invoice`, makes `get_delivery_address`
   fall back to the typed text, and adds `is_delivery/customer/delivery_address` to **both** ticket
   payloads. Riders are `Restaurant Waiter`s; *Sales by Waiter* has a Room filter for their commission.
+- **Attribution**: no anonymous transaction. `seat_walkin` requires a verified waiter (PIN or
+  token); the pad's Order goes through `house.dispatch(order, waiter, token)`, which stamps
+  `Order Entry Item.waiter` on every fired line and adds a timeline comment. The tablet asks the PIN
+  again after `Restaurant Settings.waiter_recheck_seconds` (blank = 90; 1 = every time) via
+  `RM_waiter.confirm()`. *Sales by Waiter* credits the check owner or the line firer.
 - **Menu item editor**: Menu Management screen has a "New Item" button and tapping a card's price pill opens an edit dialog (name, category, price, Veg/Non-Veg, photo). Backed by `restaurant_management.api.upsert_menu_item`/`get_menu_item` (appended via `restaurant/patches/api_append.py`); writes land on Item / Item Price / Restaurant Menu, so frappe stays the system of record.
 
 ## Working on it
@@ -177,6 +182,9 @@ what is shipped and what is deliberately not. Read it before touching anything.
 - Run seed functions via console (NOT `bench execute` — the module doesn't resolve there, and piped multi-line IPython mangles indentation):
   `echo 'exec(open("apps/restaurant_management/restaurant_management/demo_seed.py").read(), globals()); seed()' | docker compose exec -T backend bench --site <site> console`
   The script lives in the container only after `deploy.sh` copies it — re-copy after container recreation.
+- **A shift opened on an earlier date puts "Yesterday's shift is still open" over every page**, and its
+  backdrop swallows every tap — suites fail with "+ does nothing" and no error. `run-all.sh` banks a
+  stale local shift first (`e2e/day_prep.py`); never point that at a live site.
 - The floor layout is data: each `Restaurant Object` carries `data_style` JSON (x/y/z/width/height). `layout_floor()` re-grids everything; origin starts at x=60 — the desk sidebar no longer overlaps the page (see below).
 - Full-POS look: `restaurant-manage` passes `hide_sidebar: true` to `make_app_page` (v16 built-in; the container auto-restores the sidebar on route change). The footer "Close" link navigates back to `/app`; the accounting shift-close (POS Closing Entry) stays in the page menu, Shift+Ctrl+C.
 - Paying a check frees **that party's** seats, not the table:

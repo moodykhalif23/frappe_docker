@@ -46,7 +46,9 @@ Kitchen and cashier need no PIN — the station login is the identity.
 5. Confirm the screen shows: tables only, and just three buttons —
    **Seat guest · Waiter · Door**. No Kitchen or Bar tiles, no day buttons.
 
-Every waiter then taps **Waiter → their name → PIN** at the start of their shift.
+Every waiter taps their PIN when they **seat** and when they **Order**; a PIN stays
+good for 90 seconds (admin-adjustable), so a tablet passed hand to hand always
+records the right person.
 
 ---
 

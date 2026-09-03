@@ -119,6 +119,15 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     edge, footer wraps instead of overflowing the card on a narrow till; the
     same rules on the pad and on Menu Management.
 
+21. **Attribution — the moat.** A tablet's PIN session was a localStorage entry
+    that never expired, so every seat and every fire was credited to whoever
+    signed in last. Now: Seat guest and Order each confirm the PIN (admin-set
+    grace window, default 90 s, `Restaurant Settings.waiter_recheck_seconds`, 1 = every time);
+    seating refuses without a verified waiter; `house.dispatch` fires lines as
+    the confirmed waiter, stamps `Order Entry Item.waiter` on each, and leaves a
+    timeline note; *Sales by Waiter* gains **Credit = Check owner | Lines fired**.
+    `waiter_pad.js confirm()`, `host_stand.js`, `dispatch_identity.py`.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.

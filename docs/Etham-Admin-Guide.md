@@ -142,9 +142,18 @@ Search `Restaurant Waiter`:
 3. Optional: link an **Employee** record and the PIN also clocks them in/out
    for attendance.
 
-On the floor, waiters tap **Waiter → name → PIN** once per shift. Seating a
-guest demands this — every party is owned by whoever seated it, and *Sales by
-Waiter* is built from that.
+On the floor a waiter's PIN is the signature on every action. **Seat guest**
+and **Order** each ask *Who's on? → name → PIN* — the PIN then stays good for
+**90 seconds** (change it under `Restaurant Settings → Waiter PIN Recheck`; set it
+to 1 to ask every single time). Two things are recorded:
+
+- the **party and its check belong to the waiter who seated it**;
+- **every dish fired belongs to the waiter who tapped Order**, and the check's
+  timeline says who fired what, from which tablet.
+
+So a shared tablet can never credit a sale to whoever happened to sign in
+last. `Sales by Waiter` shows either view: **Credit = Check owner** (the
+seater) or **Credit = Lines fired** (who actually took the dishes).
 
 ---
 
