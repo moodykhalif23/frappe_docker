@@ -700,6 +700,13 @@ def free_table(table, status="Success", booking=None):
     if not parties_at(table):
         frappe.db.set_value("Restaurant Object", table,
                             {"customer": None, "current_user": None}, update_modified=False)
+    # set_value publishes nothing: every open floor kept the seated tile until
+    # its next poll. Push the freed tile and nudge the seat badges now.
+    try:
+        frappe.get_doc("Restaurant Object", table)._on_update()
+    except Exception:
+        pass
+    frappe.publish_realtime("rm_table_freed", {"table": table})
 
     frappe.db.commit()
     return {"table": table, "closed": closed}

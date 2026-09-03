@@ -75,6 +75,8 @@
       this.backdrop_timer = setInterval(() => RM_seats.clear_orphan_backdrops(), 1500);
       // Checks moving usually means seats moved with them.
       frappe.realtime.on("synchronize_order_data", () => RM_seats.soon());
+      // a table freed anywhere (payment, release, close of day) repaints at once
+      frappe.realtime.on("rm_table_freed", () => RM_seats.soon());
 
       this.watch_floor();
       this.watch_build();

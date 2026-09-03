@@ -104,7 +104,12 @@ if (process.env.NO_PAY) {
   await b.close();
   process.exit(report.every(Boolean) ? 0 : 1);
 }
+const pagesBefore = c.context().pages().length;
+// the receipt prints from THIS tab: the print view is fetched by a frame inside it, and no tab opens
+const printFetches = [];
+c.on('request', r => { if (/\/printview\?/.test(r.url()) && r.frame() !== c.mainFrame()) printFetches.push(r.url()); });
 await pay.getByText(/^Pay\b/).first().click({ force: true }); await c.waitForTimeout(12000);
+ok('the receipt prints from the same tab, no new tab', c.context().pages().length === pagesBefore && printFetches.length > 0 && /trigger_print=1/.test(printFetches[0]), JSON.stringify({ tabs: c.context().pages().length, fetches: printFetches.slice(0, 2).map(u => u.replace(/^.*\/printview\?/, '').slice(0, 90)) }));
 console.log('after Pay:', await c.evaluate(() => Array.from(document.querySelectorAll('.modal.show .modal-title, .msgprint, .desk-alert')).map(e => e.innerText.trim().slice(0, 100)).join(' | ')));
 await closeModals(c);
 
@@ -123,6 +128,10 @@ const byWaiter = await c.evaluate(async (room) => {
 ok('Sales by Waiter, filtered to the Delivery room, credits the rider', byWaiter.some(x => x[0] === RIDER), JSON.stringify(byWaiter));
 const after = await c.evaluate(async (t) => (await frappe.call('restaurant_management.house.table_occupancy')).message[t], slot);
 ok('the slot is free again after payment', !!after && after.occupied === 0, after && `${after.occupied}/${after.capacity}`);
+// and the cashier's OWN floor shows it free without any reload
+await closeModals(c); await c.waitForTimeout(4000);
+const tileNow = await c.locator('.d-table:visible').filter({ hasText: new RegExp(`\\b${slot}\\b`) }).first().evaluate(el => ({ text: el.innerText.replace(/\s+/g, ' ').trim(), badges: el.querySelectorAll('.rm-party').length }));
+ok('the floor shows the slot free at once, no reload', tileNow.badges === 0 && !/\d+\/\d+/.test(tileNow.text.replace(/\b\d+\b(?!\/)/, '')) , JSON.stringify(tileNow));
 
 console.log(`RESULT ${report.filter(Boolean).length}/${report.length}`);
 await b.close();
