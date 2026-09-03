@@ -1,0 +1,33 @@
+// A resize while another save is in flight (window.saving held 1.5 s) must act at once
+// and be saved as soon as the flag clears — never dropped. Kept as a regression probe.
+import { chromium } from 'playwright';
+const BASE = 'http://pos.localhost:8080', TABLE = 'Table 10';
+const b = await chromium.launch();
+const p = await (await b.newContext({ viewport: { width: 1500, height: 900 } })).newPage();
+const calls = []; const t0 = Date.now();
+p.on('response', r => { const m = /method=([a-z_]+)/.exec(r.request().postData() || ''); if (/api\.call/.test(r.url()) && m && m[1] === 'set_style') calls.push(`${Date.now() - t0}ms set_style ${r.status()}`); });
+p.on('pageerror', e => console.log('PAGEERROR', String(e).slice(0, 140)));
+await p.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
+await p.fill('#login_email', 'geff@etham.co.ke'); await p.fill('#login_password', 'Geff@2026'); await p.click('button.btn-login');
+await p.waitForURL(/\/app|\/desk/, { timeout: 60000 }).catch(() => {});
+await p.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(15000);
+await p.getByText('R 2', { exact: true }).first().click().catch(() => {}); await p.waitForTimeout(3000);
+await p.locator('.fa-pencil').first().evaluate(el => el.closest('button, a, div').click()); await p.waitForTimeout(1500);
+const tile = () => p.locator('.d-table:visible').filter({ hasText: /\bTable 10\b/ }).first();
+const size = async () => tile().evaluate(el => { const r = el.getBoundingClientRect(); return `${Math.round(r.width)}x${Math.round(r.height)}`; });
+const db = async () => p.evaluate(async (t) => { const s = JSON.parse((await frappe.call('frappe.client.get_value', { doctype: 'Restaurant Object', filters: { name: t }, fieldname: 'data_style' })).message.data_style || '{}'); return `${s.width}x${s.height}`; }, TABLE);
+await tile().click({ force: true }); await p.waitForTimeout(800);
+console.log('start', await size(), 'db', await db(), 'selected', await tile().evaluate(el => el.classList.contains('selected')));
+await p.evaluate(() => { window.saving = true; setTimeout(() => { window.saving = false; }, 1500); });
+const h = tile().locator('.resize-handle.se'); const box = await h.boundingBox();
+console.log('handle box', box && `${Math.round(box.width)}x${Math.round(box.height)}`, 'saving', await p.evaluate(() => window.saving));
+const x = box.x + box.width / 2, y = box.y + box.height / 2;
+await p.mouse.move(x, y); await p.mouse.down(); await p.mouse.move(x + 20, y + 10, { steps: 5 }); await p.mouse.move(x + 40, y + 20, { steps: 5 });
+console.log('mid-drag', await size());
+await p.mouse.up();
+console.log('right after up', await size(), 'saving', await p.evaluate(() => window.saving), 'calls', JSON.stringify(calls));
+await p.waitForTimeout(2500);
+console.log('after 2.5s', await size(), 'db', await db(), 'saving', await p.evaluate(() => window.saving), 'calls', JSON.stringify(calls));
+await p.waitForTimeout(3000);
+console.log('after 5.5s', await size(), 'db', await db(), 'calls', JSON.stringify(calls));
+await b.close();

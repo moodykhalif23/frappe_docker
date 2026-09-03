@@ -148,6 +148,11 @@ RUN python3 /tmp/desk_form_partial_save.py \
 COPY restaurant/patches/form_keeps_record_values.py /tmp/form_keeps_record_values.py
 RUN python3 /tmp/form_keeps_record_values.py \
  && node --check apps/restaurant_management/restaurant_management/public/helper/js/frappe-form-class.js
+# a resize overlapping another save vanished; the broadcast carried the old style
+COPY restaurant/patches/tile_save_reliable.py /tmp/tile_save_reliable.py
+RUN python3 /tmp/tile_save_reliable.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())"
 # a drag on an unselected tile did nothing until a second drag
 COPY restaurant/patches/drag_selects.py /tmp/drag_selects.py
 RUN python3 /tmp/drag_selects.py \

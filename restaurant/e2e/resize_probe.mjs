@@ -17,7 +17,8 @@ const tile = () => p.locator('.d-table:visible').filter({ hasText: new RegExp(`\
 const size = async () => tile().evaluate(el => ({ w: Math.round(el.getBoundingClientRect().width), h: Math.round(el.getBoundingClientRect().height), saving: !!window.saving }));
 const db = async () => p.evaluate(async (t) => { const r = await frappe.call('frappe.client.get_value', { doctype: 'Restaurant Object', filters: { name: t }, fieldname: 'data_style' }); const s = JSON.parse(r.message.data_style || '{}'); return `${s.width}x${s.height}`; }, TABLE);
 const resize = async (label, dx, dy) => {
-  await tile().click({ force: true }); await p.waitForTimeout(800);            // select first
+  // select first — a click on a selected tile deselects it, so only click when needed
+  if (!(await tile().evaluate(el => el.classList.contains('selected')))) { await tile().click({ force: true }); await p.waitForTimeout(800); }
   const h = tile().locator('.resize-handle.se'); const box = await h.boundingBox();
   if (!box) { log.push(`${label}: no SE handle`); return; }
   const x = box.x + box.width / 2, y = box.y + box.height / 2;
