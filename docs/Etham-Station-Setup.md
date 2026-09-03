@@ -76,6 +76,23 @@ settle checks through the day → **Close day** at the end.
 
 ---
 
+# 3b. Silent receipt printing on the till
+
+Paying a check prints the receipt from the till's own tab: the print dialog
+opens at once, already pointed at the default printer. To skip the dialog
+entirely (paper comes out the moment the cashier confirms):
+
+1. Set the Posiflex as the **default printer** in Windows, paper size 80 mm.
+2. Start Chrome for the till with the flag `--kiosk-printing` — right-click
+   the Chrome shortcut → Properties → add ` --kiosk-printing` at the end of
+   *Target*. Use that shortcut for the till.
+3. Print one receipt to confirm the dialog no longer appears.
+
+Without the flag the dialog still appears instantly and one tap on **Print**
+sends it — no second tab either way.
+
+---
+
 # 4. Add another device or change a password
 
 **Another tablet of the same kind:** just sign in with the same station account.

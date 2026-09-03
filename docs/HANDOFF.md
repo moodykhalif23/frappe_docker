@@ -107,6 +107,18 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     version it loaded with the server's every two minutes and reloads itself
     at a quiet moment (no dialog, no drag). `house.asset_version`, `seats.js`.
 
+18. **Freeing a table told nobody.** `free_table` cleared the tile with
+    `set_value`, which publishes nothing, so a paid delivery slot (or any
+    table) stayed "seated" on every floor until the 60-second poll or a
+    reload. It now pushes the freed tile and nudges the seat badges.
+19. **Receipts opened a second tab and waited for a click.** The receipt and the
+    table bill now print from a hidden frame in the same tab: the dialog
+    appears the moment payment confirms; Chrome's `--kiosk-printing` on the
+    till makes it silent. Station Setup 3b.
+20. **Card look, second pass** (Etham): 6 px corners, photo flush with the top
+    edge, footer wraps instead of overflowing the card on a narrow till; the
+    same rules on the pad and on Menu Management.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.

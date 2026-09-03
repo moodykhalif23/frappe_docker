@@ -133,6 +133,10 @@ what is shipped and what is deliberately not. Read it before touching anything.
   four-column grid that is a screenful of blank and dishes 161+ only appear after scrolling through
   it. Hiding the spacer in CSS would lose those dishes — `all_cards.py` renders every dish fetched,
   and one `LIMIT` (1000) governs both `rows_in_block` and the fetch's `page_length` (upstream: 400).
+- **`synchronize_order_data` belongs to the pad.** The order pad handles that realtime channel
+  expecting an order payload; publishing anything else on it (a "table freed" note) threw
+  `Cannot read properties of undefined (reading 'order')` at payment. Fork events get their own
+  channel (`rm_table_freed`) and `seats.js` listens for them.
 - **Two payloads build a kitchen ticket.** The board's own fetch (`get_command_data`) and
   the one pushed at dispatch (`TableOrder.send` rows) — a field added to one is missing from
   the other, and upstream's `table_info` returns a one-item *tuple*. Patch both or the
