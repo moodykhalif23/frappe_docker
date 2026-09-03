@@ -140,6 +140,10 @@ RUN python3 /tmp/rename_on_description.py \
 COPY restaurant/patches/rename_refresh.py /tmp/rename_refresh.py
 RUN python3 /tmp/rename_refresh.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
+# a drag on an unselected tile did nothing until a second drag
+COPY restaurant/patches/drag_selects.py /tmp/drag_selects.py
+RUN python3 /tmp/drag_selects.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
 # a station without Restaurant Manager was shown a floor with no rooms at all
 COPY restaurant/patches/floor_visibility.py /tmp/floor_visibility.py
 RUN python3 /tmp/floor_visibility.py \
