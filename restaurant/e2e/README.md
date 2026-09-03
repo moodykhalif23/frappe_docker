@@ -35,6 +35,7 @@ whether the page runs.
 | `drill2.mjs` | the handover drill: manager + two waiters by PIN + kitchen + till, in the second room, every fence, close-day lockout | browser |
 | `card_shots.mjs` | the menu card: photo, name, price, `- n +` pill driving the check | browser |
 | `drill.mjs` | the eight-terminal live drill (four parties, one table, split, concurrent payments) | browser |
+| `rename_probe.mjs` | rename a table through the floor editor's Update Table dialog and read the record back | browser |
 | `live_smoke.mjs` | post-deploy proof on a live site that leaves the books untouched: PIN, seat, fire, kitchen ticket, till reaches pay, then Release | browser |
 
 Test-site helpers: `mirror_stations.py` recreates the live station accounts,

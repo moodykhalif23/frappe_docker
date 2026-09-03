@@ -109,6 +109,11 @@ what is shipped and what is deliberately not. Read it before touching anything.
   a silent no-op — every time on the live site (internet latency), never locally (the sync wins the
   race). `order_counts_locally.py` counts the check's own unsent lines. Any "works locally, not
   live" pad symptom: suspect a server-computed field the client reads before the sync lands.
+- **A `field:` autoname silently undoes edits to that field.** `Restaurant Object` is named by
+  `description` (clean names), and frappe's `_sync_autoname_field()` resets the field to the docname
+  on every save of an existing record — so "Update Table" saved the seats and threw the new name
+  away with no message. Renaming is an explicit `frappe.rename_doc` (plus the plain-copy `room`
+  columns that Link fields do not update); `rename_on_description.py` does it inside `save()`.
 - **Two payloads build a kitchen ticket.** The board's own fetch (`get_command_data`) and
   the one pushed at dispatch (`TableOrder.send` rows) — a field added to one is missing from
   the other, and upstream's `table_info` returns a one-item *tuple*. Patch both or the

@@ -41,6 +41,12 @@ kitchen screen + till, working R 2) found and fixed, in this order:
    realtime sync; on the internet the tap beats the sync, locally it never did.
    Found by `live_smoke.mjs` after the deploy. `order_counts_locally.py`.
 
+9. **Renaming a table from "Update Table" was silently reverted** (seats saved,
+   name did not). Since clean_names made the description the docname, frappe's
+   `_sync_autoname_field()` put the old name back on every save. A changed
+   description now renames the record and relabels every open floor.
+   `rename_on_description.py`, `rename_refresh.py`. Reported by Etham on 3 Sep.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.
