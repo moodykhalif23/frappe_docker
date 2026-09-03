@@ -140,6 +140,14 @@ RUN python3 /tmp/rename_on_description.py \
 COPY restaurant/patches/rename_refresh.py /tmp/rename_refresh.py
 RUN python3 /tmp/rename_refresh.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
+# saving Update Table before its values loaded wiped the seat count to 0
+COPY restaurant/patches/desk_form_partial_save.py /tmp/desk_form_partial_save.py
+RUN python3 /tmp/desk_form_partial_save.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/desk_form/desk_form.py').read())"
+# the dialog blanked numeric fields on open (frappe applies an empty default to numbers)
+COPY restaurant/patches/form_keeps_record_values.py /tmp/form_keeps_record_values.py
+RUN python3 /tmp/form_keeps_record_values.py \
+ && node --check apps/restaurant_management/restaurant_management/public/helper/js/frappe-form-class.js
 # a drag on an unselected tile did nothing until a second drag
 COPY restaurant/patches/drag_selects.py /tmp/drag_selects.py
 RUN python3 /tmp/drag_selects.py \
