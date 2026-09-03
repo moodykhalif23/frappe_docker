@@ -257,6 +257,10 @@ RUN python3 /tmp/card_initials.py \
 COPY restaurant/patches/card_layout.py /tmp/card_layout.py
 RUN python3 /tmp/card_layout.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
+# 160 of 170 dishes rendered, the rest behind a blank spacer; one limit governs render and fetch
+COPY restaurant/patches/all_cards.py /tmp/all_cards.py
+RUN python3 /tmp/all_cards.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
 
 # the floor remembered an empty room and looked broken
 COPY restaurant/patches/skip_empty_room.py /tmp/skip_empty_room.py
