@@ -203,6 +203,9 @@ second trap: frappe emits them as **bare** `/assets` URLs, so the edge served th
 pre-deploy `drag.js` and form classes for hours after every deploy —
 `versioned_includes.py` stamps them with the bake id in `hooks.py`, and
 `redeploy.sh` purges Cloudflare when `CF_ZONE_ID`/`CF_API_TOKEN` are in `.env`.
+Open tabs are the third: frappe reloads a tab only for its own version bump, so a floor
+opened before a redeploy runs the old patch layer until reloaded — `RM_seats.watch_build()`
+polls `house.asset_version()` and reloads at a quiet moment.
 **Never append your own query string to a `frappe.require` asset
 path** instead: `assets.extn()` reads the extension from *after* the `?`, so
 `x.js?v=1` resolves to no handler and the whole floor fails to load. Each bake

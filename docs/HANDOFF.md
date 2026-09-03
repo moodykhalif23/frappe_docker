@@ -100,6 +100,13 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     Each bake now stamps those includes (`versioned_includes.py`), and
     `redeploy.sh` purges the edge when `CF_ZONE_ID`/`CF_API_TOKEN` are in `.env`.
 
+17. **A tab opened before a redeploy kept running the old scripts** — frappe only
+    reloads a tab when *its own* version changes, so the fixes above were live
+    on the server while the editor's tab still dropped saves and snapped tiles
+    back ("shows for a few seconds, then returns"). The floor now compares the
+    version it loaded with the server's every two minutes and reloads itself
+    at a quiet moment (no dialog, no drag). `house.asset_version`, `seats.js`.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.
