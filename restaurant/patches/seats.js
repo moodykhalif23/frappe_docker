@@ -77,6 +77,26 @@
       frappe.realtime.on("synchronize_order_data", () => RM_seats.soon());
 
       this.watch_floor();
+      this.watch_build();
+    },
+
+    // rm_reload_on_deploy: a tab opened before a redeploy runs the old scripts
+    // until someone reloads it; frappe only reloads for its own version.
+    watch_build() {
+      const mine = (() => {
+        const s = Array.from(document.scripts).map(x => x.src).find(x => /restaurant-object-class\.js\?v=/.test(x));
+        const m = s && /[?&]v=([^&]+)/.exec(s);
+        return m ? m[1] : null;
+      })();
+      if (!mine) return;
+      const check = () => call("asset_version").then((v) => {
+        if (!v || String(v) === String(mine)) return;
+        // nobody mid-gesture, no dialog open: this is the quiet moment
+        if (document.querySelector(".modal.show") || document.querySelector(".d-table.drag")) return;
+        frappe.show_alert({ message: __("The POS was updated — reloading…"), indicator: "blue" });
+        setTimeout(() => window.location.reload(), 1500);
+      }).catch(() => {});
+      setInterval(check, 120000);
     },
 
     soon() {

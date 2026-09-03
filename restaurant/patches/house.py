@@ -254,6 +254,18 @@ def _ensure_delivery():
 
 
 @frappe.whitelist()
+def asset_version():
+	"""What the page's scripts are stamped with right now. frappe only reloads a
+	tab when its own version changes; a redeploy of the patch layer bumps this."""
+	import os
+	path = frappe.get_site_path("..", "assets", "assets.json")
+	try:
+		return str(os.path.getmtime(path))
+	except OSError:
+		return None
+
+
+@frappe.whitelist()
 def delivery_room():
 	"""Which room means 'delivery', and today's fee — for the seat dialog."""
 	return {"room": frappe.db.get_single_value("Restaurant Settings", "delivery_room"),
