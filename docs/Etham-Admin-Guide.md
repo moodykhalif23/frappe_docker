@@ -160,7 +160,7 @@ finish):
 | Add a table | pencil → **+ Table** |
 | Delete a table | pencil → **×** on the tile → confirm |
 | Rename / set seats | pencil → **Edit** on the tile → Description / No of Seats |
-| Move / resize | pencil → drag the tile or its corners |
+| Move / resize | pencil → drag the tile to move it, pull a corner handle to resize (no need to click it first) |
 
 **Seats matter**: the seat count is what "Seat guest" uses to offer tables,
 and it is how two parties can share one table — the tile reads `5/6` with a

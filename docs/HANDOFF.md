@@ -47,6 +47,25 @@ kitchen screen + till, working R 2) found and fixed, in this order:
    description now renames the record and relabels every open floor.
    `rename_on_description.py`, `rename_refresh.py`. Reported by Etham on 3 Sep.
 
+10. **Dragging or resizing an unselected tile did nothing** (upstream): the drag
+    bailed out, the mouse-up selected the tile, and a click on a selected tile
+    deselects it — so the editor felt like it worked once and then stopped.
+    A drag now selects the tile as it starts. `drag_selects.py`. Reported 3 Sep.
+
+11. **Update Table could wipe the seat count** (upstream): `desk_form.accept`
+    writes every field of the form and takes a missing key as blank, so saving
+    before the values had loaded set seats to 0 — it happened to Etham's first
+    save on 3 Sep (4 → empty) and to my probe (9 → empty; put back to 9). An
+    existing record now keeps any field the form did not send.
+    `desk_form_partial_save.py`.
+
+12. **The dialog opened with the seat count blank** — the real cause behind 11.
+    frappe's FieldGroup applies each field's default *after* the record loads,
+    and an empty default is applied to numeric fields (ignored for text), so
+    No of Seats and Minimum Seating were blanked on open and posted as null.
+    The record's values are now put back over the defaults.
+    `form_keeps_record_values.py`.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.

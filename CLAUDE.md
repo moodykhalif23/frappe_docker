@@ -114,6 +114,15 @@ what is shipped and what is deliberately not. Read it before touching anything.
   on every save of an existing record — so "Update Table" saved the seats and threw the new name
   away with no message. Renaming is an explicit `frappe.rename_doc` (plus the plain-copy `room`
   columns that Link fields do not update); `rename_on_description.py` does it inside `save()`.
+- **`desk_form.accept` treats a missing key as blank.** Every field on the Desk Form is written
+  onto the document from the posted `data`; a field the client did not send becomes None. Save a
+  dialog before its values have loaded and you wipe the record (Update Table set seats to 0).
+  `desk_form_partial_save.py` skips unsent fields on update — new records still take every field.
+- **A Desk Form blanks its numeric fields on open.** frappe's `FieldGroup.make()` applies field
+  defaults after the record loads, and `get_field_default_value` returns an empty default for
+  numeric fields (it drops it for text). The app's forms bind controls to the record, so the
+  loaded number is overwritten with null before the user sees it — then posted back as null.
+  `form_keeps_record_values.py` re-applies the record's values after `make()`.
 - **Two payloads build a kitchen ticket.** The board's own fetch (`get_command_data`) and
   the one pushed at dispatch (`TableOrder.send` rows) — a field added to one is missing from
   the other, and upstream's `table_info` returns a one-item *tuple*. Patch both or the

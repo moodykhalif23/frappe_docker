@@ -1,7 +1,7 @@
 // Reproduce: edit a table's Description in the floor editor, save, read back.
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'http://pos.localhost:8080';
-const TABLE = process.env.TABLE || 'Table 9', NEW = process.env.NEW || 'Table Probe';
+const TABLE = process.env.TABLE || 'Table 9', NEW = process.env.NEW || 'Table Probe', ROOM = process.env.ROOM || 'R 2';
 const b = await chromium.launch();
 const p = await (await b.newContext({ viewport: { width: 1500, height: 900 } })).newPage();
 const log = [];
@@ -11,7 +11,7 @@ await p.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
 await p.fill('#login_email', 'geff@etham.co.ke'); await p.fill('#login_password', 'Geff@2026'); await p.click('button.btn-login');
 await p.waitForURL(/\/app|\/desk/, { timeout: 60000 }).catch(() => {});
 await p.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(15000);
-await p.getByText('R 2', { exact: true }).first().click().catch(() => {}); await p.waitForTimeout(3000);
+await p.getByText(ROOM, { exact: true }).first().click().catch(() => {}); await p.waitForTimeout(3000);
 // pencil = edit mode, then select the tile, then its gear
 await p.locator('.btn-edit-floor, button:has(.fa-pencil), .fa-pencil').first().click({ force: true }).catch(e => log.push('pencil click failed'));
 await p.waitForTimeout(1500);
@@ -30,7 +30,8 @@ const d = p.locator('.modal.show').last();
 log.push('dialog: ' + (await d.locator('.modal-title').innerText().catch(() => 'none')));
 const desc = d.locator('input[data-fieldname="description"]');
 log.push('description field present: ' + (await desc.count()));
-await desc.fill(NEW); await d.locator('input[data-fieldname="no_of_seats"]').fill('6');
+await desc.fill(NEW);
+if (process.env.SEATS) await d.locator('input[data-fieldname="no_of_seats"]').fill(process.env.SEATS);   // otherwise keep the seats as they are
 await d.getByRole('button', { name: /^Save$/ }).click({ force: true }); await p.waitForTimeout(5000);
 log.push('dialog after save: ' + (await p.locator('.modal.show .modal-title').innerText().catch(() => 'closed')) + ' | alerts: ' + (await p.locator('.desk-alert, .msgprint').allInnerTexts().catch(() => [])).join(' / ').slice(0, 160));
 const db = await p.evaluate(async ([t, n]) => {
