@@ -38,6 +38,7 @@ whether the page runs.
 | `rename_probe.mjs` | rename a table through the floor editor's Update Table dialog and read the record back | browser |
 | `resize_probe.mjs` | resize a tile by its handle in edit mode, use Update Table, resize again, reload — the size must persist | browser |
 | `update_table_probe.mjs` | Update Table opens with the record's numbers filled in, and a save that touches nothing keeps them | browser |
+| `move_probe.mjs` | drag a tile's body right and back — from an unselected start and a selected one — and read `data_style` | browser |
 | `live_smoke.mjs` | post-deploy proof on a live site that leaves the books untouched: PIN, seat, fire, kitchen ticket, till reaches pay, then Release | browser |
 
 Test-site helpers: `mirror_stations.py` recreates the live station accounts,
