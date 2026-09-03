@@ -14,5 +14,10 @@ frappe.query_reports["Sales by Waiter"] = {
       fieldname: "room", label: __("Room"), fieldtype: "Link", options: "Restaurant Object",
       get_query: () => ({ filters: { type: "Room" } }),
     },
+    {
+      // the seater owns the check; whoever tapped Order owns each line
+      fieldname: "credit", label: __("Credit"), fieldtype: "Select",
+      options: ["Check owner", "Lines fired"], default: "Check owner",
+    },
   ],
 };

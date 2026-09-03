@@ -39,18 +39,42 @@ def rows(filters):
 		conds.append("i.booking in (select name from `tabRestaurant Booking` where room = %(room)s)")
 		values["room"] = filters.room
 
-	sales = frappe.db.sql(
-		"""
-		select coalesce(nullif(i.waiter, ''), 'Unassigned') as waiter,
-			count(distinct i.name) as checks,
-			sum(i.grand_total) as sales
-		from `tabPOS Invoice` i
-		where {conds}
-		group by 1
-		""".format(conds=" and ".join(conds)),
-		values,
-		as_dict=True,
-	)
+	if filters.get("credit") == "Lines fired" and frappe.db.has_column("Order Entry Item", "waiter"):
+		# every line carries who fired it: credit the firer, on invoiced checks only
+		lconds = ["o.status = 'Invoiced'", "e.qty > 0"]
+		lvalues = {}
+		if filters.get("from_date"):
+			lconds.append("date(o.creation) >= %(from_date)s"); lvalues["from_date"] = filters.from_date
+		if filters.get("to_date"):
+			lconds.append("date(o.creation) <= %(to_date)s"); lvalues["to_date"] = filters.to_date
+		if filters.get("room"):
+			lconds.append("o.room = %(room)s"); lvalues["room"] = filters.room
+		sales = frappe.db.sql(
+			"""
+			select coalesce(nullif(e.waiter, ''), coalesce(nullif(o.waiter, ''), 'Unassigned')) as waiter,
+				count(distinct o.name) as checks,
+				sum(e.qty * e.rate) as sales
+			from `tabOrder Entry Item` e
+			join `tabTable Order` o on o.name = e.parent
+			where {conds}
+			group by 1
+			""".format(conds=" and ".join(lconds)),
+			lvalues,
+			as_dict=True,
+		)
+	else:
+		sales = frappe.db.sql(
+			"""
+			select coalesce(nullif(i.waiter, ''), 'Unassigned') as waiter,
+				count(distinct i.name) as checks,
+				sum(i.grand_total) as sales
+			from `tabPOS Invoice` i
+			where {conds}
+			group by 1
+			""".format(conds=" and ".join(conds)),
+			values,
+			as_dict=True,
+		)
 
 	ocond = ["o.docstatus < 2"]
 	ovalues = {}
