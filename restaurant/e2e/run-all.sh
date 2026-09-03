@@ -17,6 +17,13 @@ APP=/home/frappe/frappe-bench/apps/restaurant_management/restaurant_management
 BE="$(docker compose ps -q backend)"
 
 declare -a NAMES=() VERDICTS=()
+# A shift opened on an earlier date puts "Yesterday's shift is still open" over
+# every page and its backdrop swallows every tap. Local sites only: this banks.
+case "$SITE" in *.localhost)
+  echo "exec(open(\"${APP}/day_prep.py\").read(), globals()); run()" \
+    | { docker cp restaurant/e2e/day_prep.py "${BE}:${APP}/day_prep.py" >/dev/null; docker compose exec -T backend bench --site "$SITE" console 2>&1; } | grep -E '^DAY' ;;
+esac
+
 record() { NAMES+=("$1"); VERDICTS+=("$2"); }
 
 server_suite() {

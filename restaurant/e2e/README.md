@@ -47,6 +47,9 @@ whether the page runs.
 | `resize_persists_live.mjs` | on a live floor: resize a tile, hard-reload, the size must still be there; then put it back | browser |
 | `build_watch_probe.mjs` | the floor's loaded script version matches the server's and the self-reload watcher is mounted | browser |
 | `revert_watch.mjs` | resize a live tile, then watch it for 20 s and log every realtime event that touches it — for "it snaps back" reports | browser |
+| `attribution_probe.mjs` | a bare tablet asks who seats; after the grace window Order asks again; the check is the seater's, every fired line the firer's, the timeline says so | browser |
+| `perf_live2.mjs` | where the time goes on a live site: cold and warm floor, a room switch, a pad open, with each API call's time | browser |
+| `day_prep.py` | local sites only: banks a shift opened on an earlier date and opens today's (run-all does this first) | server |
 | `look_live.mjs` | read-only look check on a live site's Menu Management: 6px corners, flush photo, nothing overflowing, page ends at the last card | browser |
 | `live_smoke.mjs` | post-deploy proof on a live site that leaves the books untouched: PIN, seat, fire, kitchen ticket, till reaches pay, then Release | browser |
 
