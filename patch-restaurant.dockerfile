@@ -184,6 +184,10 @@ COPY restaurant/patches/build_stamp.js /tmp/build_stamp.js
 RUN { echo ';'; cat /tmp/build_stamp.js; } >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && sed -i "s|__RM_BUILD__|$(date -u +%Y%m%d%H%M%S)|" apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+# the app's bare app_include_js/css URLs were cached by the CDN across deploys
+COPY restaurant/patches/versioned_includes.py /tmp/versioned_includes.py
+RUN python3 /tmp/versioned_includes.py "$(date -u +%Y%m%d%H%M%S)" \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/hooks.py').read())"
 
 # tapping a dish with no open check was a silent no-op; make it open the check
 COPY restaurant/patches/autostart_order.py /tmp/autostart_order.py

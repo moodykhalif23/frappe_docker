@@ -53,4 +53,15 @@ log "clearing server caches (sessions untouched)"
 docker compose exec -T backend bench --site "$SITE" clear-cache
 docker compose exec -T backend bench --site "$SITE" clear-website-cache || true
 
+CF_ZONE_ID="${CF_ZONE_ID:-$(sed -n 's/^CF_ZONE_ID=//p' .env | tail -1)}"
+CF_API_TOKEN="${CF_API_TOKEN:-$(sed -n 's/^CF_API_TOKEN=//p' .env | tail -1)}"
+if [ -n "$CF_ZONE_ID" ] && [ -n "$CF_API_TOKEN" ]; then
+  log "purging the Cloudflare edge cache"
+  curl -sS -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/purge_cache" \
+    -H "Authorization: Bearer ${CF_API_TOKEN}" -H "Content-Type: application/json" \
+    --data '{"purge_everything":true}' | grep -o '"success":[a-z]*' || echo "purge request failed"
+else
+  log "no CF_ZONE_ID/CF_API_TOKEN in .env — skipping the edge purge"
+fi
+
 log "done — reload the POS tab, no re-login needed"

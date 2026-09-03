@@ -42,6 +42,8 @@ whether the page runs.
 | `delivery_drill.mjs` | a delivery end to end: rider by PIN, slot + address, kitchen ticket shows where it goes, till pays with the fee on the bill, Sales by Waiter (Room = Delivery) credits the rider — `NO_PAY=1` releases instead of paying, for a live site | browser |
 | `resize_live.mjs` | resize a tile by a corner and an edge handle on a live floor, then put it back; `CORNERS=1` checks nothing covers a corner | browser |
 | `menu_blank_probe.mjs` | Menu Management ends where its last card ends — no virtual-scroller spacer below | browser |
+| `asset_urls.mjs` | every app script/style the floor loads, its version stamp and the CDN's cache status — bare URLs are the ones the edge serves stale after a deploy | browser |
+| `overlap_probe.mjs` | a resize while another save is in flight acts at once and is saved when the flag clears — never dropped | browser |
 | `live_smoke.mjs` | post-deploy proof on a live site that leaves the books untouched: PIN, seat, fire, kitchen ticket, till reaches pay, then Release | browser |
 
 Test-site helpers: `mirror_stations.py` recreates the live station accounts,
