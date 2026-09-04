@@ -30,6 +30,9 @@ what is shipped and what is deliberately not. Read it before touching anything.
    `table_order.py` vanished on the first rebake while its guard marker (inside the class) stayed,
    and every check open died with `NameError`. Insert helpers at the module head, and guard each
    edit of a file by its own token.
+   And when a patched block *changes*, the guard must recognise the **previous bake's output** and
+   upgrade it — the base image already carries the old block, so "already applied → exit" freezes
+   the old text forever (the M-Pesa refusal stayed a dialog for two bakes this way).
 3. **Site name must equal the public domain** (`SITE=pos.example.com`). The nginx template rewrites the `Origin` header to the site name and frappe's websocket auth requires `Host == Origin` — mismatch = "Invalid origin", dead realtime/kitchen display. For local work use `SITE=pos.localhost` — **and** the websocket service must be able to `fetch("http://<site name>/api/...")` to authenticate each socket (it uses the rewritten Origin as the URL). Public domains resolve via real DNS; `*.localhost` needs `restaurant/compose.localhost.yaml` (deploy.sh adds it to COMPOSE_FILE automatically: frontend gets the site name as a network alias + nginx listens on :80). Never add that override on a public deployment — the alias would shadow real DNS and break the https auth fetch. Symptom of missing override: browser console shows `Error connecting to socket.io: Unauthorized: TypeError: fetch failed`, nothing on the floor live-updates.
 4. Rebuilding from `apps-restaurant.json` alone produces an **unpatched** image — always follow with the patch dockerfile build. `deploy.sh` does both.
 5. Commits: single-concern, author `moodykhalif23 <brian@sozuri.net>`, never add an AI co-author.
@@ -175,6 +178,10 @@ what is shipped and what is deliberately not. Read it before touching anything.
   `Order Entry Item.waiter` on every fired line and adds a timeline comment. The tablet asks the PIN
   again after `Restaurant Settings.waiter_recheck_seconds` (blank = 90; 1 = every time) via
   `RM_waiter.confirm()`. *Sales by Waiter* credits the check owner or the line firer.
+- **M-Pesa by code**: an M-Pesa payment row must carry the customer's 10-character confirmation
+  code, unused before — asked for on the pay form (`mpesa_code.py`), enforced and stored as
+  `Sales Invoice Payment.reference_no` in `make_invoice` (`mpesa_reference.py`), printed on the
+  receipt, listed by the *M-Pesa Payments* report. Mode detection is the name matching `m-?pesa`.
 - **Menu item editor**: Menu Management screen has a "New Item" button and tapping a card's price pill opens an edit dialog (name, category, price, Veg/Non-Veg, photo). Backed by `restaurant_management.api.upsert_menu_item`/`get_menu_item` (appended via `restaurant/patches/api_append.py`); writes land on Item / Item Price / Restaurant Menu, so frappe stays the system of record.
 
 ## Working on it

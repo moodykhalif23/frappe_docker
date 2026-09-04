@@ -222,7 +222,10 @@ credits each correctly.
 1. Tap the table. The pad **asks "Whose check is this?"** — every party is
    listed with the guest's name, covers and waiter. Pick one.
 2. **Complete** → take the payment (cash, M-Pesa, or several lines mixed) →
-   the receipt prints.
+   the receipt prints. **M-Pesa needs the customer's confirmation code** — the
+   10-character code on their phone (e.g. `QGH7X8K2LM`), typed in the box under
+   the M-Pesa amount. The till refuses to pay without it, refuses a code that
+   already paid another bill, and prints it on the receipt.
 3. Paying frees **only that party's seats** — the tile drops from `7/10` to
    `5/10` and the other parties keep eating undisturbed.
 4. Tap the table again for the next party. The check chips in the pad's left
@@ -239,6 +242,9 @@ moment the pad opens.
   new check → each check pays separately, each gets its own numbered receipt.
   For an even split of one bill: **Complete** → add several payment rows
   (Cash + M-Pesa + …) on the one receipt.
+- **M-Pesa reconciles by code**: the `M-Pesa Payments` report lists every
+  mobile-money payment with its code, amount, invoice, waiter and cashier for
+  a date range — tick it off against the M-Pesa statement, or search one code.
 - **Release** (floor toolbar) voids a table's unpaid checks and frees its
   seats — cashier/manager only, and it never touches a paid sale.
 - Receipts print from the pad after payment and open the print dialog

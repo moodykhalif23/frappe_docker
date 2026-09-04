@@ -80,6 +80,10 @@ settle checks through the day → **Close day** at the end.
 
 # 3b. Silent receipt printing on the till
 
+> **M-Pesa on the till:** the cashier types the customer's 10-character confirmation
+> code under the M-Pesa amount before tapping Pay. No code, no payment.
+
+
 Paying a check prints the receipt from the till's own tab: the print dialog
 opens at once, already pointed at the default printer. To skip the dialog
 entirely (paper comes out the moment the cashier confirms):

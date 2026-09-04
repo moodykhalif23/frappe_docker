@@ -128,6 +128,13 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     timeline note; *Sales by Waiter* gains **Credit = Check owner | Lines fired**.
     `waiter_pad.js confirm()`, `host_stand.js`, `dispatch_identity.py`.
 
+22. **M-Pesa paid with no trace.** A mobile-money payment was an amount and a mode; the
+    customer's confirmation code was read aloud and lost, so nothing reconciled against the
+    M-Pesa statement. The pay form asks for the code under the M-Pesa amount (`mpesa_code.py`),
+    `make_invoice` refuses a row without a well-formed one or with a code that already paid
+    another invoice, and stores it as the payment row's `reference_no` (`mpesa_reference.py`);
+    the receipt prints it; the *M-Pesa Payments* report lists the day by code.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.
