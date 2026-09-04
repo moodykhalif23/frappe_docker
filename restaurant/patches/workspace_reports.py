@@ -41,13 +41,13 @@ for w in WANTED:
                     "data": {"shortcut_name": w["label"], "col": 3}})
     added.append(w["label"])
 
-if not added:
-    print("workspace: reports already linked")
-    raise SystemExit
-
-doc["content"] = json.dumps(content)
-# frappe re-imports a workspace only when the file is newer than the stored row
-doc["modified"] = "2026-08-24 23:59:59.000000"
+if added:
+    doc["content"] = json.dumps(content)
+# frappe re-imports a workspace only when the file is newer than the stored row:
+# stamp every bake, or a shortcut added on an earlier bake never reaches a site
+# that already holds the old stamp (five were missing on live for this)
+import datetime
+doc["modified"] = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.000000")
 json.dump(doc, open(P, "w"), indent=1, sort_keys=True)
 open(P, "a").write("\n")
-print("workspace: added " + ", ".join(added))
+print("workspace: " + ("added " + ", ".join(added) if added else "reports already linked") + "; stamped " + doc["modified"][:19])

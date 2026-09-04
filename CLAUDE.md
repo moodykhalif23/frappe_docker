@@ -217,6 +217,10 @@ therefore serves the **pre-patch** body for four hours while `curl` against
 
     docker compose exec -T backend touch sites/assets/assets.json
 
+frappe re-imports a standard workspace only when the JSON's `modified` is **newer than the
+stored row**, so a patch that adds a shortcut must stamp the JSON with the bake time — a fixed
+date left *M-Pesa Payments* (and four other shortcuts) missing on live until a forced import.
+
 `redeploy.sh` does this. The `app_include_js`/`app_include_css` helpers are a
 second trap: frappe emits them as **bare** `/assets` URLs, so the edge served the
 pre-deploy `drag.js` and form classes for hours after every deploy —
