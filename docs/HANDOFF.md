@@ -135,6 +135,12 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     another invoice, and stores it as the payment row's `reference_no` (`mpesa_reference.py`);
     the receipt prints it; the *M-Pesa Payments* report lists the day by code.
 
+23. **Initials on the title, a square plus, a visible scrollbar.** The photo placeholder's
+    initials are centred with `top:50%`, but `.icon` was never positioned, so the percentage
+    resolved against the card — fine on a short card, on the title once a two-line name made the
+    row taller. `.icon` is now `position: relative`; the plus is a circle again (the 6px pass had
+    squared it); the card list scrolls without a bar. Third pass in `menu_card.css`.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.
