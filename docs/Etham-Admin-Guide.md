@@ -234,9 +234,12 @@ credits each correctly.
 A table with a single party skips the question — its check is selected the
 moment the pad opens.
 
-**Seat guest is the only way to put someone on a table.** Typing a name into the
-pad's customer box attaches nothing the floor can count — no covers, no waiter — and
-the floor clears such leftovers by itself.
+**Seat guest is the only way to put someone on a table.** The pad's **+** (top left)
+is the same door: it asks the waiter's PIN, then opens Seat guest already set to that
+table with the seats left, and the new party's check appears in the pad. So can a dish
+tapped when no check is selected. Typing a name into the pad's customer box attaches
+nothing the floor can count — no covers, no waiter — and the floor clears such
+leftovers by itself.
 
 ---
 

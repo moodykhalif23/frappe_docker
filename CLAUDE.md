@@ -178,6 +178,8 @@ what is shipped and what is deliberately not. Read it before touching anything.
   `Order Entry Item.waiter` on every fired line and adds a timeline comment. The tablet asks the PIN
   again after `Restaurant Settings.waiter_recheck_seconds` (blank = 90; 1 = every time) via
   `RM_waiter.confirm()`. *Sales by Waiter* credits the check owner or the line firer.
+  The pad's + and a dish tapped with no check both open Seat guest locked to the table
+  (`RM_host_stand.open_for`, `pad_plus_seats.py`) — upstream's `add_order` made anonymous checks.
 - **M-Pesa by code**: an M-Pesa payment row must carry the customer's 10-character confirmation
   code, unused before — asked for on the pay form (`mpesa_code.py`), enforced and stored as
   `Sales Invoice Payment.reference_no` in `make_invoice` (`mpesa_reference.py`), printed on the

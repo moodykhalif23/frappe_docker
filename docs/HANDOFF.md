@@ -151,6 +151,11 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     floor now heals such leftovers on every occupancy fetch (`house.heal_stale_markers`) and the
     dot is hidden — seats and party badges already say who is where.
 
+25. **Two more doors round the seating rule.** The pad's + called the table's `add_order`
+    and opened a check with no party, no covers and no PIN; a dish tapped with no check selected
+    did the same. Both now open Seat guest locked to that table — PIN first, seats left shown,
+    the new party's check selected in the pad (`pad_plus_seats.py`, `host_stand.open_for`).
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.
