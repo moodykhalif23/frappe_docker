@@ -80,8 +80,11 @@ NEW = """      payment_methods += this.form_tag(
                         placeholder: __("M-Pesa confirmation code"), maxlength: 12,
                         autocapitalize: "characters", spellcheck: "false" },
         });
-        // change/keyup callbacks get no element: use the handle
-        ref.on(["change", "keyup"], () => { ref.val(String(ref.val() || "").toUpperCase().replace(/[^A-Z0-9]/g, "")); });
+        // jshtml caches val() after its first read: read and write the element itself
+        ref.on(["change", "keyup"], () => {
+          const code = String(ref.JQ().val() || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+          ref.JQ().val(code); ref.value = code;
+        });
         this.payment_refs[mode_of_payment.mode_of_payment] = ref;
         payment_methods += this.form_tag(__("M-Pesa code"), ref);
       }
