@@ -81,7 +81,7 @@ const shape = await p.evaluate(() => {
     pillCentred: pill && Math.abs((pill.left + pill.right) / 2 - (c.getBoundingClientRect().left + c.getBoundingClientRect().right) / 2) <= 3,
     priceAbovePill: price && pill && price.bottom <= pill.top + 1,
     priceColor: cs.color, priceText: c.querySelector('.rm-price').textContent.trim(),
-    plusRound: plus && Math.abs(plus.width - plus.height) < 2 && getComputedStyle(c.querySelector('.add-item')).borderRadius,
+    plusRound: plus && getComputedStyle(c.querySelector('.add-item')).borderRadius,
     minusVisible: !!minus && minus.width > 0,
     // visible text only: the screen-reader label still says "Add <price>"
     visiblePlus: Array.from(c.querySelector('.add-item').childNodes).filter(n => n.nodeType === 3).map(n => n.textContent).join('').trim(),
@@ -101,7 +101,14 @@ ok('initials stay inside the photo box', strays === 0, `${strays} cards with str
 const bar = await p.evaluate(() => { const l = document.querySelector('.order-manage .product-list'); return l ? l.offsetWidth - l.clientWidth : -1; });
 ok('the card list shows no scrollbar', bar === 0, `${bar}px of scrollbar`);
 ok('price on its own line, pill centred beneath', shape.priceAbovePill && shape.pillCentred, shape.priceText);
-ok('plus is a round button showing only "+"', !!shape.plusRound && /50%|999px/.test(shape.plusRound) && shape.visiblePlus === '+', `${shape.plusRound} text "${shape.visiblePlus}"`);
+ok('plus is square and shows only "+"', !!shape.plusRound && /^0px/.test(shape.plusRound) && shape.visiblePlus === '+', `${shape.plusRound} text "${shape.visiblePlus}"`);
+// the client's pick: the pill sits on the card's bottom edge and the buttons fill its ends
+const fit = await p.evaluate(() => {
+  const c = document.querySelector('.order-manage .small-box.item'); const cr = c.getBoundingClientRect();
+  const pill = c.querySelector('.input-group').getBoundingClientRect(), minus = c.querySelector('.rm-cart-minus').getBoundingClientRect(), plus = c.querySelector('.add-item').getBoundingClientRect();
+  return { gapBelow: Math.round(cr.bottom - pill.bottom), minusInset: Math.round(minus.left - pill.left), plusInset: Math.round(pill.right - plus.right), heightDiff: Math.round(pill.height - plus.height), pillRadius: getComputedStyle(c.querySelector('.input-group')).borderRadius };
+});
+ok('the pill sits on the card bottom, square, buttons filling its ends', fit.gapBelow <= 2 && fit.minusInset <= 2 && fit.plusInset <= 2 && fit.heightDiff <= 3 && /^0px/.test(fit.pillRadius), JSON.stringify(fit));
 if (shape.undefinedSrc.length) console.log('UNDEFINED SRC:', JSON.stringify(shape.undefinedSrc));
 ok('minus is on the pill', shape.minusVisible);
 ok('pill starts at 0', shape.qty === '0', shape.qty);

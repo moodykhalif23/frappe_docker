@@ -286,3 +286,23 @@
 .pos-items .small-box.item .small-box-footer { justify-content: center !important; }
 .pos-items .small-box.item .small-box-footer .rm-price { flex: 0 0 100%; text-align: left; }
 .pos-items .small-box.item .small-box-footer .form-group { margin: 0 auto !important; }
+
+/* Fifth pass, the client's pick: the pill sits on the card's bottom edge,
+   square-cornered, and the − and + fill its two ends completely. */
+.pos-items .small-box.item { padding-bottom: 0 !important; }
+.pos-items .small-box.item .small-box-footer { margin-bottom: 0 !important; padding-bottom: 0 !important; row-gap: 6px !important; }
+.pos-items .small-box.item .small-box-footer .form-group { margin: 0 auto !important; }
+.pos-items .small-box.item .small-box-footer .input-group {
+  border-radius: 0 !important; padding: 0 !important; gap: 0 !important;
+  align-items: stretch !important; margin-bottom: 0 !important; min-height: 44px;
+}
+.pos-items .small-box.item .small-box-footer .input-group .rm-cart-minus,
+.pos-items .small-box.item .small-box-footer .input-group .btn.add-item {
+  border-radius: 0 !important; height: auto !important; min-height: 0 !important;
+  align-self: stretch !important; width: 44px !important; border: 0 !important; margin: 0 !important;
+}
+.pos-items .small-box.item .small-box-footer .input-group .rm-cart-minus { border-right: 1px solid rgba(15, 23, 42, 0.12) !important; }
+.pos-items .small-box.item .small-box-footer .input-group .btn.add-item { border-left: 1px solid rgba(15, 23, 42, 0.12) !important; }
+.pos-items .small-box.item.rm-has-qty .small-box-footer .input-group .btn.add-item { border-left-color: var(--rm-teal) !important; }
+.pos-items .small-box.item .small-box-footer .input-group .qty-in-cart { min-width: 40px; }
+.pos-items .small-box.item .rm-cart-minus:active, .pos-items .small-box.item .add-item:active { transform: none; opacity: 0.85; }
