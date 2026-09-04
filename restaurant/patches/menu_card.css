@@ -267,3 +267,16 @@
 .pos-items .small-box.item .small-box-footer .btn { border-radius: 6px !important; }
 /* the order pad's - n + stays a pill: that is the approved look */
 .pos-items .small-box.item .input-group { border-radius: 999px !important; }
+
+/* Third pass. The initials are centred with top:50% + translate, but .icon was
+   not positioned, so 50% resolved against the whole card: in a row made taller
+   by a two-line name they landed on the title. The plus had lost its circle to
+   the 6px rule above. And the card list scrolls without showing a bar. */
+.pos-items .small-box.item .icon { position: relative !important; }
+.pos-items .small-box.item .icon .placeholder-text { top: 50% !important; left: 50% !important; }
+/* outranks the 6px .btn rule of the second pass on specificity */
+.pos-items .small-box.item .small-box-footer .input-group .btn.add-item,
+.pos-items .small-box.item .small-box-footer .btn.add-item,
+.pos-items .small-box.item .btn.add-item { border-radius: 50% !important; }
+.order-manage .product-list { scrollbar-width: none; }
+.order-manage .product-list::-webkit-scrollbar { display: none; width: 0; height: 0; }

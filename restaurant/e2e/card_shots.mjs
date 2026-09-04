@@ -93,8 +93,13 @@ const radius = await p.evaluate(() => parseFloat(getComputedStyle(document.query
 ok('cards have nearly sharp corners', radius <= 8, `${radius}px`);
 const overflow = await p.evaluate(() => Array.from(document.querySelectorAll('.order-manage .small-box.item')).slice(0, 40).filter(c => { const r = c.getBoundingClientRect(); const g = c.querySelector('.input-group').getBoundingClientRect(); return g.right > r.right + 1; }).length);
 ok('no pill overflows its card', overflow === 0, `${overflow} cards overflow`);
+// initials belong inside the photo box on every card, however tall its name makes it
+const strays = await p.evaluate(() => Array.from(document.querySelectorAll('.order-manage .small-box.item')).filter(c => c.offsetParent).filter(c => { const a = c.querySelector('.icon .placeholder-text'); if (!a) return false; const ar = a.getBoundingClientRect(), ir = c.querySelector('.icon').getBoundingClientRect(); return ar.top < ir.top - 1 || ar.bottom > ir.bottom + 1; }).length);
+ok('initials stay inside the photo box', strays === 0, `${strays} cards with stray initials`);
+const bar = await p.evaluate(() => { const l = document.querySelector('.order-manage .product-list'); return l ? l.offsetWidth - l.clientWidth : -1; });
+ok('the card list shows no scrollbar', bar === 0, `${bar}px of scrollbar`);
 ok('price left, pill right', shape.priceLeftOfPill, shape.priceText);
-ok('plus is a round button showing only "+"', !!shape.plusRound && shape.visiblePlus === '+', `${shape.plusRound} text "${shape.visiblePlus}"`);
+ok('plus is a round button showing only "+"', !!shape.plusRound && /50%|999px/.test(shape.plusRound) && shape.visiblePlus === '+', `${shape.plusRound} text "${shape.visiblePlus}"`);
 if (shape.undefinedSrc.length) console.log('UNDEFINED SRC:', JSON.stringify(shape.undefinedSrc));
 ok('minus is on the pill', shape.minusVisible);
 ok('pill starts at 0', shape.qty === '0', shape.qty);
