@@ -272,7 +272,8 @@
    not positioned, so 50% resolved against the whole card: in a row made taller
    by a two-line name they landed on the title. The plus had lost its circle to
    the 6px rule above. And the card list scrolls without showing a bar. */
-.pos-items .small-box.item .icon { position: relative !important; }
+/* upstream gives .icon top:3px/left:-3px, dormant while static: zero them */
+.pos-items .small-box.item .icon { position: relative !important; top: 0 !important; left: 0 !important; }
 .pos-items .small-box.item .icon .placeholder-text { top: 50% !important; left: 50% !important; }
 /* outranks the 6px .btn rule of the second pass on specificity */
 .pos-items .small-box.item .small-box-footer .input-group .btn.add-item,
@@ -280,3 +281,8 @@
 .pos-items .small-box.item .btn.add-item { border-radius: 50% !important; }
 .order-manage .product-list { scrollbar-width: none; }
 .order-manage .product-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* Fourth pass: the price on its own line, the - 0 + pill centred beneath it. */
+.pos-items .small-box.item .small-box-footer { justify-content: center !important; }
+.pos-items .small-box.item .small-box-footer .rm-price { flex: 0 0 100%; text-align: left; }
+.pos-items .small-box.item .small-box-footer .form-group { margin: 0 auto !important; }

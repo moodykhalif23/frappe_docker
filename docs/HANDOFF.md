@@ -139,7 +139,15 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     initials are centred with `top:50%`, but `.icon` was never positioned, so the percentage
     resolved against the card — fine on a short card, on the title once a two-line name made the
     row taller. `.icon` is now `position: relative`; the plus is a circle again (the 6px pass had
-    squared it); the card list scrolls without a bar. Third pass in `menu_card.css`.
+    squared it); the card list scrolls without a bar. Third pass in `menu_card.css`. Positioning
+    `.icon` woke upstream's dormant `top:3px; left:-3px` and shifted the photo off the card edge
+    by 3px on live — zeroed; the card suite now checks the photo's offset, not only its width.
+
+24. **A ghost on Table 16.** The tile showed a white dot and looked taken, with no check, no
+    party and nobody's badge. The dot is upstream's "a customer is attached" marker, and the pad's
+    customer box can attach a name (here `test`) without seating anyone or naming a waiter. The
+    floor now heals such leftovers on every occupancy fetch (`house.heal_stale_markers`) and the
+    dot is hidden — seats and party badges already say who is where.
 
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —

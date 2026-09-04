@@ -76,8 +76,10 @@ const shape = await p.evaluate(() => {
   const cs = getComputedStyle(c.querySelector('.rm-price'));
   return {
     card: c.getBoundingClientRect().width, iconH: icon && icon.height, iconW: icon && icon.width,
+    iconDx: icon && Math.round(icon.left - c.getBoundingClientRect().left), iconDy: icon && Math.round(icon.top - c.getBoundingClientRect().top),
     photoAboveTitle: icon && title && icon.bottom <= title.top + 1,
-    priceLeftOfPill: price && pill && price.right <= pill.left,
+    pillCentred: pill && Math.abs((pill.left + pill.right) / 2 - (c.getBoundingClientRect().left + c.getBoundingClientRect().right) / 2) <= 3,
+    priceAbovePill: price && pill && price.bottom <= pill.top + 1,
     priceColor: cs.color, priceText: c.querySelector('.rm-price').textContent.trim(),
     plusRound: plus && Math.abs(plus.width - plus.height) < 2 && getComputedStyle(c.querySelector('.add-item')).borderRadius,
     minusVisible: !!minus && minus.width > 0,
@@ -88,7 +90,7 @@ const shape = await p.evaluate(() => {
   };
 });
 console.log('SHAPE', JSON.stringify(shape));
-ok('photo sits above the name, flush with the card edges', shape.photoAboveTitle && Math.abs(shape.iconW - shape.card) <= 2 && shape.iconH >= 120, `icon ${Math.round(shape.iconW)}x${Math.round(shape.iconH)} in a ${Math.round(shape.card)} card`);
+ok('photo sits above the name, flush with the card edges', shape.photoAboveTitle && Math.abs(shape.iconW - shape.card) <= 2 && Math.abs(shape.iconDx) <= 2 && Math.abs(shape.iconDy) <= 2 && shape.iconH >= 120, `icon ${Math.round(shape.iconW)}x${Math.round(shape.iconH)} at (${shape.iconDx},${shape.iconDy}) in a ${Math.round(shape.card)} card`);
 const radius = await p.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.order-manage .small-box.item')).borderTopLeftRadius));
 ok('cards have nearly sharp corners', radius <= 8, `${radius}px`);
 const overflow = await p.evaluate(() => Array.from(document.querySelectorAll('.order-manage .small-box.item')).slice(0, 40).filter(c => { const r = c.getBoundingClientRect(); const g = c.querySelector('.input-group').getBoundingClientRect(); return g.right > r.right + 1; }).length);
@@ -98,7 +100,7 @@ const strays = await p.evaluate(() => Array.from(document.querySelectorAll('.ord
 ok('initials stay inside the photo box', strays === 0, `${strays} cards with stray initials`);
 const bar = await p.evaluate(() => { const l = document.querySelector('.order-manage .product-list'); return l ? l.offsetWidth - l.clientWidth : -1; });
 ok('the card list shows no scrollbar', bar === 0, `${bar}px of scrollbar`);
-ok('price left, pill right', shape.priceLeftOfPill, shape.priceText);
+ok('price on its own line, pill centred beneath', shape.priceAbovePill && shape.pillCentred, shape.priceText);
 ok('plus is a round button showing only "+"', !!shape.plusRound && /50%|999px/.test(shape.plusRound) && shape.visiblePlus === '+', `${shape.plusRound} text "${shape.visiblePlus}"`);
 if (shape.undefinedSrc.length) console.log('UNDEFINED SRC:', JSON.stringify(shape.undefinedSrc));
 ok('minus is on the pill', shape.minusVisible);

@@ -47,6 +47,8 @@ whether the page runs.
 | `resize_persists_live.mjs` | on a live floor: resize a tile, hard-reload, the size must still be there; then put it back | browser |
 | `build_watch_probe.mjs` | the floor's loaded script version matches the server's and the self-reload watcher is mounted | browser |
 | `revert_watch.mjs` | resize a live tile, then watch it for 20 s and log every realtime event that touches it — for "it snaps back" reports | browser |
+| `floor_shot.mjs` | screenshots for a look review on a test site: the floor with a seated party, and the pad filtered to a row of long dish names | browser |
+| `stale_marker_suite.py` | server: a customer name on a table with no check and no party is cleared by the next occupancy fetch; a seated table keeps its guest | server |
 | `mpesa_suite.py` | server: an M-Pesa row needs a well-formed, unused code; cash does not; the code lands on the payment row, the receipt and the report | server |
 | `mpesa_probe.mjs` | the till asks for the M-Pesa code, refuses without it, pays with it and stores it as the payment's reference | browser |
 | `attribution_probe.mjs` | a bare tablet asks who seats; after the grace window Order asks again; the check is the seater's, every fired line the firer's, the timeline says so | browser |

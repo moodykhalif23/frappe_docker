@@ -234,6 +234,10 @@ credits each correctly.
 A table with a single party skips the question — its check is selected the
 moment the pad opens.
 
+**Seat guest is the only way to put someone on a table.** Typing a name into the
+pad's customer box attaches nothing the floor can count — no covers, no waiter — and
+the floor clears such leftovers by itself.
+
 ---
 
 # 10. Money rules worth knowing

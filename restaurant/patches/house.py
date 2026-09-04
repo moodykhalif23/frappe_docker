@@ -1263,6 +1263,31 @@ def table_seats(table, doc=None):
     }
 
 
+def heal_stale_markers(room=None):
+	"""Upstream lets the pad attach a customer to a table without seating anyone,
+	and shows it as a dot on the tile. With no open check and no party that name
+	is a leftover: clear it so the tile reads what the floor knows. Three bulk
+	queries, because this runs on every floor poll."""
+	filters = {"type": "Table"}
+	if room:
+		filters["room"] = room
+	marked = [r.name for r in frappe.get_all("Restaurant Object", filters=filters, fields=["name"],
+											or_filters={"customer": ["is", "set"], "current_user": ["is", "set"]})]
+	if not marked:
+		return []
+	# what the floor itself counts: a party is a booking in status Open; a check
+	# is a Table Order past "Opened" (an empty one, as upstream's count agrees, is not)
+	busy = {r.table for r in frappe.get_all("Table Order", fields=["table"], filters={
+		"table": ["in", marked], "status": ["not in", ["Cancelled", "Invoiced", "Opened"]]})}
+	busy |= {r.table for r in frappe.get_all("Restaurant Booking", fields=["table"], filters={
+		"table": ["in", marked], "status": "Open"})}
+	healed = [t for t in marked if t not in busy]
+	for table in healed:
+		frappe.db.set_value("Restaurant Object", table, {"customer": None, "current_user": None},
+							update_modified=False)
+	return healed
+
+
 @frappe.whitelist()
 def table_occupancy(room=None):
     """Seat counts for the whole floor, keyed by table — one call per repaint.
@@ -1270,6 +1295,10 @@ def table_occupancy(room=None):
     Deliberately bulk: per-table lookups meant forty-odd queries a repaint, and
     the floor polls this, so it showed up as a slow floor.
     """
+    try:
+        heal_stale_markers(room)  # leftovers: a name with no check and no party
+    except Exception:
+        pass
     filters = {"type": "Table"}
     if room:
         filters["room"] = room

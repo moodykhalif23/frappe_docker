@@ -19,3 +19,7 @@
 .restaurant-manage .floor-map .d-table.selected .resize-handle.s { cursor: ns-resize !important; }
 /* the body of a selected tile is for moving */
 .restaurant-manage.editing .floor-map .d-table.selected { cursor: move; }
+
+/* Upstream's white dot meant "a customer name is attached to the table" — with
+   seats and party badges on every tile it only ever read as a stale marker. */
+.d-table .has-customer, .d-table .has-customer-icon { display: none !important; }
