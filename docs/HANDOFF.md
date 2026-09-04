@@ -142,6 +142,8 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     squared it); the card list scrolls without a bar. Third pass in `menu_card.css`. Positioning
     `.icon` woke upstream's dormant `top:3px; left:-3px` and shifted the photo off the card edge
     by 3px on live — zeroed; the card suite now checks the photo's offset, not only its width.
+    The client's final pick for the quantity control (fifth pass): the pill sits on the card's
+    bottom edge, square-cornered, the − and + filling its two ends; the card suite asserts the fit.
 
 24. **A ghost on Table 16.** The tile showed a white dot and looked taken, with no check, no
     party and nobody's badge. The dot is upstream's "a customer is attached" marker, and the pad's
