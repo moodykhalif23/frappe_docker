@@ -118,9 +118,17 @@ const totalText = async () => (await page.locator('.order-manage').innerText().c
 const before = await totalText();
 const newOrder = page.locator('.order-manage .btn-app.btn-order').first();
 ok('new-order button present', await newOrder.count() > 0);
-// the + is bound to DOUBLE_CLICK, like dispatch — a single click does nothing
-await newOrder.dblclick({ force: true });
-await page.waitForTimeout(6000);
+// the + no longer opens an anonymous check: it is a door into Seat guest for this
+// table (the PIN was tapped moments ago, so it goes straight to the seat dialog)
+await newOrder.click({ force: true });
+await page.waitForTimeout(3500);
+const seatAnother = page.locator('.modal.show').filter({ hasText: /Seat another party/ }).last();
+ok('the + opens Seat guest locked to this table', (await seatAnother.count()) > 0,
+   JSON.stringify(await page.locator('.modal.show .modal-title').allInnerTexts()));
+if (await seatAnother.count()) {
+  await seatAnother.locator('.modal-header .btn-modal-close, .modal-header .close').first().click({ force: true }).catch(() => {});
+  await page.waitForTimeout(800);
+}
 await shot('order-created');
 
 // dismiss only an error notice — Escape would close the order pad itself

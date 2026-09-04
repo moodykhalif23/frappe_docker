@@ -15,7 +15,9 @@
     const covers = dialog.get_value("covers") || 0;
     const whole_table = dialog.get_value("whole_table") ? 1 : 0;
     return frappe.call("restaurant_management.house.free_tables", { covers, whole_table }).then(({ message }) => {
-      const tables = message || [];
+      let tables = message || [];
+      // opened from a table's own pad: that table only, with its seats left
+      if (dialog.__only_table) tables = tables.filter(t => t.name === dialog.__only_table);
       dialog.__rooms = Object.fromEntries(tables.map(t => [t.name, t.room]));
       const field = dialog.get_field("table");
       field.df.options = tables.map(t => ({ value: t.name, label: label(t) }));
@@ -24,11 +26,16 @@
       const seats_free = tables.reduce((n, t) => n + (t.free || 0), 0);
       dialog.fields_dict.hint.$wrapper.html(
         tables.length
-          ? `<p class="text-muted small">${__("{0} seat(s) across {1} table(s) for {2}",
-              [seats_free, tables.length, covers || __("any party")])}</p>`
-          : `<p class="text-danger small">${__("Nowhere seats {0} — free a table, or split the party.", [covers])}</p>`
+          ? `<p class="text-muted small">${dialog.__only_table
+              ? __("{0} seat(s) left at this table for {1}", [seats_free, covers || __("any party")])
+              : __("{0} seat(s) across {1} table(s) for {2}", [seats_free, tables.length, covers || __("any party")])}</p>`
+          : `<p class="text-danger small">${dialog.__only_table
+              ? __("This table cannot seat {0} more — free seats first, or pick another table.", [covers])
+              : __("Nowhere seats {0} — free a table, or split the party.", [covers])}</p>`
       );
       if (tables.length) dialog.set_value("table", tables[0].name);
+      dialog.set_df_property("table", "read_only", dialog.__only_table ? 1 : 0);
+      if (dialog.__only_table) dialog.get_primary_btn().prop("disabled", !tables.length);
       toggle_address(dialog);
     });
   };
@@ -50,6 +57,22 @@
     frappe.call("restaurant_management.house.delivery_room").then(({ message }) => { delivery = message || {}; show(); });
   };
 
+  // The pad is already open on this table: wait for the new check to arrive on
+  // the realtime sync, select it, then do whatever the tap was for (a dish).
+  const select_new_check = (om, order, then) => {
+    let tries = 0;
+    const tick = setInterval(() => {
+      tries += 1;
+      // the pad keeps its checks as children of an ObjectManage: iterate whatever shape that is
+      const pool = om.orders || om.children || {};
+      const list = typeof pool.values === "function" ? Array.from(pool.values()) : Object.values(pool);
+      let found = list.find(o => o && o.data && o.data.name === order);
+      if (!found && om.last_order && om.last_order.data && om.last_order.data.name === order) found = om.last_order;
+      if (found) { clearInterval(tick); found.select(); if (then) setTimeout(then, 300); return; }
+      if (tries === 5 && om.make_orders) om.make_orders();
+      if (tries > 40) { clearInterval(tick); frappe.show_alert({ message: __("Seated — tap the check to open it"), indicator: "blue" }); }
+    }, 250);
+  };
   const seat = (values, dialog) => {
     const who = window.RM_waiter && RM_waiter.current;
     frappe.call({
@@ -61,6 +84,7 @@
       if (!message) return;
       dialog.hide();
       window.RM_seats && RM_seats.refresh();
+      if (dialog.__om) return select_new_check(dialog.__om, message.order, dialog.__then);
 
       const go = () => {
         // Mark the table, then select its room: rendering a room opens the marked
@@ -92,14 +116,50 @@
       rm.page.add_inner_button(__("Seat guest"), () => RM_host_stand.open(), null, "primary");
     },
 
+    // A dish tapped with no check selected: if the table already has a party the
+    // pad simply has not loaded its checks yet — load them and let the picker
+    // choose; only an empty table opens Seat guest.
+    seat_or_pick(om, then) {
+      const table = om.table.data.name;
+      const pick = () => (window.RM_seats && RM_seats.pick_check(om, then)) || this.open_for(table, om, then);
+      // the pad loads its checks as it opens: give that load a moment first
+      let tries = 0;
+      const tick = setInterval(() => {
+        tries += 1;
+        if ((om.child_values || []).length) { clearInterval(tick); return pick(); }
+        if (tries === 4 && om.get_orders) om.get_orders();
+        if (tries > 16) {
+          clearInterval(tick);
+          // still nothing loaded: the server decides — a party here means keep waiting, none means seat
+          frappe.call("restaurant_management.house.parties", { table }).then(({ message }) => {
+            if (!(message || []).length) return this.open_for(table, om, then);
+            let more = 0;
+            const again = setInterval(() => {
+              more += 1;
+              if ((om.child_values || []).length) { clearInterval(again); pick(); }
+              else if (more > 20) { clearInterval(again); this.open_for(table, om, then); }
+            }, 250);
+          });
+        }
+      }, 250);
+    },
+
+    // The pad's + and a dish tapped with no check selected come here: another
+    // party at this table, through the same door — PIN, covers, seats left.
+    open_for(table, om, then) {
+      this.__for = { table, om, then };
+      return this.open();
+    },
+
     open() {
       // Seating belongs to a waiter: the PIN is confirmed before the dialog opens,
       // so on a shared tablet the seat is credited to the person actually seating.
       if (window.RM_waiter && RM_waiter.confirm && !this.__confirmed) {
         return RM_waiter.confirm("seat").then(() => { this.__confirmed = true; this.open(); this.__confirmed = false; });
       }
+      const for_table = this.__for; this.__for = null;
       const dialog = new frappe.ui.Dialog({
-        title: __("Seat a guest"),
+        title: for_table ? __("Seat another party at {0}", [for_table.table]) : __("Seat a guest"),
         fields: [
           { fieldname: "guest_name", fieldtype: "Data", label: __("Guest name"), reqd: 1 },
           {
@@ -121,6 +181,7 @@
         primary_action_label: __("Seat & open order"),
         primary_action: (values) => seat(values, dialog),
       });
+      if (for_table) { dialog.__only_table = for_table.table; dialog.__om = for_table.om; dialog.__then = for_table.then; }
       dialog.show();
       free_tables(dialog);
     },

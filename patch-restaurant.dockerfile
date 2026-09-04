@@ -313,6 +313,12 @@ COPY restaurant/patches/dispatch_identity.py /tmp/dispatch_identity.py
 RUN python3 /tmp/dispatch_identity.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js
 
+# the pad's + and a dish with no check go through Seat guest, not round it
+COPY restaurant/patches/pad_plus_seats.py /tmp/pad_plus_seats.py
+RUN python3 /tmp/pad_plus_seats.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js
+
 # a @property reached through api.call fired on getattr, then got called
 COPY restaurant/patches/api_property_call.py /tmp/api_property_call.py
 RUN python3 /tmp/api_property_call.py \

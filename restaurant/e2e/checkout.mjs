@@ -93,9 +93,8 @@ ok('the seated table is no longer offered whole',
    (await api('free_tables', { whole_table: 1 })).length === freeBefore - 1,
    `${freeBefore} -> ${(await api('free_tables', { whole_table: 1 })).length}`);
 
-// open a check and ring a dish — both are double-click by design
-await page.locator('.order-manage .btn-app.btn-order').first().dblclick({ force: true });
-await page.waitForTimeout(6000);
+// the party's check was opened by Seat guest; the + would seat another party
+await page.waitForTimeout(1500);
 for (const t of ['Deadlock', 'Not found', 'Error', 'Message']) {
   const box = page.locator('.modal.show').filter({ hasText: t });
   if (await box.count()) {
