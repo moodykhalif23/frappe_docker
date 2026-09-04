@@ -240,6 +240,7 @@ RUN python3 /tmp/workspace_reports.py \
 COPY --chown=frappe:frappe restaurant/patches/inventory.py apps/restaurant_management/restaurant_management/inventory.py
 COPY --chown=frappe:frappe restaurant/patches/report/restock_list apps/restaurant_management/restaurant_management/restaurant_management/report/restock_list
 COPY --chown=frappe:frappe restaurant/patches/report/consumption_variance apps/restaurant_management/restaurant_management/restaurant_management/report/consumption_variance
+COPY --chown=frappe:frappe restaurant/patches/report/mpesa_payments apps/restaurant_management/restaurant_management/restaurant_management/report/mpesa_payments
 RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/inventory.py').read())"
 
 # stock the kitchen actually burns: sale -> recipe -> issue, plus waste and variance

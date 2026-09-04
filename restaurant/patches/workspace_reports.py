@@ -10,6 +10,8 @@ WANTED = [
     {"label": "Waiters", "type": "DocType", "link_to": "Restaurant Waiter", "block": "rmWaitersBlk"},
     {"label": "Sales by Waiter", "type": "Report", "link_to": "Sales by Waiter",
      "report_ref_doctype": "POS Invoice", "doc_view": "Report", "block": "rmSalesRepBlk"},
+    {"label": "M-Pesa Payments", "type": "Report", "link_to": "M-Pesa Payments",
+     "report_ref_doctype": "POS Invoice", "doc_view": "Report", "block": "rmMpesaRepBlk"},
     {"label": "Table Turns", "type": "Report", "link_to": "Table Turns",
      "report_ref_doctype": "Restaurant Booking", "doc_view": "Report", "block": "rmTurnsRepBlk"},
     {"label": "Restock List", "type": "Report", "link_to": "Restock List",
