@@ -326,6 +326,10 @@ def _ensure_receipt_format():
 			frappe.db.set_value("Print Format", name, "html", _THERMAL_CSS + base,
 								update_modified=False)
 		frappe.db.set_value("Print Format", name, "custom_format", 1, update_modified=False)
+		current = frappe.db.get_value("Print Format", name, "html") or ""
+		if _RECEIPT_ROWS_MARK not in current and _RECEIPT_ROWS_ANCHOR in current:
+			frappe.db.set_value("Print Format", name, "html", _receipt_with_payment_rows(current),
+								update_modified=False)
 		return name
 
 	import json
@@ -333,7 +337,7 @@ def _ensure_receipt_format():
 
 	src = os.path.join(frappe.get_app_path("erpnext"), "accounts", "print_format",
 					   "pos_invoice", "pos_invoice.json")
-	html = json.load(open(src))["html"]
+	html = _receipt_with_payment_rows(json.load(open(src))["html"])
 	frappe.get_doc({
 		"doctype": "Print Format", "name": name, "doc_type": "POS Invoice",
 		"module": "Accounts", "print_format_type": "Jinja", "standard": "No",
@@ -341,6 +345,30 @@ def _ensure_receipt_format():
 		"html": _THERMAL_CSS + html,
 	}).insert(ignore_permissions=True)
 	return name
+
+
+# erpnext's receipt prints one "Paid Amount"; the till needs each mode and, for
+# M-Pesa, the customer's confirmation code — the line the statement is checked against.
+_RECEIPT_ROWS_MARK = "rm_payment_rows"
+_RECEIPT_ROWS_ANCHOR = "{%- if doc.change_amount -%}"
+_RECEIPT_ROWS = """{#- rm_payment_rows -#}
+		{%- for p in doc.payments if p.amount -%}
+		<tr>
+			<td class="text-right" style="width: 75%">
+				{{ p.mode_of_payment }}{% if p.reference_no %} · <b>{{ p.reference_no }}</b>{% endif %}
+			</td>
+			<td class="text-right">
+				{{ frappe.format(p.amount, {"fieldtype": "Currency", "options": "currency"}, doc) }}
+			</td>
+		</tr>
+		{%- endfor -%}
+		"""
+
+
+def _receipt_with_payment_rows(html):
+	if _RECEIPT_ROWS_MARK in html or _RECEIPT_ROWS_ANCHOR not in html:
+		return html
+	return html.replace(_RECEIPT_ROWS_ANCHOR, _RECEIPT_ROWS + _RECEIPT_ROWS_ANCHOR, 1)
 
 
 # A Posiflex till prints an 80mm roll: the paper is the page, so the format

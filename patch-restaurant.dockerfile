@@ -288,6 +288,11 @@ RUN python3 /tmp/delivery_ticket.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
 
+# M-Pesa: the payment row carries the customer's confirmation code, verified and unused
+COPY restaurant/patches/mpesa_reference.py /tmp/mpesa_reference.py
+RUN python3 /tmp/mpesa_reference.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
+
 # a closed counter still accepted new checks through the pad's + button
 COPY restaurant/patches/gate_orders_when_closed.py /tmp/gate_orders_when_closed.py
 RUN python3 /tmp/gate_orders_when_closed.py \
@@ -328,6 +333,11 @@ RUN python3 /tmp/print_ticket.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js
+
+# the pay form asks for the M-Pesa code beside the amount and refuses to pay without it
+COPY restaurant/patches/mpesa_code.py /tmp/mpesa_code.py
+RUN python3 /tmp/mpesa_code.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
 
 # the order pad's menu opens before its DOM lands and renders nothing
 COPY restaurant/patches/items_tree_race.py /tmp/items_tree_race.py
