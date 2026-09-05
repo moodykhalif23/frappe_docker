@@ -37,7 +37,10 @@ by dish, by waiter, by table, and stock used.
    takes payments.
 3. **Cashier closes the day** — floor → **Close day**. It shows what it will
    bank and refuses if checks are still open. Closing also clears every
-   waiter's tables and any party still marked seated.
+   waiter's tables and any party still marked seated. If you **close anyway**
+   with checks open, the day closes and the message names each unpaid check
+   (table, guest, amount): settle it, or **Release** the table to void it. An
+   unpaid check is never voided by the close itself.
 
 > A day left open overnight blocks tomorrow's sales. If billing is ever
 > "refused", check this first: was the day opened today?

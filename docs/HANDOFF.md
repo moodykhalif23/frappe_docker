@@ -156,6 +156,13 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     did the same. Both now open Seat guest locked to that table — PIN first, seats left shown,
     the new party's check selected in the pad (`pad_plus_seats.py`, `host_stand.open_for`).
 
+26. **"Day closed" hid what stayed open.** Closing the day banks paid sales and sweeps parties;
+    it never voids an unpaid check (money), so one stood on Table 14 after the close and the
+    message said only "0 table sections released". `close_day` now returns
+    `open_checks_detail` and the dialog names each check left standing — table, guest, amount —
+    with "settle it or release the table". The check on Table 14 was an anonymous one from the
+    old + (finding 25), released by hand.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.
