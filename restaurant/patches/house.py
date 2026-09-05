@@ -1163,7 +1163,15 @@ def close_day(pos_profile=None, force=0):
 
     swept = _end_of_day_sweep()
 
+    # what the sweep could not touch: unpaid checks stay, and the till must be told
+    left = frappe.get_all("Table Order", filters={"status": ["not in", ["Cancelled", "Invoiced"]]},
+                          fields=["name", "table", "customer", "amount"], order_by="creation")
+    tables = {t.name: t.description for t in frappe.get_all("Restaurant Object", filters={"type": "Table"},
+                                                             fields=["name", "description"])}
+    open_detail = [{"order": o.name, "table": tables.get(o.table, o.table), "customer": o.customer or "",
+                    "amount": frappe.utils.flt(o.amount)} for o in left]
     return {"closed": closing.name, "shift": shift.name, "waiters_restored": healed,
+            "open_checks_detail": open_detail,
             "invoices": summary["invoices"], "sales": summary["sales"],
             "open_checks_left": summary["open_checks"],
             "parties_closed": len(swept["parties_closed"]),

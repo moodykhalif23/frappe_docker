@@ -13,11 +13,17 @@
           frappe.show_alert({ message: __("The counter was already closed"), indicator: "blue" });
           return;
         }
+        // an unpaid check is never voided by the close: name each one, or the
+        // till reads a still-seated tile as a failed close
+        const left = res.open_checks_detail || [];
+        const standing = left.length ? "<br><br>" + __("{0} unpaid check(s) still open:", [left.length]) + "<ul style='margin:6px 0 0 18px'>" +
+          left.map(c => `<li><b>${frappe.utils.escape_html(c.table)}</b> · ${frappe.utils.escape_html(c.customer || __("no guest name"))} · ${format_currency(c.amount)}</li>`).join("") +
+          "</ul>" + __("Settle each one, or Release the table to void it.") : "";
         frappe.msgprint({
           title: __("Day closed"),
-          indicator: "green",
+          indicator: left.length ? "orange" : "green",
           message: __("{0} banked {1} sale(s). {2} table section(s) released. Open the day again when you next serve.",
-            [res.closed, res.invoices, res.sections_cleared]),
+            [res.closed, res.invoices, res.sections_cleared]) + standing,
         });
         RM_close_day.badge();
         window.RM_seats && RM_seats.refresh();
