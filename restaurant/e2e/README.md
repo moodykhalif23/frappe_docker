@@ -49,6 +49,7 @@ whether the page runs.
 | `revert_watch.mjs` | resize a live tile, then watch it for 20 s and log every realtime event that touches it — for "it snaps back" reports | browser |
 | `pad_plus_probe.mjs` | the pad's + asks who is seating, opens Seat guest locked to the table with its seats left, and the new party's check lands in the pad with its own waiter | browser |
 | `floor_shot.mjs` | screenshots for a look review on a test site: the floor with a seated party, and the pad filtered to a row of long dish names | browser |
+| `close_day_suite.py` | server: closing the day leaves an unpaid check standing and names it — table, guest, amount | server |
 | `stale_marker_suite.py` | server: a customer name on a table with no check and no party is cleared by the next occupancy fetch; a seated table keeps its guest | server |
 | `mpesa_suite.py` | server: an M-Pesa row needs a well-formed, unused code; cash does not; the code lands on the payment row, the receipt and the report | server |
 | `mpesa_probe.mjs` | the till asks for the M-Pesa code, refuses without it, pays with it and stores it as the payment's reference | browser |

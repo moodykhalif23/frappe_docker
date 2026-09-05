@@ -58,6 +58,7 @@ server_suite "staff and attendance" staff_test.py
 server_suite "stock: sale -> recipe -> issue" stock_test.py
 server_suite "M-Pesa by code" mpesa_suite.py
 server_suite "stale guest markers" stale_marker_suite.py
+server_suite "close day names what stays open" close_day_suite.py
 browser_suite "floor, waiter, order, dispatch" flow.mjs
 browser_suite "the door" door.mjs
 browser_suite "seats, parties and the counter" seats.mjs
