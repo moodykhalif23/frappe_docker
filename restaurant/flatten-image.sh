@@ -14,6 +14,10 @@ set -euo pipefail
 IMAGE="${1:-custom-erpnext:v16.6.0}"
 TMP="${IMAGE%%:*}:flatten-tmp"
 
+# The config (USER, WORKDIR, ENV, CMD) is carried across with python3; without it
+# the import silently produces a bare filesystem and the next bake dies on its
+# first step with "sites/apps.json: No such file". Refuse rather than strip.
+command -v python3 >/dev/null 2>&1 || { echo "flatten: python3 is required to carry the image config" >&2; exit 1; }
 before=$(docker inspect "$IMAGE" --format '{{len .RootFS.Layers}}')
 echo "==> $IMAGE has $before layer(s)"
 if [ "$before" -le 2 ]; then echo "already flat, nothing to do"; exit 0; fi
@@ -44,6 +48,8 @@ for o in "${OPTS[@]}"; do args+=(-c "$o"); done
 echo "==> exporting and re-importing as one layer (a few minutes)"
 docker export "$cid" | docker import "${args[@]}" - "$TMP" >/dev/null
 
+# the carried config must have survived, or the tag must not move
+[ -n "$(docker inspect "$TMP" --format '{{.Config.WorkingDir}}')" ] || { echo "flatten: config lost on import — keeping $IMAGE as it was" >&2; docker rmi "$TMP" >/dev/null 2>&1; exit 1; }
 docker tag "$TMP" "$IMAGE"
 docker rmi "$TMP" >/dev/null
 echo "==> $IMAGE now has $(docker inspect "$IMAGE" --format '{{len .RootFS.Layers}}') layer(s)"
