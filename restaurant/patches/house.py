@@ -275,6 +275,38 @@ def asset_version():
 		return None
 
 
+def menu_sells_without_stock(menu=None):
+	"""A dish on the menu is sold as a recipe, never from stock: the Item form's
+	default (Maintain Stock on) makes the till refuse it with nothing in the
+	warehouse. Switch such items to non-stock — unless stock ever moved for them."""
+	menus = [menu] if menu else [r.name for r in frappe.get_all("Restaurant Menu")]
+	if not menus:
+		return []
+	items = [r.item for r in frappe.get_all("Restaurant Menu Item", filters={"parent": ["in", menus]}, fields=["item"])]
+	if not items:
+		return []
+	flipped = []
+	for it in frappe.get_all("Item", filters={"name": ["in", items], "is_stock_item": 1}, fields=["name", "item_name"]):
+		if frappe.db.count("Stock Ledger Entry", {"item_code": it.name, "is_cancelled": 0}):
+			continue
+		doc = frappe.get_doc("Item", it.name)
+		doc.is_stock_item = 0
+		doc.flags.ignore_permissions = True
+		doc.save()
+		flipped.append(it.item_name or it.name)
+	if flipped and getattr(frappe.local, "request", None):
+		frappe.msgprint(frappe._("Now sold as dishes, not from stock: {0}").format(", ".join(flipped)),
+						indicator="blue", alert=True)
+	return flipped
+
+
+def menu_sells_without_stock_hook(doc, method=None):
+	try:
+		menu_sells_without_stock(doc.name)
+	except Exception:
+		frappe.log_error(title="menu sells without stock")
+
+
 @frappe.whitelist()
 def waiter_policy():
 	"""How long a tapped PIN stays good on a shared tablet."""
@@ -414,6 +446,11 @@ def _ensure_bill_format():
 
 def ensure_custom_fields():
 	"""Idempotent: hangs the waiter link on the table, its orders and its invoices."""
+	# and sweeps the menu: a dish left as a stock item cannot be sold at the till
+	try:
+		menu_sells_without_stock()
+	except Exception:
+		pass
 	from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 	create_custom_fields({

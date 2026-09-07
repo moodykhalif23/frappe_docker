@@ -83,6 +83,11 @@ menu (⋮) → *Export* for Excel.
 3. To change a price: tap the **price pill** on any card, edit, Save.
 4. **Remove** on a card takes it off the menu (the item's sales history stays).
 
+> Adding a dish from the back-office **Item** form instead? Fine — the moment it joins
+> the menu, *Maintain Stock* is switched off for it, because dishes sell as recipes,
+> not from a warehouse count. A stocked item with nothing received cannot be sold at
+> the till; ingredients (which do carry stock) are never touched by this.
+
 **On the order pad** every dish is a card: photo, name, price, and a `− n +`
 pill. **+** puts one on the check (the pill turns green and counts), **−** takes
 one off. The number on the pill is what is on the check right now, so a waiter

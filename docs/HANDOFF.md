@@ -183,6 +183,13 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     no code repeats, and writes one `Sales Invoice Payment` row per code (erpnext accepts several
     rows of one mode; the closing entry sums by mode). Receipt and report list each transaction.
 
+30. **"Cannot be sold" on nine new dishes.** Geff added them from the Item form, whose default is
+    *Maintain Stock* on; with nothing ever received, erpnext's POS stock check refused them. The
+    kit's dishes are non-stock (recipes consume ingredients). The nine were switched to non-stock on
+    live by hand; from now on `Restaurant Menu.on_update` (`menu_hook.py` →
+    `house.menu_sells_without_stock`) switches any joining dish with no stock history, and the same
+    sweep runs at every deploy from `ensure_custom_fields()`.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.

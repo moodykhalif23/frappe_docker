@@ -310,6 +310,11 @@ COPY restaurant/patches/order_counts_locally.py /tmp/order_counts_locally.py
 RUN python3 /tmp/order_counts_locally.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
+# a dish joining the menu is sold as a recipe, never from stock
+COPY restaurant/patches/menu_hook.py /tmp/menu_hook.py
+RUN python3 /tmp/menu_hook.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/hooks.py').read())"
+
 # firing an order names the waiter holding the tablet, per line
 COPY restaurant/patches/dispatch_identity.py /tmp/dispatch_identity.py
 RUN python3 /tmp/dispatch_identity.py \

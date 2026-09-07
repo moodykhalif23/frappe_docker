@@ -197,6 +197,10 @@ what is shipped and what is deliberately not. Read it before touching anything.
   A Script Report's folder **must be `frappe.scrub(report_name)`** — "M-Pesa Payments" is
   `m_pesa_payments`, not `mpesa_payments` — and a suite must open it through
   `frappe.desk.query_report.run`, not by importing the module, or the desk finds what the test never did.
+- **A dish on the menu is never a stock item.** The Item form defaults *Maintain Stock* on; a dish
+  made there and put on the menu is refused at the till by erpnext's POS stock check (nothing in the
+  warehouse). `Restaurant Menu.on_update` (`menu_hook.py` → `house.menu_sells_without_stock`)
+  switches joining dishes with no stock history to non-stock; `ensure_custom_fields()` sweeps at deploy.
 - **Menu item editor**: Menu Management screen has a "New Item" button and tapping a card's price pill opens an edit dialog (name, category, price, Veg/Non-Veg, photo). Backed by `restaurant_management.api.upsert_menu_item`/`get_menu_item` (appended via `restaurant/patches/api_append.py`); writes land on Item / Item Price / Restaurant Menu, so frappe stays the system of record.
 
 ## Working on it
