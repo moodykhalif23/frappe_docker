@@ -267,7 +267,17 @@ Until their real ingredients, recipes and opening counts are loaded, every stock
 number would be invented — which is exactly what the client asked us to remove.
 The intake path is `docs/Etham-Stock-Flow-and-Manual.pdf`.
 
-## Next: KRA eTIMS
+## Next: multi-tenant, then KRA eTIMS
+
+See `docs/Multi-Tenant-Plan.md`. Short version: frappe is already multi-site and
+our image is already shared, so what blocks it is one pinned variable
+(`FRAPPE_SITE_NAME_HEADER`), two print formats named after Etham, and the
+operational work — onboarding, DNS and TLS per tenant, per-tenant backups, and a
+release process that no longer risks every restaurant on one bake. Doing it
+before eTIMS is deliberate: eTIMS credentials are per taxpayer and must be
+isolated per tenant by construction.
+
+## Then: KRA eTIMS
 
 See `docs/eTIMS-Integration-Plan.md`. Short version: it is blocked on a
 commercial registration and on a tax-position decision, not on code, and it hooks

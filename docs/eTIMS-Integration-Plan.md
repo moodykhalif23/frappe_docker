@@ -222,7 +222,8 @@ worst failure mode in this document.
 
 This is a good reason to do the multi-tenant work first, as planned: it is much
 easier to design per-tenant credential isolation into a multi-tenant deployment
-than to retrofit it after eTIMS assumes a single taxpayer.
+than to retrofit it after eTIMS assumes a single taxpayer. See `Multi-Tenant-Plan.md`,
+whose §3 audit exists partly to catch exactly this class of shared configuration.
 
 ---
 
