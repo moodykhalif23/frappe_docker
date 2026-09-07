@@ -20,7 +20,7 @@ def run():
 					"is_stock_item": 1, "is_sales_item": 1, "item_type": "Veg"}).insert(ignore_permissions=True)
 	ok("a dish made on the Item form starts as a stocked item", frappe.db.get_value("Item", code, "is_stock_item") == 1)
 	m = frappe.get_doc("Restaurant Menu", menu)
-	m.append("items", {"item": code, "rate": 100, "status": 1})
+	m.append("menu_items", {"item": code, "rate": 100, "status": 1})
 	m.save(ignore_permissions=True)
 	frappe.db.commit()
 	ok("joining the menu switches it to non-stock", frappe.db.get_value("Item", code, "is_stock_item") == 0)
@@ -33,7 +33,7 @@ def run():
 		ok("an item with stock history keeps Maintain Stock", frappe.db.get_value("Item", ingredient, "is_stock_item") == before)
 	# tidy: take the test dish off the menu again
 	m = frappe.get_doc("Restaurant Menu", menu)
-	m.items = [r for r in m.items if r.item != code]
+	m.menu_items = [r for r in m.menu_items if r.item != code]
 	m.save(ignore_permissions=True)
 	frappe.db.commit()
 	print("%d/%d passed" % (sum(PASSED), len(PASSED)))
