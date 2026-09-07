@@ -37,9 +37,8 @@ GOOD_HANDLER = """        const ref = frappe.jshtml({
         this.payment_refs[mode_of_payment.mode_of_payment] = ref;
         payment_methods += this.form_tag(__("M-Pesa code"), ref);"""
 if BAD_HANDLER in src:
-    open(P, "w").write(src.replace(BAD_HANDLER, GOOD_HANDLER, 1))
+    src = src.replace(BAD_HANDLER, GOOD_HANDLER, 1)
     print("mpesa code: code input handler upgraded")
-    raise SystemExit
 CACHED_HANDLER = """        // change/keyup callbacks get no element: use the handle
         ref.on(["change", "keyup"], () => { ref.val(String(ref.val() || "").toUpperCase().replace(/[^A-Z0-9]/g, "")); });"""
 DOM_HANDLER = """        // jshtml caches val() after its first read: read and write the element itself
@@ -50,25 +49,22 @@ DOM_HANDLER = """        // jshtml caches val() after its first read: read and w
 CACHED_REF = """      const code = String(this.payment_refs[mode].val() || "").trim().toUpperCase();"""
 DOM_REF = """      const code = String(this.payment_refs[mode].JQ().val() || "").trim().toUpperCase();"""
 if CACHED_HANDLER in src or CACHED_REF in src:
-    open(P, "w").write(src.replace(CACHED_HANDLER, DOM_HANDLER, 1).replace(CACHED_REF, DOM_REF, 1))
+    src = src.replace(CACHED_HANDLER, DOM_HANDLER, 1).replace(CACHED_REF, DOM_REF, 1)
     print("mpesa code: code input reads the element, not jshtml's cache")
-    raise SystemExit
 NO_RESET = TOAST + "      if (this.payment_refs[short]) this.payment_refs[short].select();\n"
 if NO_RESET in src:
-    open(P, "w").write(src.replace(NO_RESET, TOAST + "      this.reset_payment_button();  // the click disabled it; give it back\n      if (this.payment_refs[short]) this.payment_refs[short].select();\n", 1))
+    src = src.replace(NO_RESET, TOAST + "      this.reset_payment_button();  // the click disabled it; give it back\n      if (this.payment_refs[short]) this.payment_refs[short].select();\n", 1)
     print("mpesa code: refusal upgraded — toast, button given back")
-    raise SystemExit
 if "rm_mpesa_code" in src:
     print("mpesa code: already applied")
-    raise SystemExit
-
-# 1. an extra input under an M-Pesa amount
-OLD = """      payment_methods += this.form_tag(
+else:
+  # 1. an extra input under an M-Pesa amount
+  OLD = """      payment_methods += this.form_tag(
         mode_of_payment.mode_of_payment, this.payment_methods[mode_of_payment.mode_of_payment]
       );
     });
 """
-NEW = """      payment_methods += this.form_tag(
+  NEW = """      payment_methods += this.form_tag(
         mode_of_payment.mode_of_payment, this.payment_methods[mode_of_payment.mode_of_payment]
       );
       // rm_mpesa_code: the customer's confirmation code rides with the amount
@@ -90,17 +86,17 @@ NEW = """      payment_methods += this.form_tag(
       }
     });
 """
-if src.count(OLD) != 1:
-    raise SystemExit("mpesa code: make_inputs anchor found %d times" % src.count(OLD))
-src = src.replace(OLD, NEW, 1)
+  if src.count(OLD) != 1:
+      raise SystemExit("mpesa code: make_inputs anchor found %d times" % src.count(OLD))
+  src = src.replace(OLD, NEW, 1)
 
-# 2. the codes travel as `references`, keyed like the amounts
-OLD = """  send_payment() {
+  # 2. the codes travel as `references`, keyed like the amounts
+  OLD = """  send_payment() {
     RM.working("Saving Invoice");
     this.#send_payment();
   }
 """
-NEW = """  get payment_references() {
+  NEW = """  get payment_references() {
     const refs = {};
     Object.keys(this.payment_refs || {}).forEach((mode) => {
       const code = String(this.payment_refs[mode].JQ().val() || "").trim().toUpperCase();
@@ -130,19 +126,119 @@ NEW = """  get payment_references() {
     this.#send_payment();
   }
 """
-if src.count(OLD) != 1:
-    raise SystemExit("mpesa code: send_payment anchor found %d times" % src.count(OLD))
-src = src.replace(OLD, NEW, 1)
+  if src.count(OLD) != 1:
+      raise SystemExit("mpesa code: send_payment anchor found %d times" % src.count(OLD))
+  src = src.replace(OLD, NEW, 1)
 
-OLD = """          args: {
+  OLD = """          args: {
             mode_of_payment: this.payments_values
           },"""
-NEW = """          args: {
+  NEW = """          args: {
             mode_of_payment: this.payments_values,
             references: this.payment_references,
           },"""
-if src.count(OLD) != 1:
-    raise SystemExit("mpesa code: make_invoice args anchor found %d times" % src.count(OLD))
-src = src.replace(OLD, NEW, 1)
+  if src.count(OLD) != 1:
+      raise SystemExit("mpesa code: make_invoice args anchor found %d times" % src.count(OLD))
+  src = src.replace(OLD, NEW, 1)
+  print("mpesa code: the pay form asks for the confirmation code and sends it")
+
+# ---- rm_mpesa_split: a bill paid in several M-Pesa transactions, one row per code ----
+if "rm_mpesa_split" not in src:
+    def once(old, new, what):
+        global src
+        if src.count(old) != 1:
+            raise SystemExit("mpesa split: %s found %d times" % (what, src.count(old)))
+        src = src.replace(old, new, 1)
+    # a) under the code: "+ another M-Pesa payment" and a home for extra rows
+    once("""        this.payment_refs[mode_of_payment.mode_of_payment] = ref;
+        payment_methods += this.form_tag(__("M-Pesa code"), ref);
+      }
+    });
+""", """        this.payment_refs[mode_of_payment.mode_of_payment] = ref;
+        payment_methods += this.form_tag(__("M-Pesa code"), ref);
+        // rm_mpesa_split: a customer may pay one bill in several transactions —
+        // each gets its own amount and code, and lands as its own payment row
+        this.rm_splits = this.rm_splits || {};
+        this.rm_splits[mode_of_payment.mode_of_payment] = [];
+        payment_methods += `<div class="rm-mpesa-splits" data-mode="${frappe.utils.escape_html(mode_of_payment.mode_of_payment)}"></div>
+          <a href="#" class="rm-mpesa-add" data-mode="${frappe.utils.escape_html(mode_of_payment.mode_of_payment)}">+ ${__("another {0} payment", [mode_of_payment.mode_of_payment])}</a>`;
+      }
+    });
+""", "split anchor in make_inputs")
+    once("""    this.get_field("payment_methods").$wrapper.empty().append(payment_methods);
+""", """    this.get_field("payment_methods").$wrapper.empty().append(payment_methods);
+    this.get_field("payment_methods").$wrapper.find(".rm-mpesa-add").on("click", (e) => {
+      e.preventDefault();
+      this.rm_add_split($(e.currentTarget).attr("data-mode"));
+    });
+""", "payment_methods append")
+    # b) the amounts and the paid total include the extra rows
+    once("""      let value = this.payment_methods[mode_of_payment.mode_of_payment].float_val;
+""", """      let value = this.payment_methods[mode_of_payment.mode_of_payment].float_val
+        + (this.rm_split_total ? this.rm_split_total(mode_of_payment.mode_of_payment) : 0);
+""", "payments_values")
+    once("""        total += this.payment_methods[payment_method].float_val;
+""", """        total += this.payment_methods[payment_method].float_val
+          + (this.rm_split_total ? this.rm_split_total(payment_method) : 0);
+""", "update_paid_value")
+    # c) references: a string for one transaction, a list of {amount, code} for several
+    once("""  get payment_references() {
+    const refs = {};
+    Object.keys(this.payment_refs || {}).forEach((mode) => {
+      const code = String(this.payment_refs[mode].JQ().val() || "").trim().toUpperCase();
+      if (code) refs[mode] = code;
+    });
+    return refs;
+  }
+""", """  get payment_references() {
+    const refs = {};
+    Object.keys(this.payment_refs || {}).forEach((mode) => {
+      const code = String(this.payment_refs[mode].JQ().val() || "").trim().toUpperCase();
+      const splits = (this.rm_splits && this.rm_splits[mode]) || [];
+      if (splits.length) {
+        refs[mode] = [{ amount: this.payment_methods[mode].float_val, code }].concat(
+          splits.map((s) => ({ amount: s.amount.float_val, code: String(s.code.JQ().val() || "").trim().toUpperCase() })));
+      } else if (code) {
+        refs[mode] = code;
+      }
+    });
+    return refs;
+  }
+
+  rm_split_total(mode) {
+    return ((this.rm_splits && this.rm_splits[mode]) || []).reduce((t, s) => t + (s.amount.float_val || 0), 0);
+  }
+
+  rm_add_split(mode) {
+    const amount = frappe.jshtml({ tag: "input", properties: { type: "text", class: "input-with-feedback form-control bold rm-mpesa-split-amount", placeholder: __("Amount") } })
+      .on(["change", "keyup"], () => this.update_paid_value()).float();
+    const code = frappe.jshtml({ tag: "input", properties: { type: "text", class: "input-with-feedback form-control bold rm-mpesa-code rm-mpesa-split-code",
+      placeholder: __("M-Pesa confirmation code"), maxlength: 12, autocapitalize: "characters", spellcheck: "false" } });
+    code.on(["change", "keyup"], () => { const c = String(code.JQ().val() || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); code.JQ().val(c); code.value = c; });
+    this.rm_splits[mode].push({ amount, code });
+    const n = this.rm_splits[mode].length + 1;
+    this.get_field("payment_methods").$wrapper.find(`.rm-mpesa-splits[data-mode="${mode}"]`).append(
+      `<div class="rm-mpesa-split">${this.form_tag(__("{0} payment {1}", [mode, n]), amount)}${this.form_tag(__("Code {0}", [n]), code)}</div>`);
+    setTimeout(() => amount.select && amount.select(), 200);
+  }
+""", "payment_references")
+    # d) every transaction needs its code
+    once("""  mpesa_code_missing() {
+    const amounts = this.payments_values;
+    return Object.keys(this.payment_refs || {}).find((mode) =>
+      amounts[mode] > 0 && !/^[A-Z0-9]{10}$/.test(this.payment_references[mode] || ""));
+  }
+""", """  mpesa_code_missing() {
+    const amounts = this.payments_values;
+    const refs = this.payment_references;
+    return Object.keys(this.payment_refs || {}).find((mode) => {
+      if (!(amounts[mode] > 0)) return false;
+      const r = refs[mode];
+      if (Array.isArray(r)) return r.some((x) => !(x.amount > 0) || !/^[A-Z0-9]{10}$/.test(x.code || ""));
+      return !/^[A-Z0-9]{10}$/.test(r || "");
+    });
+  }
+""", "mpesa_code_missing")
+    print("mpesa split: + another M-Pesa payment, one row per code")
+
 open(P, "w").write(src)
-print("mpesa code: the pay form asks for the confirmation code and sends it")

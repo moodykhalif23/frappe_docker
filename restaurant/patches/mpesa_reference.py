@@ -5,7 +5,7 @@
 P = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py"
 
 src = open(P).read()
-if "def _rm_payment_reference" in src and "references=None" in src:
+if "def _rm_payment_reference" in src and "references=None" in src and "rm_mpesa_split" in src:
     print("mpesa reference: already applied")
     raise SystemExit
 
@@ -41,14 +41,16 @@ def _rm_payment_reference(mode_of_payment, reference):
     return code
 ''', "module head anchor")
 
-src = replace_once(src, "    def make_invoice(self, mode_of_payment):\n",
-                   "    def make_invoice(self, mode_of_payment, references=None):\n", "make_invoice signature")
-src = replace_once(src, """        for mp in mode_of_payment:
+if "references=None" not in src:
+    src = replace_once(src, "    def make_invoice(self, mode_of_payment):\n",
+                       "    def make_invoice(self, mode_of_payment, references=None):\n", "make_invoice signature")
+UPSTREAM_LOOP = """        for mp in mode_of_payment:
             invoice.append('payments', dict(
                 mode_of_payment=mp,
                 amount=mode_of_payment[mp]
             ))
-""", """        if isinstance(references, str):
+"""
+ONE_ROW_LOOP = """        if isinstance(references, str):
             references = frappe.parse_json(references or "{}")
         for mp in mode_of_payment:
             invoice.append('payments', dict(
@@ -56,6 +58,40 @@ src = replace_once(src, """        for mp in mode_of_payment:
                 amount=mode_of_payment[mp],
                 reference_no=_rm_payment_reference(mp, (references or {}).get(mp)),
             ))
-""", "payments loop")
+"""
+SPLIT_LOOP = """        if isinstance(references, str):
+            references = frappe.parse_json(references or "{}")
+        # rm_mpesa_split: one bill, several transactions — a list of {amount, code}
+        # for a mode lands as one payment row per code; the amounts must add up
+        seen = set()
+        for mp in mode_of_payment:
+            ref = (references or {}).get(mp)
+            if isinstance(ref, list):
+                total = sum(frappe.utils.flt(r.get("amount")) for r in ref)
+                if abs(total - frappe.utils.flt(mode_of_payment[mp])) > 0.01:
+                    frappe.throw(_("The {0} transactions add up to {1}, not {2}.").format(
+                        mp, frappe.utils.fmt_money(total), frappe.utils.fmt_money(mode_of_payment[mp])))
+                for r in ref:
+                    if frappe.utils.flt(r.get("amount")) <= 0:
+                        frappe.throw(_("Every {0} transaction needs an amount.").format(mp))
+                    code = _rm_payment_reference(mp, r.get("code"))
+                    if code and code in seen:
+                        frappe.throw(_("{0} code {1} is entered twice on this bill.").format(mp, code))
+                    seen.add(code)
+                    invoice.append('payments', dict(mode_of_payment=mp, amount=frappe.utils.flt(r.get("amount")),
+                                                    reference_no=code))
+                continue
+            invoice.append('payments', dict(
+                mode_of_payment=mp,
+                amount=mode_of_payment[mp],
+                reference_no=_rm_payment_reference(mp, ref),
+            ))
+"""
+if UPSTREAM_LOOP in src:
+    src = replace_once(src, UPSTREAM_LOOP, SPLIT_LOOP, "payments loop (fresh)")
+elif ONE_ROW_LOOP in src:
+    src = replace_once(src, ONE_ROW_LOOP, SPLIT_LOOP, "payments loop (upgrade)")
+elif "rm_mpesa_split" not in src:
+    raise SystemExit("mpesa reference: payments loop anchor not found")
 open(P, "w").write(src)
-print("mpesa reference: M-Pesa rows carry a verified, unused confirmation code")
+print("mpesa reference: M-Pesa rows carry a verified, unused confirmation code; several transactions, several rows")
