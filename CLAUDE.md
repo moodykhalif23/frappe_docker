@@ -144,7 +144,9 @@ what is shipped and what is deliberately not. Read it before touching anything.
   party badges on every tile render from its occupancy map; upstream's tile re-renders from the
   realtime payload, and the overlay then stamped the *old* seats and badges back until the poll —
   "the floor needs a refresh". Any table event now marks that table stale (skipped in paint until
-  fresh occupancy lands), refetches at once, and responses are sequence-ordered. Publish events that
+  fresh occupancy lands), refetches at once, and responses are sequence-ordered — and an
+  overtaken `refresh()` resolves to the *newer* request's result, never the old map (the Release
+  dialog read "nothing held" off a stale hand-back). Publish events that
   trigger a refetch with `after_commit=True`.
 - **Two payloads build a kitchen ticket.** The board's own fetch (`get_command_data`) and
   the one pushed at dispatch (`TableOrder.send` rows) — a field added to one is missing from

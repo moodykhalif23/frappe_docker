@@ -190,6 +190,13 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     `house.menu_sells_without_stock`) switches any joining dish with no stock history, and the same
     sweep runs at every deploy from `ensure_custom_fields()`.
 
+31. **Release said "nothing held" while Table 1 showed a party.** The party was real (a
+    booking of two, seated 17:05, no check yet). The Release dialog reads the occupancy map
+    straight off its own `refresh()`; with finding 28's ordering guard, a refresh overtaken by a
+    newer one handed back the *old* map — on a slow link, right after a seating, that is the
+    pre-seating map, so the dialog saw no party. An overtaken refresh now resolves to the newer
+    request's result. `refresh_order_probe.mjs` covers it.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.

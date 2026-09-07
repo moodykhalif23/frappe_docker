@@ -48,6 +48,7 @@ whether the page runs.
 | `build_watch_probe.mjs` | the floor's loaded script version matches the server's and the self-reload watcher is mounted | browser |
 | `revert_watch.mjs` | resize a live tile, then watch it for 20 s and log every realtime event that touches it — for "it snaps back" reports | browser |
 | `pad_plus_probe.mjs` | the pad's + asks who is seating, opens Seat guest locked to the table with its seats left, and the new party's check lands in the pad with its own waiter | browser |
+| `refresh_order_probe.mjs` | two overlapping occupancy refreshes: the overtaken one still resolves to the fresh map (the Release dialog reads it) | browser |
 | `propagation_probe.mjs` | two screens: a seat, a seat-count change and a release each reach the other screen within 2.5 s and never revert to the older value | browser |
 | `floor_shot.mjs` | screenshots for a look review on a test site: the floor with a seated party, and the pad filtered to a row of long dish names | browser |
 | `menu_sells_suite.py` | server: a dish added with Maintain Stock on becomes non-stock when it joins the menu; an item with stock history is left alone | server |

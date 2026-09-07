@@ -135,16 +135,20 @@
     },
 
     refresh() {
-      // ordered: a slow, older response must never overwrite a newer one
+      // ordered: a slow, older response must never overwrite a newer one — and a
+      // caller whose request was overtaken gets the newer result, never the old
+      // map (the Release dialog once read "nothing held" off a stale map this way)
       const seq = (this.seq = (this.seq || 0) + 1);
-      return Promise.all([call("table_occupancy"), call("floor_waiters")]).then(([m, w]) => {
-        if (seq !== RM_seats.seq) return RM_seats.map;
+      const mine = Promise.all([call("table_occupancy"), call("floor_waiters")]).then(([m, w]) => {
+        if (seq !== RM_seats.seq) return RM_seats.inflight;
         RM_seats.map = m || {};
         RM_seats.holders = w || {};
         RM_seats.stale = {};
         RM_seats.paint();
         return RM_seats.map;
       });
+      this.inflight = mine;
+      return mine;
     },
 
     // Paying stacks bootstrap backdrops that outlive their dialog, leaving the
