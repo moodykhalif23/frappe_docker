@@ -168,6 +168,15 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     The suite had imported the module directly, so it never walked frappe's path. Folder renamed; the
     suite now runs the report through `frappe.desk.query_report.run`, exactly as the desk does.
 
+28. **The floor needed a refresh after a release or a seat change.** Measured: a seat-count change
+    showed the new number 211 ms after the event, then reverted to the old one at 617 ms and stayed
+    until the 60 s poll. The seats overlay repaints on every tile render from a cached occupancy map,
+    so the tile's own realtime re-render was immediately overwritten with stale seats and old party
+    badges. Fix (no behaviour change): the overlay skips a table it knows is behind until fresh
+    occupancy lands, refetches at once on any table event, discards out-of-order responses, polls
+    every 15 s as the safety net, and the freed-table event is published after the commit.
+    `propagation_probe.mjs` asserts each change reaches a second screen within 2.5 s and never reverts.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.

@@ -140,6 +140,12 @@ what is shipped and what is deliberately not. Read it before touching anything.
   expecting an order payload; publishing anything else on it (a "table freed" note) threw
   `Cannot read properties of undefined (reading 'order')` at payment. Fork events get their own
   channel (`rm_table_freed`) and `seats.js` listens for them.
+- **An overlay that repaints from a cache will undo a fresh render.** `RM_seats` paints seats and
+  party badges on every tile render from its occupancy map; upstream's tile re-renders from the
+  realtime payload, and the overlay then stamped the *old* seats and badges back until the poll —
+  "the floor needs a refresh". Any table event now marks that table stale (skipped in paint until
+  fresh occupancy lands), refetches at once, and responses are sequence-ordered. Publish events that
+  trigger a refetch with `after_commit=True`.
 - **Two payloads build a kitchen ticket.** The board's own fetch (`get_command_data`) and
   the one pushed at dispatch (`TableOrder.send` rows) — a field added to one is missing from
   the other, and upstream's `table_info` returns a one-item *tuple*. Patch both or the
