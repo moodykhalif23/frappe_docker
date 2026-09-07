@@ -53,6 +53,7 @@ whether the page runs.
 | `close_day_suite.py` | server: closing the day leaves an unpaid check standing and names it — table, guest, amount | server |
 | `stale_marker_suite.py` | server: a customer name on a table with no check and no party is cleared by the next occupancy fetch; a seated table keeps its guest | server |
 | `mpesa_suite.py` | server: an M-Pesa row needs a well-formed, unused code; cash does not; the code lands on the payment row, the receipt and the report | server |
+| `mpesa_split_probe.mjs` | the till's "+ another M-Pesa payment": two amounts, two codes, two payment rows on the invoice; a missing second code is refused | browser |
 | `mpesa_probe.mjs` | the till asks for the M-Pesa code, refuses without it, pays with it and stores it as the payment's reference | browser |
 | `attribution_probe.mjs` | a bare tablet asks who seats; after the grace window Order asks again; the check is the seater's, every fired line the firer's, the timeline says so | browser |
 | `perf_live2.mjs` | where the time goes on a live site: cold and warm floor, a room switch, a pad open, with each API call's time | browser |

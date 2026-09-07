@@ -64,6 +64,7 @@ browser_suite "the door" door.mjs
 browser_suite "seats, parties and the counter" seats.mjs
 browser_suite "checkout and the turn" checkout.mjs
 browser_suite "changes reach the other screen" propagation_probe.mjs
+browser_suite "one bill, two M-Pesa transactions" mpesa_split_probe.mjs
 
 echo
 echo "================ verdict ================"

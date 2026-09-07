@@ -95,6 +95,26 @@ def run():
 	allrows = [frappe._dict(r) for r in run_report("M-Pesa Payments", filters={"from_date": today, "to_date": today})["result"] if isinstance(r, dict)]
 	ok("the report lists only M-Pesa rows", allrows and all("pesa" in r.mode.lower() for r in allrows), "%d rows" % len(allrows))
 
+	# one bill, two M-Pesa transactions: two rows, two codes, the amounts adding up
+	doc3, total3 = _check("Mpesa Split %s" % tag, _free_table())
+	c1, c2 = "Q" + frappe.generate_hash(length=9).upper(), "Q" + frappe.generate_hash(length=9).upper()
+	hit, msg = _throws(lambda: doc3.make_invoice({"M-Pesa": total3}, references={"M-Pesa": [
+		{"amount": total3 - 50, "code": c1}, {"amount": 40, "code": c2}]}), "add up")
+	ok("transactions that do not add up to the bill are refused", hit, msg)
+	doc3 = frappe.get_doc("Table Order", doc3.name)
+	hit, msg = _throws(lambda: doc3.make_invoice({"M-Pesa": total3}, references={"M-Pesa": [
+		{"amount": total3 - 50, "code": c1}, {"amount": 50, "code": c1}]}), "twice")
+	ok("the same code twice on one bill is refused", hit, msg)
+	doc3 = frappe.get_doc("Table Order", doc3.name)
+	doc3.make_invoice({"M-Pesa": total3}, references={"M-Pesa": [{"amount": total3 - 50, "code": c1}, {"amount": 50, "code": c2.lower()}]})
+	frappe.db.commit()
+	inv3 = frappe.get_doc("POS Invoice", frappe.db.get_value("Table Order", doc3.name, "link_invoice"))
+	rows3 = [(r.mode_of_payment, float(r.amount), r.reference_no) for r in inv3.payments if r.amount]
+	ok("two transactions land as two M-Pesa rows with their own codes",
+	   rows3 == [("M-Pesa", float(total3 - 50), c1), ("M-Pesa", 50.0, c2)] and inv3.docstatus == 1, str(rows3))
+	split_rows = [frappe._dict(r) for r in run_report("M-Pesa Payments", filters={"from_date": today, "to_date": today})["result"] if isinstance(r, dict)]
+	ok("the report lists each transaction on its own line", sorted(r.code for r in split_rows if r.invoice == inv3.name) == sorted([c1, c2]))
+
 	html = frappe.db.get_value("Print Format", "Etham Receipt", "html") or ""
 	ok("the receipt format prints the payment rows", "rm_payment_rows" in html)
 	if "rm_payment_rows" in html:
