@@ -86,12 +86,13 @@ def run():
 	inv2 = frappe.get_doc("POS Invoice", frappe.db.get_value("Table Order", doc2.name, "link_invoice"))
 	ok("cash needs no code", inv2.docstatus == 1 and not [r for r in inv2.payments if r.amount][0].reference_no)
 
-	from restaurant_management.restaurant_management.report.mpesa_payments.mpesa_payments import execute
+	# through frappe's own runner, the way the desk calls it — the module path is derived from the name
+	from frappe.desk.query_report import run as run_report
 	today = frappe.utils.today()
-	_, rows = execute({"from_date": today, "to_date": today, "code": code})
+	rows = [frappe._dict(r) for r in run_report("M-Pesa Payments", filters={"from_date": today, "to_date": today, "code": code})["result"] if isinstance(r, dict)]
 	ok("the M-Pesa Payments report finds the code", len(rows) == 1 and rows[0].invoice == inv.name and rows[0].waiter == "Amina Test",
 	   json.dumps([dict(r) for r in rows], default=str)[:160])
-	_, allrows = execute({"from_date": today, "to_date": today})
+	allrows = [frappe._dict(r) for r in run_report("M-Pesa Payments", filters={"from_date": today, "to_date": today})["result"] if isinstance(r, dict)]
 	ok("the report lists only M-Pesa rows", allrows and all("pesa" in r.mode.lower() for r in allrows), "%d rows" % len(allrows))
 
 	html = frappe.db.get_value("Print Format", "Etham Receipt", "html") or ""

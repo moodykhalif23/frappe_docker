@@ -163,6 +163,11 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     with "settle it or release the table". The check on Table 14 was an anonymous one from the
     old + (finding 25), released by hand.
 
+27. **M-Pesa Payments opened to `ModuleNotFoundError`.** frappe finds a Script Report's module by
+    scrubbing its name — "M-Pesa Payments" → `m_pesa_payments` — and the folder was `mpesa_payments`.
+    The suite had imported the module directly, so it never walked frappe's path. Folder renamed; the
+    suite now runs the report through `frappe.desk.query_report.run`, exactly as the desk does.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.
