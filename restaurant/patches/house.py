@@ -275,6 +275,20 @@ def asset_version():
 		return None
 
 
+def _ensure_readable_merge_log_names():
+	"""Upstream leaves POS Invoice Merge Log unnamed, so frappe falls back to a
+	random hash and the day-close list reads as gibberish. Give it a series like
+	every other document. Only new logs are affected: the doctype forbids rename."""
+	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+	wanted = "format:POS-MRG-.YYYY.-.#####"
+	current = frappe.db.get_value("Property Setter",
+								  {"doc_type": "POS Invoice Merge Log", "property": "autoname"}, "value")
+	if current == wanted:
+		return
+	make_property_setter("POS Invoice Merge Log", None, "autoname", wanted, "Data",
+						 for_doctype=True, validate_fields_for_doctype=False)
+
+
 def menu_sells_without_stock(menu=None):
 	"""A dish on the menu is sold as a recipe, never from stock: the Item form's
 	default (Maintain Stock on) makes the till refuse it with nothing in the
@@ -449,6 +463,10 @@ def ensure_custom_fields():
 	# and sweeps the menu: a dish left as a stock item cannot be sold at the till
 	try:
 		menu_sells_without_stock()
+	except Exception:
+		pass
+	try:
+		_ensure_readable_merge_log_names()
 	except Exception:
 		pass
 	from frappe.custom.doctype.custom_field.custom_field import create_custom_fields

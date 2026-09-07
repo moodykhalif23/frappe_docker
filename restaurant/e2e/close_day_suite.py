@@ -29,6 +29,11 @@ def run():
 					   item_invoice=None, item_invoice_name=None, ordered_time=None, has_serial_no=0, serial_no=None,
 					   has_batch_no=0, batch_no=None, status="Pending", notes=""))
 	frappe.db.commit()
+	house.ensure_custom_fields()
+	frappe.clear_cache(doctype="POS Invoice Merge Log")
+	ok("the day-close consolidation log is named readably, not by hash",
+	   (frappe.get_meta("POS Invoice Merge Log").autoname or "") == "format:POS-MRG-.YYYY.-.#####",
+	   repr(frappe.get_meta("POS Invoice Merge Log").autoname))
 	res = house.close_day(force=1)
 	frappe.db.commit()
 	left = res.get("open_checks_detail") or []
