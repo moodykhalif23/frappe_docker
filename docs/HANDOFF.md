@@ -269,8 +269,10 @@ The intake path is `docs/Etham-Stock-Flow-and-Manual.pdf`.
 
 ## Next: KRA eTIMS
 
-See `docs/ETIMS-SCOPE.md`. Short version: it is blocked on a commercial
-registration, not on code, and it hooks **POS Invoice** — the till.
+See `docs/eTIMS-Integration-Plan.md`. Short version: it is blocked on a
+commercial registration and on a tax-position decision, not on code, and it hooks
+**POS Invoice** — the till. Etham charges no VAT today and has no PIN recorded,
+so the plan's Phase 0 is a client decision before any of it is built.
 
 ## House rules that cost us time to learn
 
