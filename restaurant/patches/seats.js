@@ -70,13 +70,18 @@
       }
       // The floor is still wiring itself up; do not compete with it.
       setTimeout(() => RM_seats.refresh(), 1500);
-      // Polling every ten seconds showed up as a slow floor; realtime carries it.
-      this.timer = setInterval(() => RM_seats.refresh(), 60000);
+      // Realtime carries changes; the poll is the safety net (one bulk query, ~30 ms server-side).
+      this.timer = setInterval(() => RM_seats.refresh(), 15000);
       this.backdrop_timer = setInterval(() => RM_seats.clear_orphan_backdrops(), 1500);
       // Checks moving usually means seats moved with them.
       frappe.realtime.on("synchronize_order_data", () => RM_seats.soon());
       // a table freed anywhere (payment, release, close of day) repaints at once
-      frappe.realtime.on("rm_table_freed", () => RM_seats.soon());
+      frappe.realtime.on("rm_table_freed", (d) => { RM_seats.invalidate(d && d.table); RM_seats.soon(100); });
+      // A tile's own channel (its name) fires on any change to it — seats, size,
+      // name, release. Until fresh occupancy lands, that table must not be
+      // painted from the cached map: the repaint after the tile's re-render was
+      // putting the old seat count and old party badges back over fresh data.
+      this.watch_tables();
 
       this.watch_floor();
       this.watch_build();
@@ -101,9 +106,28 @@
       setInterval(check, 120000);
     },
 
-    soon() {
+    soon(delay) {
       clearTimeout(this.pending);
-      this.pending = setTimeout(() => RM_seats.refresh(), 800);
+      this.pending = setTimeout(() => RM_seats.refresh(), delay == null ? 800 : delay);
+    },
+
+    // a table whose cached entry is known to be behind: skip it in paint until fresh
+    invalidate(table) {
+      if (!table) return;
+      this.stale = this.stale || {};
+      this.stale[table] = Date.now();
+    },
+
+    watch_tables() {
+      if (this.__tables_hooked) return;
+      const sock = frappe.socketio && frappe.socketio.socket;
+      if (!sock || typeof sock.onAny !== "function") return;
+      this.__tables_hooked = true;
+      sock.onAny((name) => {
+        if (!RM_seats.map || !RM_seats.map[name]) return;   // not a table we know
+        RM_seats.invalidate(name);
+        RM_seats.soon(100);
+      });
     },
 
     seats(table) {
@@ -111,9 +135,13 @@
     },
 
     refresh() {
+      // ordered: a slow, older response must never overwrite a newer one
+      const seq = (this.seq = (this.seq || 0) + 1);
       return Promise.all([call("table_occupancy"), call("floor_waiters")]).then(([m, w]) => {
+        if (seq !== RM_seats.seq) return RM_seats.map;
         RM_seats.map = m || {};
         RM_seats.holders = w || {};
+        RM_seats.stale = {};
         RM_seats.paint();
         return RM_seats.map;
       });
@@ -158,6 +186,8 @@
     paint_table(name) {
       const seats = this.map[name];
       if (!seats) return;
+      // behind an event we have not caught up with: leave the tile's own fresh render alone
+      if (this.stale && this.stale[name] && Date.now() - this.stale[name] < 5000) return;
 
       // Find the tile in the live document: a room re-render replaces the nodes
       // the cached RestaurantObject still points at, so its JSHtml writes vanish.

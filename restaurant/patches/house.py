@@ -777,7 +777,8 @@ def free_table(table, status="Success", booking=None):
         frappe.get_doc("Restaurant Object", table)._on_update()
     except Exception:
         pass
-    frappe.publish_realtime("rm_table_freed", {"table": table})
+    # after the commit: a floor that refetches on this event must read the freed table
+    frappe.publish_realtime("rm_table_freed", {"table": table}, after_commit=True)
 
     frappe.db.commit()
     return {"table": table, "closed": closed}
