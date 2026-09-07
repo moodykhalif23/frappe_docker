@@ -63,6 +63,7 @@ browser_suite "floor, waiter, order, dispatch" flow.mjs
 browser_suite "the door" door.mjs
 browser_suite "seats, parties and the counter" seats.mjs
 browser_suite "checkout and the turn" checkout.mjs
+browser_suite "changes reach the other screen" propagation_probe.mjs
 
 echo
 echo "================ verdict ================"

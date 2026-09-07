@@ -48,6 +48,7 @@ whether the page runs.
 | `build_watch_probe.mjs` | the floor's loaded script version matches the server's and the self-reload watcher is mounted | browser |
 | `revert_watch.mjs` | resize a live tile, then watch it for 20 s and log every realtime event that touches it — for "it snaps back" reports | browser |
 | `pad_plus_probe.mjs` | the pad's + asks who is seating, opens Seat guest locked to the table with its seats left, and the new party's check lands in the pad with its own waiter | browser |
+| `propagation_probe.mjs` | two screens: a seat, a seat-count change and a release each reach the other screen within 2.5 s and never revert to the older value | browser |
 | `floor_shot.mjs` | screenshots for a look review on a test site: the floor with a seated party, and the pad filtered to a row of long dish names | browser |
 | `close_day_suite.py` | server: closing the day leaves an unpaid check standing and names it — table, guest, amount | server |
 | `stale_marker_suite.py` | server: a customer name on a table with no check and no party is cleared by the next occupancy fetch; a seated table keeps its guest | server |
