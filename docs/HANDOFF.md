@@ -177,6 +177,12 @@ kitchen screen + till, working R 2) found and fixed, in this order:
     every 15 s as the safety net, and the freed-table event is published after the commit.
     `propagation_probe.mjs` asserts each change reaches a second screen within 2.5 s and never reverts.
 
+29. **One bill, two M-Pesa transactions.** The pay form had one M-Pesa line per bill, so a customer
+    who paid 450 then 50 could not be recorded truthfully. "+ another M-Pesa payment" adds an amount
+    and a code per transaction; `make_invoice` takes a list per mode, checks the amounts add up and
+    no code repeats, and writes one `Sales Invoice Payment` row per code (erpnext accepts several
+    rows of one mode; the closing entry sums by mode). Receipt and report list each transaction.
+
 The books were purged for handover on the afternoon of 2 Sep: the two screenshot-test
 invoices, two stale checks and the three 14:52 test checks on Table 7 are gone —
 0 POS Invoices, 0 open checks, 0 open parties. Etham can start trading clean.

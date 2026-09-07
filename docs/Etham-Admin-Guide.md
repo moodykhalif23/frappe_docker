@@ -228,7 +228,10 @@ credits each correctly.
    the receipt prints. **M-Pesa needs the customer's confirmation code** — the
    10-character code on their phone (e.g. `QGH7X8K2LM`), typed in the box under
    the M-Pesa amount. The till refuses to pay without it, refuses a code that
-   already paid another bill, and prints it on the receipt.
+   already paid another bill, and prints it on the receipt. **Paid in two or more
+   transactions?** Tap **+ another M-Pesa payment** and enter each amount with its
+   own code; the amounts must add up, and each lands as its own line on the
+   receipt and in the M-Pesa Payments report.
 3. Paying frees **only that party's seats** — the tile drops from `7/10` to
    `5/10` and the other parties keep eating undisturbed.
 4. Tap the table again for the next party. The check chips in the pad's left

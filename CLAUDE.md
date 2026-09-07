@@ -190,6 +190,10 @@ what is shipped and what is deliberately not. Read it before touching anything.
   code, unused before — asked for on the pay form (`mpesa_code.py`), enforced and stored as
   `Sales Invoice Payment.reference_no` in `make_invoice` (`mpesa_reference.py`), printed on the
   receipt, listed by the *M-Pesa Payments* report. Mode detection is the name matching `m-?pesa`.
+  Several transactions on one bill: the form's "+ another M-Pesa payment" sends a list of
+  `{amount, code}` for the mode and `make_invoice` writes one payment row per code (the amounts
+  must add up; a repeated code is refused). erpnext accepts several rows of one mode; the closing
+  entry groups by mode.
   A Script Report's folder **must be `frappe.scrub(report_name)`** — "M-Pesa Payments" is
   `m_pesa_payments`, not `mpesa_payments` — and a suite must open it through
   `frappe.desk.query_report.run`, not by importing the module, or the desk finds what the test never did.
