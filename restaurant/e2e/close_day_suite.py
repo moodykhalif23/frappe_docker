@@ -31,9 +31,13 @@ def run():
 	frappe.db.commit()
 	house.ensure_custom_fields()
 	frappe.clear_cache(doctype="POS Invoice Merge Log")
-	ok("the day-close consolidation log is named readably, not by hash",
-	   (frappe.get_meta("POS Invoice Merge Log").autoname or "") == "format:POS-MRG-.YYYY.-.#####",
-	   repr(frappe.get_meta("POS Invoice Merge Log").autoname))
+	import re
+	from frappe.model.naming import make_autoname
+	pattern = frappe.get_meta("POS Invoice Merge Log").autoname or ""
+	resolved = make_autoname(pattern, "POS Invoice Merge Log") if pattern else ""
+	ok("the day-close consolidation log resolves to a readable name, not a literal pattern",
+	   bool(re.fullmatch(r"POS-MRG-\d{4}-\d+", resolved)),
+	   "pattern %r resolves to %r" % (pattern, resolved))
 	res = house.close_day(force=1)
 	frappe.db.commit()
 	left = res.get("open_checks_detail") or []

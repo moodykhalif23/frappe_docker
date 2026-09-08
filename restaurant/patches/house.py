@@ -280,7 +280,7 @@ def _ensure_readable_merge_log_names():
 	random hash and the day-close list reads as gibberish. Give it a series like
 	every other document. Only new logs are affected: the doctype forbids rename."""
 	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
-	wanted = "format:POS-MRG-.YYYY.-.#####"
+	wanted = "POS-MRG-.YYYY.-.#####"
 	current = frappe.db.get_value("Property Setter",
 								  {"doc_type": "POS Invoice Merge Log", "property": "autoname"}, "value")
 	if current == wanted:
