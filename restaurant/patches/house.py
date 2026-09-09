@@ -334,10 +334,13 @@ def menu_sells_without_stock_hook(doc, method=None):
 
 
 def _shift_floats(shift):
-	"""The float counted in at opening, per mode. erpnext leaves it at zero on the
-	closing entry, so a drawer holding float plus takings always read as an overage."""
+	"""The float counted into the drawer at opening, per mode. Only a cash drawer
+	holds one: an M-Pesa opening balance is a phone balance, not money in the till,
+	and erpnext leaves opening_amount at zero so the count reads as an overage."""
+	cash = {m.name for m in frappe.get_all("Mode of Payment", filters={"type": "Cash"},
+										   fields=["name"])}
 	return {r.mode_of_payment: frappe.utils.flt(r.opening_amount)
-			for r in (shift.get("balance_details") or [])}
+			for r in (shift.get("balance_details") or []) if r.mode_of_payment in cash}
 
 
 def _record_counted_drawer(closing, counted):

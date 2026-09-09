@@ -83,6 +83,12 @@ def run():
 	ok("every mode the float went into is asked about, sales or no sales",
 	   set(house._shift_floats(shift)) <= {r["mode_of_payment"] for r in floats},
 	   json.dumps(house._shift_floats(shift)))
+	# live opens the day with the M-Pesa till balance in the float box every single day
+	not_cash = {m.name for m in frappe.get_all("Mode of Payment", filters={"type": ["!=", "Cash"]},
+											   fields=["name"])}
+	ok("a phone or bank balance is never counted as money in the drawer",
+	   all(abs(r["opening"]) < 0.005 for r in floats if r["mode_of_payment"] in not_cash),
+	   json.dumps([r for r in floats if r["mode_of_payment"] in not_cash]))
 
 	from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import make_closing_entry_from_opening
 	draft = make_closing_entry_from_opening(shift)
