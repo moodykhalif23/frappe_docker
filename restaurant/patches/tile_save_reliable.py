@@ -1,9 +1,4 @@
 # Two ways a resize or move was lost. Client: save_config() returned silently
-# whenever any other save was in flight (window.saving), so a gesture that
-# overlapped a dish or dialog save never reached the server — a hard refresh
-# then showed the old size. Server: set_style broadcast the tile it had loaded
-# BEFORE writing the new style, so every open floor snapped the tile back even
-# when the save succeeded. Retry instead of dropping; reload before telling.
 JS = "apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js"
 PY = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py"
 

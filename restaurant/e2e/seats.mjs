@@ -1,5 +1,4 @@
 // Seats, not tables: two parties on one six-top, each with its own check and
-// waiter, and a counter that only a manager opens.
 import { chromium } from 'playwright';
 // the floor demands a signed-in waiter before seating; answer the PIN pad
 const answerGate = async (pg, dlg) => {

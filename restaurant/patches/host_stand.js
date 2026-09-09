@@ -1,6 +1,5 @@
 
 // Host stand. The stock check-in wants an existing Customer and a reservation
-// window, then hides itself with no table picked — useless for a walk-in.
 (() => {
   if (window.RM_host_stand) return;
 
@@ -58,7 +57,6 @@
   };
 
   // The pad is already open on this table: wait for the new check to arrive on
-  // the realtime sync, select it, then do whatever the tap was for (a dish).
   const select_new_check = (om, order, then) => {
     let tries = 0;
     const tick = setInterval(() => {
@@ -88,7 +86,6 @@
 
       const go = () => {
         // Mark the table, then select its room: rendering a room opens the marked
-        // table's pad. A route with a query string is not a route in v16.
         RM.navigate_table = message.table;
         // so the pad opens on this party's check, not on a "whose check?" prompt
         RM.navigate_order = message.order;
@@ -117,8 +114,6 @@
     },
 
     // A dish tapped with no check selected: if the table already has a party the
-    // pad simply has not loaded its checks yet — load them and let the picker
-    // choose; only an empty table opens Seat guest.
     seat_or_pick(om, then) {
       const table = om.table.data.name;
       const pick = () => (window.RM_seats && RM_seats.pick_check(om, then)) || this.open_for(table, om, then);
@@ -145,7 +140,6 @@
     },
 
     // The pad's + and a dish tapped with no check selected come here: another
-    // party at this table, through the same door — PIN, covers, seats left.
     open_for(table, om, then) {
       this.__for = { table, om, then };
       return this.open();
@@ -153,7 +147,6 @@
 
     open() {
       // Seating belongs to a waiter: the PIN is confirmed before the dialog opens,
-      // so on a shared tablet the seat is credited to the person actually seating.
       if (window.RM_waiter && RM_waiter.confirm && !this.__confirmed) {
         return RM_waiter.confirm("seat").then(() => { this.__confirmed = true; this.open(); this.__confirmed = false; });
       }

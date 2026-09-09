@@ -1,7 +1,4 @@
 # The pay form made the covers count mandatory for dine-in, so Pay stayed
-# disabled until someone typed a number. A guest settling up should never be
-# blocked by a statistic. The field stays visible and still records covers —
-# it just defaults to 1 instead of holding the payment hostage.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js"
 
 src = open(P).read()

@@ -1,5 +1,4 @@
 # After "Update Table" saves, the tile still showed the old name: the room's
-# objects are keyed by docname and a rename is a new key. Redraw the room.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js"
 
 src = open(P).read()

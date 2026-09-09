@@ -1,8 +1,4 @@
 # frappe's FieldGroup.make() applies each field's default AFTER the record has
-# loaded — and get_field_default_value returns an empty default for NUMERIC
-# fields (it ignores it for text). So "Update Table" opened with the seat count
-# blank while the description showed, and saving posted null: seats wiped to 0.
-# Put the record's values back over the defaults once the form is made.
 P = "apps/restaurant_management/restaurant_management/public/helper/js/frappe-form-class.js"
 
 src = open(P).read()

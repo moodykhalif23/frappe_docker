@@ -1,6 +1,4 @@
 # Seat -> sit -> pay -> free, asserted end to end against the real doctypes.
-# Run: docker cp it into the app, then in `bench console`:
-#   exec(open(".../turn_test.py").read(), globals()); run()
 
 import frappe
 from frappe.utils import add_to_date, now_datetime
@@ -70,7 +68,6 @@ def run():
 	check("the turn lands on the table's row", row, str(row))
 	if row:
 		# The table may already have turns from earlier today, so the average is
-		# not ours to assert — the 45 minutes we staged is the longest.
 		check("the 45 minutes it sat is on the board", row["longest_turn"] >= 44, row)
 		check("covers counted", row["covers"] >= 2, row["covers"])
 	check("floor summary counts the turn", m["turns"] >= 1, m["turns"])
@@ -109,7 +106,6 @@ def run():
 	check("booking frees nothing on the floor", len(house.free_tables()) == free_count,
 		f"{free_count} -> {len(house.free_tables())}")
 	# book_table can land tomorrow if the shift runs past midnight — ask for the
-	# day the booking is actually on rather than assuming it is today
 	booked_day = str(frappe.db.get_value("Restaurant Booking", bk["name"], "reservation_time"))[:10]
 	check("it shows under that day's expected",
 		bk["name"] in [r["name"] for r in house.reservations(booked_day)], booked_day)
@@ -131,7 +127,6 @@ def run():
 	check("a no-show closes", frappe.db.get_value("Restaurant Booking", nb["name"], "status") == "No Show")
 
 	# --- what stops a table being deleted, and clearing it ---
-	# a table that has never been billed — one with past sales is correctly undeletable
 	spare = [x for x in house.free_tables(2)
 	         if not frappe.db.count("Table Order", {"table": x["name"], "status": "Invoiced"})]
 	if spare:

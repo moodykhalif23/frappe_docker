@@ -1,7 +1,5 @@
 
 // The door: who is waiting, who is expected, and one tap to seat them.
-// A waiting party is a Restaurant Booking with no table, so seating from the
-// queue is the same operation as seating a walk-in.
 (() => {
   if (window.RM_door) return;
 
@@ -160,7 +158,6 @@
     },
 
     // A booking holds no table: the right one depends on the night, so it is
-    // picked when they walk in.
     book(parent) {
       const d = new frappe.ui.Dialog({
         title: __("Take a booking"),

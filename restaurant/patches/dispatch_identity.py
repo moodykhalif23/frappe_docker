@@ -1,8 +1,4 @@
 # Firing an order to the kitchen went through api.call → TableOrder.send with no
-# idea who was holding the tablet; the check's waiter was whoever seated it.
-# Order now confirms the waiter's PIN (within the admin's grace window) and calls
-# house.dispatch, which stamps every fired line with that waiter and leaves a
-# timeline note — the seater owns the check, the firer owns the lines.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js"
 
 src = open(P).read()

@@ -1,5 +1,4 @@
 # The kitchen ticket and the pre-payment bill used the same PDF-embed modal the
-# receipt did — a dialog that opens with a title and nothing under it.
 PAY = "apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js"
 PROCESS = "apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js"
 ORDER = "apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js"

@@ -1,6 +1,4 @@
 // Renders a client document to PDF. It lives here because this is where
-// playwright is installed:
-//   node topdf.mjs <in>.html <out>.pdf ["Footer title"]
 import { chromium } from 'playwright'
 import { resolve } from 'node:path'
 const src = resolve(process.argv[2]), out = process.argv[3]

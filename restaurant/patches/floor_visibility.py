@@ -1,9 +1,4 @@
 # Restaurant Permissions are opt-in and nobody fills them in, but every
-# non-manager is filtered *through* them: rooms, tables, order counts and
-# can_access() all treat the empty list as "you may see nothing". A waiter
-# tablet holding only Restaurant User therefore shows a floor with no rooms at
-# all — which is what happened the moment Restaurant Manager was taken off the
-# station accounts so they could not delete tables.
 P = ("apps/restaurant_management/restaurant_management/restaurant_management/"
      "doctype/restaurant_settings/restaurant_settings.py")
 

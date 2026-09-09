@@ -1,7 +1,4 @@
 # Paying by M-Pesa recorded nothing but an amount: the customer's confirmation
-# code was read off the phone and lost. The pay form now asks for it beside the
-# M-Pesa amount, refuses to pay without a well-formed one, and sends it as the
-# payment row's reference — so a report can tie every M-Pesa shilling to a code.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js"
 
 src = open(P).read()

@@ -1,9 +1,4 @@
 // Handover drill: a manager (Geff), two waiters by PIN, a kitchen screen and a
-// till, working the SECOND room. Proves a Room 2 order reaches the kitchen and
-// is billable, and that every fence holds. Nothing sugar-coated: page errors,
-// refused calls and slow requests are all collected.
-//
-//   BASE=http://pos.localhost:8080 node drill2.mjs
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE || 'http://pos.localhost:8080';

@@ -1,6 +1,4 @@
 # Fail the bake if an app is not the version we expect. The restaurant app
-# tracks master with no tags, so it can move under us at any time; our patches
-# anchor on exact source and would either misapply or apply to changed code.
 import json
 import os
 
@@ -24,7 +22,6 @@ for app, want in EXPECTED.items():
     version = got.get("version") or ""
     if want.startswith("v"):
         # frappe is installed by bench init itself, not through apps.json, so its
-        # resolution is empty and only `version` says what actually landed.
         if branch != want and version != want.lstrip("v"):
             problems.append("%s: expected %s, got branch %s / version %s"
                             % (app, want, branch or "?", version or "?"))

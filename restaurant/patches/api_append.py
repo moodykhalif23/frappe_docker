@@ -1,9 +1,6 @@
 
 
 # ---- restaurant-kit extensions (appended by the patch layer) ----
-# Every write below lands on standard ERPNext doctypes (Item, Item Price,
-# Restaurant Menu) so frappe stays the single source of record for
-# accounting, audit and reporting.
 
 RM_STATUS_FLOW = ["Sent", "Processing", "Completed", "Delivered"]
 RM_STATUS_LABELS = {

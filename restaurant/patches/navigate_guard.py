@@ -1,6 +1,4 @@
 # After seating a guest the page navigates to that party's room. If the room is
-# not among this user's objects the unguarded select() threw, and the floor then
-# never repainted — a waiter tablet stuck showing the old tiles.
 P = ("apps/restaurant_management/restaurant_management/restaurant_management/"
      "page/restaurant_manage/restaurant_manage.js")
 

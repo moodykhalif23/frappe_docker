@@ -1,5 +1,4 @@
-# What the recipes say was used against what actually left the shelf. The gap
-# is waste, over-portioning or something walking out of the door.
+# What the recipes say was used against what actually left the shelf. 
 
 import frappe
 

@@ -1,7 +1,4 @@
 // Full-service drill against the live site: three waiters by PIN, two kitchen
-// screens, two cashiers and an admin — four parties on one table, concurrent
-// ordering, a split, concurrent payments, reports, close. Nothing sugar-coated:
-// every page error, refused call and slow request is collected and printed.
 import { chromium } from 'playwright';
 
 const BASE = 'https://frappe.ikobriq.com';
@@ -197,8 +194,6 @@ const payCurrent = async (a, guest) => {
 };
 
 // ---------------------------------------------------------------- actors
-// staff do not all log in in the same second; the stampede case is measured
-// separately. Boots are staggered, service concurrency stays real.
 const w1 = await mkActor('W1', 'waiter@etham.co.ke', 'Waiter@2026');
 const w2 = await mkActor('W2', 'waiter@etham.co.ke', 'Waiter@2026');
 const w3 = await mkActor('W3', 'waiter@etham.co.ke', 'Waiter@2026');

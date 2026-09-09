@@ -1,5 +1,4 @@
 // Where does the time go? Cold and warm floor loads, a room switch, opening a
-// table's pad, with every API call's server time. Read-only apart from opening a pad.
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'https://frappe.ikobriq.com', ROOM = process.env.ROOM || 'Main Hall', TABLE = process.env.TABLE || 'Table 1';
 const b = await chromium.launch();

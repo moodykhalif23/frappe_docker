@@ -1,7 +1,4 @@
 # Hard floor reset for a TEST site: cancel every open check, close every party,
-# clear every tile. Refuses to run unless the site name looks local.
-#
-#   exec(open(".../reset_floor.py").read(), globals()); run()
 
 import frappe
 

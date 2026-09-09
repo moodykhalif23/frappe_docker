@@ -1,8 +1,4 @@
 // The moat: on a shared tablet, Amina seats a party; the grace window is set to
-// one second, so when Moses taps Order the tablet asks "Who's on?" and he signs
-// in. The check stays Amina's, every fired line is Moses's, the timeline says
-// who fired what, and Sales by Waiter (Lines fired) credits Moses.
-//   BASE=http://pos.localhost:8080 node attribution_probe.mjs   (test site: writes checks)
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'http://pos.localhost:8080', TABLE = process.env.TABLE || 'Table 9';
 const GUEST = 'Attribution ' + Date.now().toString().slice(-4);

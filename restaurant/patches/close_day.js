@@ -1,5 +1,4 @@
 // Opening and closing the selling day from the floor. A shift left open bills
-// into yesterday and then refuses today's sales, which reads as a broken till.
 (() => {
   if (window.RM_close_day) return;
 
@@ -14,7 +13,6 @@
           return;
         }
         // an unpaid check is never voided by the close: name each one, or the
-        // till reads a still-seated tile as a failed close
         const left = res.open_checks_detail || [];
         const standing = left.length ? "<br><br>" + __("{0} unpaid check(s) still open:", [left.length]) + "<ul style='margin:6px 0 0 18px'>" +
           left.map(c => `<li><b>${frappe.utils.escape_html(c.table)}</b> · ${frappe.utils.escape_html(c.customer || __("no guest name"))} · ${format_currency(c.amount)}</li>`).join("") +
@@ -39,7 +37,6 @@
       const caps = (frappe.boot && frappe.boot.user && frappe.boot.user.can_create) || [];
       if (caps.indexOf("POS Closing Entry") === -1) return;
       // One button, not two: a sixth toolbar item pushes the rest into an
-      // overflow menu, and the floor's buttons must stay one tap away.
       this.day_btn = rm.page.add_inner_button(__("Day"), () => {
         call("day_summary").then((s) => (s && s.open ? RM_close_day.open() : RM_close_day.open_day()));
       });

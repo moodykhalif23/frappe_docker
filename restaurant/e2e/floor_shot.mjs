@@ -1,6 +1,4 @@
 // Screenshots for a look review on a test site: the floor with one seated party
-// (badges, no upstream dot), and the pad filtered to a row of long dish names.
-//   BASE=http://pos.localhost:8080 node floor_shot.mjs   → shots/floor.png, shots/pad-tall-names.png
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 const BASE = process.env.BASE || 'http://pos.localhost:8080', TABLE = process.env.TABLE || 'Table 9', FILTER = process.env.FILTER || 'Ma';

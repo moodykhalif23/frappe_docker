@@ -1,5 +1,4 @@
 # Floor operations this fork adds on top of restaurant_management.
-# COPY'd whole into the app, so a rebake always lands the current version.
 
 import frappe
 from frappe.utils import get_date_str, today
@@ -87,7 +86,6 @@ def free_tables(covers=0, room=None, whole_table=0):
 		})
 
 	# Empty before shared, then the tightest fit — and delivery slots last, so a
-	# walk-in never defaults to one ("Delivery 1" sorts before every "Table").
 	delivery_room = frappe.db.get_single_value("Restaurant Settings", "delivery_room")
 	out.sort(key=lambda t: (bool(delivery_room) and t["room"] == delivery_room, not t["fits"], t["shared"],
 							t["free"] if t["free"] is not None else 9999, t["description"]))
@@ -96,7 +94,6 @@ def free_tables(covers=0, room=None, whole_table=0):
 
 def _walkin_customer(guest_name, contact=None):
 	# Reused by exact name so regulars don't breed duplicate Customers, but the
-	# host never has to search: typing the name is the whole interaction.
 	existing = frappe.db.get_value("Customer", {"customer_name": guest_name}, "name")
 	if existing:
 		return existing
@@ -127,7 +124,6 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None, add
 		frappe.throw(frappe._("The counter is closed. Open the day before seating guests."))
 
 	# Every seating is somebody's: the party carries the waiter who took it, and
-	# that is what Sales by Waiter is built from. No anonymous seats.
 	if not waiter:
 		frappe.throw(frappe._("Sign in as a waiter first — the guests you seat are yours."))
 	_authorised(waiter, pin, token)
@@ -155,14 +151,12 @@ def seat_walkin(guest_name, covers=1, table=None, contact=None, waiter=None, add
 	booking.insert(ignore_permissions=True)
 
 	# The pad refuses to open an order until the table carries a customer; on a
-	# shared table this is only the default, each check carries its own.
 	frappe.db.set_value("Restaurant Object", obj.name, "customer", booking.customer)
 	frappe.db.commit()
 
 	order = _open_check(booking, obj)
 
 	# A check seated in the Delivery room is a delivery: the kitchen ticket shows
-	# where it goes, and the fee the admin set rides on the bill.
 	if order and obj.room and obj.room == frappe.db.get_single_value("Restaurant Settings", "delivery_room"):
 		where = " · ".join(x for x in ((address or "").strip(), (contact or "").strip()) if x)
 		frappe.db.set_value("Table Order", order, {"is_delivery": 1, "delivery_notes": where or None,
@@ -178,14 +172,12 @@ WAITER_FIELD = {"fieldname": "waiter", "fieldtype": "Link", "options": "Restaura
 SEATED_FIELD = {"fieldname": "seated_at", "fieldtype": "Datetime", "label": "Seated At", "read_only": 1}
 LEFT_FIELD = {"fieldname": "left_at", "fieldtype": "Datetime", "label": "Left At", "read_only": 1}
 # Hidden, not merely read-only: the machine sets it, and a visible read-only
-# link still joins client-side form validation ("Missing Values Required: Party").
 BOOKING_FIELD = {"fieldname": "booking", "fieldtype": "Link", "options": "Restaurant Booking",
 				 "label": "Party", "read_only": 1, "hidden": 1, "no_copy": 1}
 # Checks seated in this room are deliveries: flagged for the kitchen, fee added.
 DELIVERY_ROOM_FIELD = {"fieldname": "delivery_room", "fieldtype": "Link", "options": "Restaurant Object",
 					   "label": "Delivery Room"}
 # How long a tapped PIN stays good on a shared tablet before the next seat or
-# fire asks again. Blank means 90; 1 asks every time.
 RECHECK_FIELD = {"fieldname": "waiter_recheck_seconds", "fieldtype": "Int", "label": "Waiter PIN Recheck (seconds)",
 				 "default": "90", "description": "A waiter's PIN is asked again for a seat or an order after this many seconds. Blank = 90; 1 = every time."}
 
@@ -365,7 +357,6 @@ def _ensure_receipt_format():
 	name = "Etham Receipt"
 	if frappe.db.exists("Print Format", name):
 		# An earlier build created it without custom_format, which frappe ignores;
-		# a later one stored A4 margins instead of the till's 80mm roll.
 		current = frappe.db.get_value("Print Format", name, "html") or ""
 		if "80mm auto" not in current:
 			base = current.split("</style>", 1)[-1] if "<style>" in current else current
@@ -394,7 +385,6 @@ def _ensure_receipt_format():
 
 
 # erpnext's receipt prints one "Paid Amount"; the till needs each mode and, for
-# M-Pesa, the customer's confirmation code — the line the statement is checked against.
 _RECEIPT_ROWS_MARK = "rm_payment_rows"
 _RECEIPT_ROWS_ANCHOR = "{%- if doc.change_amount -%}"
 _RECEIPT_ROWS = """{#- rm_payment_rows -#}
@@ -418,7 +408,6 @@ def _receipt_with_payment_rows(html):
 
 
 # A Posiflex till prints an 80mm roll: the paper is the page, so the format
-# carries the width and kills the margin the browser writes its URL into.
 _THERMAL_CSS = """<style>
   @page { size: 80mm auto; margin: 0 }
   html, body { width: 80mm; margin: 0 }
@@ -492,7 +481,6 @@ def ensure_custom_fields():
 	}, ignore_validate=True)
 
 	# The pad's client flow reads these before an item can land; without them a
-	# waiter's add-to-cart dies as a silent 403 and the check stays empty.
 	from frappe.permissions import add_permission
 	for dt in ("Item", "Item Price", "Item Group", "UOM", "POS Profile", "POS Settings",
 			   "Stock Settings", "Selling Settings", "Accounts Settings", "Company",
@@ -581,7 +569,6 @@ def _token_key(waiter):
 
 def _authorised(waiter, pin=None, token=None):
 	# A PIN is tapped once per shift on the terminal; the token stands in for it
-	# afterwards so claiming a table is one tap, not a PIN every time.
 	if pin:
 		return _verify_pin(waiter, pin)
 	if token and frappe.cache().get_value(_token_key(waiter)) == token:
@@ -636,12 +623,9 @@ def floor_waiters():
 
 
 # ---- the door: waitlist and reservations -----------------------------------
-# A waiting party is a Restaurant Booking with no table and status Waitlisted;
-# seating one assigns the table and flips it to Open.
 
 def _company():
     # A site with no global default still has a Company; the old bare-name
-    # fallback was a NameError waiting for the first tenant that skipped it.
     return (frappe.defaults.get_global_default("company")
             or frappe.db.get_value("Company", {}, "name"))
 
@@ -744,7 +728,6 @@ def seat_from_waitlist(booking, table, waiter=None):
     doc.table = obj.name
     doc.status = "Open"
     # reservation_time stays the time they arrived or were promised — overwriting it
-    # would make both the wait and a late reservation unmeasurable.
     doc.seated_at = now
     doc.reservation_end_time = frappe.utils.add_to_date(now, hours=2)
     if waiter and frappe.db.has_column("Restaurant Booking", "waiter"):
@@ -822,12 +805,10 @@ def free_table(table, status="Success", booking=None):
                             {"status": status, "left_at": now}, update_modified=False)
         closed.append(b.name)
     # Nobody left sitting clears the tile — even when this call closed no booking:
-    # a check paid on a bookingless table used to leave its guest's name behind.
     if not parties_at(table):
         frappe.db.set_value("Restaurant Object", table,
                             {"customer": None, "current_user": None}, update_modified=False)
     # set_value publishes nothing: every open floor kept the seated tile until
-    # its next poll. Push the freed tile and nudge the seat badges now.
     try:
         frappe.get_doc("Restaurant Object", table)._on_update()
     except Exception:
@@ -844,7 +825,6 @@ def _turn_rows(from_date=None, to_date=None):
     from_date = from_date or frappe.utils.today()
     to_date = to_date or from_date
     # The stamps are custom fields; without them there are no turns to report,
-    # and the door panel must not fail over a metric.
     if not frappe.db.has_column("Restaurant Booking", "seated_at"):
         return []
 
@@ -873,7 +853,6 @@ def _turn_rows(from_date=None, to_date=None):
         minutes = int((frappe.utils.get_datetime(b.left_at)
                        - frappe.utils.get_datetime(b.seated)).total_seconds() // 60)
         # A clock that runs backwards, or a party parked overnight, is bad data
-        # rather than a turn — counting it would poison the average.
         if minutes < 0 or minutes > 12 * 60:
             continue
         row = by_table.setdefault(b.tbl, {"turns": 0, "covers": 0, "minutes": []})
@@ -924,8 +903,6 @@ def turn_metrics(day=None):
 
 
 # ---- staff: the floor's PIN pad doubles as the shift clock ------------------
-# Employee is erpnext and always present; Employee Checkin is hrms, so every use
-# of it is guarded and a floor without hrms still signs waiters in.
 
 
 def _has_hrms():
@@ -938,7 +915,6 @@ def _last_log(employee):
         filters={"employee": employee, "time": [">=", frappe.utils.today() + " 00:00:00"]},
         fields=["name", "log_type", "time"],
         # Employee Checkin.time keeps only seconds, so two logs can tie —
-        # creation breaks it, otherwise the order is whatever the db returns.
         order_by="time desc, creation desc",
         limit=1,
     )
@@ -1029,8 +1005,6 @@ def link_employee(waiter, employee):
 
 
 # ---- deleting a table ------------------------------------------------------
-# An unpaid check keeps its table linked for good and blocks the delete; it can
-# be closed. An invoiced one is history and must not be.
 
 OPEN_ORDER_STATES = ["not in", ["Invoiced", "Cancelled"]]
 
@@ -1066,7 +1040,6 @@ def release_table(table):
     """Close the unpaid checks and seatings holding a table. Never touches an
     invoiced order — that is a sale, and the table is part of its record."""
     # Voiding checks hides sales, so it belongs to whoever can bank the day —
-    # a waiter must not order, pocket cash, and release the evidence.
     if not frappe.has_permission("POS Closing Entry", ptype="create"):
         frappe.throw(frappe._("Releasing a table is the cashier's or manager's job."),
                      frappe.PermissionError)
@@ -1104,8 +1077,6 @@ def release_table(table):
 
 
 # ---- closing the day -------------------------------------------------------
-# A shift left open bills into yesterday and then refuses today's sales with
-# "POS Opening Entry is outdated", which reads as a broken till.
 
 
 def _open_shift_doc(pos_profile=None):
@@ -1210,7 +1181,6 @@ def close_day(pos_profile=None, force=0):
         closing.submit()
     except Exception:
         # erpnext rolls the closing entry back and then fails to comment on it,
-        # so the real reason never reaches the till. Keep it, and say so.
         frappe.log_error(title="close_day could not bank the shift")
         frappe.throw(frappe._(
             "The day could not be banked. Nothing was changed — the reason is in"
@@ -1235,8 +1205,6 @@ def close_day(pos_profile=None, force=0):
 
 
 # ---- seats, not tables ------------------------------------------------------
-# Two parties can share a six-top: occupancy is counted in seats, and a party is
-# one Restaurant Booking carrying its own waiter.
 
 
 def _party_fields():
@@ -1340,7 +1308,6 @@ def heal_stale_markers(room=None):
 	if not marked:
 		return []
 	# what the floor itself counts: a party is a booking in status Open; a check
-	# is a Table Order past "Opened" (an empty one, as upstream's count agrees, is not)
 	busy = {r.table for r in frappe.get_all("Table Order", fields=["table"], filters={
 		"table": ["in", marked], "status": ["not in", ["Cancelled", "Invoiced", "Opened"]]})}
 	busy |= {r.table for r in frappe.get_all("Restaurant Booking", fields=["table"], filters={
@@ -1382,7 +1349,6 @@ def table_occupancy(room=None):
     )
 
     # A fresh check sits in status "Opened": it must link to its party, but it
-    # does not make a table busy — that matches the app's own orders_count.
     orders = frappe.get_all(
         "Table Order",
         filters={"table": ["in", names], "show_in_pos": 1,
@@ -1572,8 +1538,6 @@ def claim_party(booking, waiter, pin=None, token=None):
 
 
 # ---- opening the day -------------------------------------------------------
-# The pad used to fall through to erpnext's create_opening_voucher(), so the
-# first waiter to ring a dish opened the drawer with a float nobody counted.
 
 
 def _heal_series(doctype, like):

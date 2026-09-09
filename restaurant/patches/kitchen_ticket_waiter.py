@@ -1,8 +1,4 @@
 # The kitchen saw a table and a check number, never who to hand the plate to.
-# Two payloads build a ticket — the board's own fetch and the one pushed at
-# dispatch — and only the first carried the waiter. The pushed one also left
-# room_description out (the board printed "undefined") and passed table_info,
-# which upstream returns as a one-item tuple.
 OBJ = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py"
 ORDER = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py"
 JS = "apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js"
@@ -22,7 +18,6 @@ else:
     print("ticket waiter: server sends the waiter on every ticket")
 
 # table_info is returned as a tuple upstream, so the pushed ticket rendered the
-# table as an array and left the waiter out entirely.
 osrc = open(ORDER).read()
 TUPLE = """    @property
     def table_info(self):

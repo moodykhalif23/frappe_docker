@@ -1,6 +1,4 @@
 // The menu card, as a waiter sees it: photo on top, name, price left, "- n +"
-// pill right. Screenshots the grid and proves the pill drives the check.
-//   BASE=http://pos.localhost:8080 node card_shots.mjs
 import { chromium } from 'playwright';
 import { mkdirSync } from 'node:fs';
 

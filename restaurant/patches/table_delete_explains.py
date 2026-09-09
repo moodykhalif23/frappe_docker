@@ -1,7 +1,4 @@
 # Deleting a table threw frappe's raw link error — "Restaurant Object 5bdtibmn77
-# is linked with Table Order OR-2026-00002" — which names neither the table nor
-# anything the user can act on. Ask what is holding it first: an unpaid check can
-# be closed on the spot, an invoiced one is a sale and the table has to stay.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js"
 
 src = open(P).read()

@@ -1,9 +1,4 @@
 # Remove what an earlier demo company left behind. Its Company record was
-# deleted but its ledger, warehouses, accounts and cost centres were not, so the
-# books still carry a restaurant that does not exist.
-#
-#   exec(open(".../purge_demo.py").read(), globals()); report()   # look first
-#   exec(open(".../purge_demo.py").read(), globals()); purge("TD") # then act
 
 import frappe
 

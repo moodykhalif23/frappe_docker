@@ -1,6 +1,4 @@
 # The pad's menu opens itself from a setTimeout, but the icon and the items
-# container each resolve on their own timer — lose that race and the menu is
-# empty: the icon throws, or Clusterize fails with "Could not find scroll element".
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/items-tree-class.js"
 
 src = open(P).read()

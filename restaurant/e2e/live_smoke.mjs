@@ -1,9 +1,4 @@
 // Live proof after a deploy, with nothing left in the books: a waiter by PIN
-// seats a party in the second room and fires a dish, the kitchen screen shows
-// the ticket with the waiter's name, the till opens the check and reaches the
-// pay screen — then the till RELEASES the table instead of paying, so no
-// invoice is written and the day stays open.
-//   BASE=https://frappe.ikobriq.com WAITER=sharon PIN=5566 node live_smoke.mjs
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE || 'https://frappe.ikobriq.com';

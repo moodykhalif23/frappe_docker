@@ -1,5 +1,4 @@
 # Item Price create is Sales Master Manager only, so a manager with Item Manager
-# could rename a dish but never price a new one. The fence is Item write above.
 P = "apps/restaurant_management/restaurant_management/api.py"
 src = open(P).read()
 

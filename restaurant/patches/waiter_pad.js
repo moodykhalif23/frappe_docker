@@ -1,6 +1,5 @@
 
 // Waiter pad. Waiters have no logins: they tap a name and PIN on the shared
-// terminal, then own the tables they claim until someone else takes them.
 (() => {
   if (window.RM_waiter) return;
 
@@ -84,9 +83,6 @@
     get current() { return session(); },
 
     // Before a seat or a fire: who is doing this? A tapped PIN stays good for
-    // the admin's recheck window (Restaurant Settings, default 90 s); after
-    // that the shared tablet asks again, so a sale is never credited to whoever
-    // happened to sign in last. Blank means 90; 1 asks every time.
     confirm(purpose) {
       const ask = (fallback) => new Promise((resolve) => {
         const who = session();
@@ -115,7 +111,6 @@
     open(then, force) {
       const who = session();
       // `then` lets another flow demand a sign-in and continue where it was;
-      // `force` asks for the PIN even with a session (the recheck window ran out).
       if (who && !force) return then ? then(who) : this.signed_in(who);
       frappe.call("restaurant_management.house.waiters").then(({ message }) => {
         const list = message || [];

@@ -1,9 +1,4 @@
 # The pad's card list is virtualised in blocks of 40 rows, four blocks a cluster:
-# 160 cards render and the rest hide behind a spacer sized for one card per row.
-# With a four-column grid that spacer is a screenful of blank, and a 170-dish
-# menu shows 160 until someone scrolls through it. Render every dish fetched at
-# once, and fetch enough for a big menu: one number governs both. Categories
-# and search refetch server-side, so a view never has to hold the whole menu.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js"
 LIMIT = 1000
 

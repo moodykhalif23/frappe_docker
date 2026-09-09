@@ -1,11 +1,6 @@
-/* rm-menu-card: the stock card hangs a 100x100 placeholder letter behind the
-   title as a watermark, floats Add, absolutely positions the stepper, and lays
-   the grid out in a fixed 3 columns. Rebuilt as a photo-first card in an
-   auto-fitting grid: photo on top, name, then price left and a - n + pill right.
-   Selectors are .pos-items — there is no .product wrapper. */
+/* rm-menu-card: the stock card hangs a 100x100 placeholder letter behind the title as a watermark. */
 
-/* The pad reuses a desk page layout whose main section is 80% wide, to leave room
-   for a sidebar the pad never renders — that is the white gap beside the menu. */
+/* The pad reuses a desk page layout whose main section is 80% wide, to leave room for a sidebar the. */
 .product-list .items-wrapper.layout-main-section-wrapper,
 .product-list .layout-main-section-wrapper {
   width: 100% !important;
@@ -30,8 +25,7 @@
   padding: 4px 2px 12px;
 }
 
-/* clusterize's scroll spacers are grid items too; on their own row they cannot
-   stretch the last cards to the spacer's height. */
+/* clusterize's scroll spacers are grid items too; on their own row they cannot stretch the last cards. */
 .pos-items .widget-group-body .clusterize-extra-row { grid-column: 1 / -1; }
 
 /* The widget wrapper adds its own card chrome; the .small-box is our card. */
@@ -243,10 +237,7 @@
   .pos-items .small-box.item .icon { height: 130px !important; }
 }
 
-/* Etham's look, second pass: nearly sharp corners on the card and everything in
-   it, the photo flush with the card's top edge, and a footer that wraps instead
-   of pushing the pill past the card on a narrow till. Same rules on the pad and
-   on Menu Management — both render the same card. */
+/* Etham's look, second pass: nearly sharp corners on the card and everything in it, the photo flush. */
 .pos-items { --rm-card-radius: 6px; }
 .pos-items .shortcut-widget-box,
 .pos-items .small-box.item { border-radius: 6px !important; }
@@ -268,10 +259,7 @@
 /* the order pad's - n + stays a pill: that is the approved look */
 .pos-items .small-box.item .input-group { border-radius: 999px !important; }
 
-/* Third pass. The initials are centred with top:50% + translate, but .icon was
-   not positioned, so 50% resolved against the whole card: in a row made taller
-   by a two-line name they landed on the title. The plus had lost its circle to
-   the 6px rule above. And the card list scrolls without showing a bar. */
+/* Third pass. The initials are centred with top:50% + translate, but .icon was not positioned, so 50%. */
 /* upstream gives .icon top:3px/left:-3px, dormant while static: zero them */
 .pos-items .small-box.item .icon { position: relative !important; top: 0 !important; left: 0 !important; }
 .pos-items .small-box.item .icon .placeholder-text { top: 50% !important; left: 50% !important; }
@@ -287,8 +275,7 @@
 .pos-items .small-box.item .small-box-footer .rm-price { flex: 0 0 100%; text-align: left; }
 .pos-items .small-box.item .small-box-footer .form-group { margin: 0 auto !important; }
 
-/* Fifth pass, the client's pick: the pill sits on the card's bottom edge,
-   square-cornered, and the − and + fill its two ends completely. */
+/* Fifth pass, the client's pick: the pill sits on the card's bottom edge, square-cornered, and the −. */
 .pos-items .small-box.item { padding-bottom: 0 !important; }
 .pos-items .small-box.item .small-box-footer { margin-bottom: 0 !important; padding-bottom: 0 !important; row-gap: 6px !important; }
 .pos-items .small-box.item .small-box-footer .form-group { margin: 0 auto !important; }

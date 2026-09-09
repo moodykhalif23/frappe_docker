@@ -1,9 +1,4 @@
 # Deliveries, end to end. Upstream keyed the fee on an Address's
-# `posa_delivery_charges` and a "Delivery Charges" doctype that do not exist
-# here, so a paid delivery lost its fee (or 500'd). The fee is the check's own
-# charge_amount, booked to the admin's RM Delivery Charges account; the address
-# is free text on the check; and both ticket payloads carry them to the kitchen.
-# Every section guards itself: a rebake must re-apply whatever is still missing.
 ORDER = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py"
 OBJ = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py"
 JS = "apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js"
@@ -16,9 +11,6 @@ def replace_once(src, old, new, what):
 
 
 # ---- server: the fee on the bill, the typed address, the dispatched ticket ----
-# The helper lives at the TOP of the module: the build strips and re-appends the
-# blocks at the end of this file every bake, and anything appended after them
-# is cut too — a helper appended at the end vanished on the first rebake.
 src = open(ORDER).read()
 if "def _rm_delivery_fee" not in src:
     src = replace_once(src, 'status_attending = "Attending"\n', '''status_attending = "Attending"

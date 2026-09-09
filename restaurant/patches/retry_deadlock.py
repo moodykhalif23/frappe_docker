@@ -1,7 +1,4 @@
 # Every pad and board action funnels through api.call, and MariaDB aborts one of
-# two conflicting writes with a deadlock. The floor saw "Deadlock Occurred" and,
-# worse, silently kept the item queued: the cart showed a dish the check never
-# saved, so Order stayed greyed and the dish could not be sent.
 P = "apps/restaurant_management/restaurant_management/api.py"
 
 src = open(P).read()

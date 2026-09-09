@@ -1,5 +1,4 @@
 // Why does the SECOND party seated on a table get an empty check? Watches the
-// pad state, the picker dialog and every server reply as it happens.
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE || 'http://pos.localhost:8080';

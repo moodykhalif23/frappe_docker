@@ -119,7 +119,6 @@ const before = await totalText();
 const newOrder = page.locator('.order-manage .btn-app.btn-order').first();
 ok('new-order button present', await newOrder.count() > 0);
 // the + no longer opens an anonymous check: it is a door into Seat guest for this
-// table (the PIN was tapped moments ago, so it goes straight to the seat dialog)
 await newOrder.click({ force: true });
 await page.waitForTimeout(3500);
 const seatAnother = page.locator('.modal.show').filter({ hasText: /Seat another party/ }).last();
@@ -145,7 +144,6 @@ const chips = page.locator('.order-manage .btn-app.btn-order');
 const chipCount = await chips.count();
 ok('an order appears in the rail', chipCount > 1, `${chipCount - 1} order(s)`);
 // Select the order. Playwright refuses the chip as "not visible", so dispatch
-// the click directly — the app binds a plain click handler to it.
 if (chipCount > 1) {
   await page.evaluate(() => {
     const c = document.querySelectorAll('.order-manage .btn-app.btn-order');
@@ -184,7 +182,6 @@ if (await orderBtn.count()) {
 await page.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded', timeout: 60000 });
 await page.waitForTimeout(10000);
 // A table with a party on it badges each party; an empty one badges the section.
-// The party badges are painted from a server call, so wait for them.
 const badge = page.locator('.d-waiter-badge, .rm-party').first();
 await badge.waitFor({ state: 'attached', timeout: 20000 }).catch(() => {});
 const badges = await page.locator('.d-waiter-badge, .rm-party').count();

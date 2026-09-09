@@ -1,5 +1,4 @@
 // Kept as a regression probe: a body drag must move the tile from an unselected start and from a selected one.
-// Drag a tile's BODY on the live floor (as the manager), then drag it back.
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'https://frappe.ikobriq.com', ROOM = process.env.ROOM || 'R 2', TABLE = process.env.TABLE || 'T-267';
 const b = await chromium.launch();

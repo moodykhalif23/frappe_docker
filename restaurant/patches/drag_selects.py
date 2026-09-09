@@ -1,7 +1,4 @@
 # In edit mode a drag on an UNSELECTED tile did nothing: initDrag bailed out,
-# the mouse-up then selected the tile, and only a second drag moved or resized
-# it. Because a click on a selected tile deselects it again, the floor editor
-# felt like it "worked once and then stopped". A drag now selects as it starts.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js"
 
 src = open(P).read()

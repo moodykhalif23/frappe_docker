@@ -1,7 +1,4 @@
 # The pad's boot call returns one item-group entry per menu row, undeduplicated,
-# and the client sends that whole list back as a GET filter. At 170 dishes the
-# request line exceeds nginx's 4094-byte limit and the items panel 400s, so a
-# real menu breaks the pad while a small demo one does not.
 P = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_settings/restaurant_settings.py"
 
 src = open(P).read()

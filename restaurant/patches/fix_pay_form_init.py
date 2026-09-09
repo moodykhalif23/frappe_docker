@@ -1,6 +1,4 @@
 # The pay form threw before it could render: make() -> set_values() -> set_value()
-# -> set_total_payment() reads this.actions, which make() only creates afterwards.
-# Checkout was impossible — "Cannot read properties of undefined (reading 'pay')".
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js"
 
 src = open(P).read()

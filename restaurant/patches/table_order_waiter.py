@@ -8,7 +8,6 @@
 
     def _stamp_waiter(self):
         # Service details follow the party, not the table: two waiters can share
-        # a six-top and each keeps the covers they served.
         party = self._party()
 
         if not self.get("waiter"):

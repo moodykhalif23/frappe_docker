@@ -1,6 +1,4 @@
 # Sale -> recipe -> issue, proven with real quantities on real stock.
-#
-#   exec(open(".../stock_test.py").read(), globals()); run()
 
 import frappe
 
@@ -14,7 +12,6 @@ PLAIN = "ZZ Test Uncosted Dish"
 
 def _cleanup():
     # Order matters: a closing entry will not cancel while a shift is open, and
-    # a banked invoice will not cancel while its closing entry stands.
     for op in frappe.get_all("POS Opening Entry", filters={"status": "Open", "docstatus": 1}, pluck="name"):
         frappe.db.set_value("POS Opening Entry", op, "status", "Closed", update_modified=False)
     frappe.db.commit()
@@ -35,8 +32,6 @@ def _cleanup():
             d.cancel()
         frappe.delete_doc("POS Invoice", inum, force=1, ignore_permissions=True)
     # Found by the items they move, not by remarks: the back-flush entry names the
-    # sale, not the test. Newest first, or cancelling a receipt before the issues
-    # it backed leaves them unbacked and the ledger refuses.
     touched = [r.parent for r in frappe.get_all(
         "Stock Entry Detail", filters={"item_code": ["like", "ZZ Test%"]},
         fields=["parent"], group_by="parent")]

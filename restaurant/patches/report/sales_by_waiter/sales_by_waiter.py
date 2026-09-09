@@ -1,5 +1,4 @@
 # Who sold what. Sales and checks come off the invoice; covers and tables off the
-# orders, because the invoice has no idea how many people sat down.
 
 import frappe
 from frappe.utils import flt

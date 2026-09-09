@@ -1,5 +1,4 @@
 // A resize while another save is in flight (window.saving held 1.5 s) must act at once
-// and be saved as soon as the flag clears — never dropped. Kept as a regression probe.
 import { chromium } from 'playwright';
 const BASE = 'http://pos.localhost:8080', TABLE = 'Table 10';
 const b = await chromium.launch();

@@ -1,5 +1,4 @@
 // Screenshots for docs/etham-manual.html. Stages a realistic floor first, so the
-// pictures show a working service rather than an empty demo.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
 

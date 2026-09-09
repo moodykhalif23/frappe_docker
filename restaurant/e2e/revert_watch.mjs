@@ -1,5 +1,4 @@
 // Resize a live tile, then watch its size every second for 20 s and log every
-// realtime event addressed to the tile or its room — with the data_style it carries.
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'https://frappe.ikobriq.com', ROOM = process.env.ROOM || 'Main Hall', TABLE = process.env.TABLE || 'Table 11';
 const b = await chromium.launch();

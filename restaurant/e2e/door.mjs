@@ -1,5 +1,4 @@
 // The door in a real browser: the panel opens, a party joins the queue, and
-// seating them lands on that table's pad. Writes real records — demo sites only.
 import { chromium } from 'playwright';
 import { mkdirSync } from 'fs';
 

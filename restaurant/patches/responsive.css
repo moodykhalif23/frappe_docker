@@ -1,7 +1,5 @@
 
-/* rm-responsive: tablet is the POS surface, phone is the handheld, desktop is the
-   manager view. These live in the page stylesheet, which is delivered with the
-   page, so a redeploy is never held stale by the browser's /assets cache. */
+/* rm-responsive: tablet is the POS surface, phone is the handheld, desktop is the manager view. These. */
 
 /* Fingers, not mice — and a narrow window is used with fingers too. */
 @media (pointer: coarse), (max-width: 640px) {
@@ -19,8 +17,7 @@
   }
 }
 
-/* Tablet and down: the cart is pinned to 450px in order-items-container.css,
-   which is wider than a phone and forces the pad sideways. */
+/* Tablet and down: the cart is pinned to 450px in order-items-container.css, which is wider than a. */
 @media (max-width: 1024px) {
   .container-order-items {
     width: 100% !important;
@@ -31,8 +28,7 @@
     overflow-x: hidden;
     overflow-y: auto;
   }
-  /* height: calc(100% - 334px) goes negative on a short screen and the cart
-     disappears entirely; bound it instead. */
+  /* height: calc(100% - 334px) goes negative on a short screen and the cart disappears entirely; bound. */
   .container-order-items .panel-order-items {
     height: auto !important;
     min-height: 150px;

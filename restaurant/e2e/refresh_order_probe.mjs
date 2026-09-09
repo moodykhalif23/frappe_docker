@@ -1,5 +1,4 @@
 // Two overlapping occupancy refreshes: the one that gets overtaken must still
-// resolve to the fresh map, never to the old one. 
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'http://pos.localhost:8080', TABLE = process.env.TABLE || 'Table 9';
 const b = await chromium.launch(); const p = await (await b.newContext({ viewport: { width: 1400, height: 900 } })).newPage();
@@ -8,8 +7,20 @@ await p.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
 await p.fill('#login_email', 'cashier@etham.co.ke'); await p.fill('#login_password', 'Cashier@2026'); await p.click('button.btn-login');
 await p.waitForURL(/\/app|\/desk/, { timeout: 60000 }).catch(() => {});
 await p.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(12000);
+// Running late in the sequence, this probe cannot assume the counter is open.
+const counter = await p.evaluate(async () => {
+  try {
+    let s = (await frappe.call('restaurant_management.house.house_shift', {})).message;
+    if (!s) {
+      await frappe.call('restaurant_management.house.open_day', { balances: JSON.stringify({ Cash: 5000 }) });
+      s = (await frappe.call('restaurant_management.house.house_shift', {})).message;
+    }
+    return { open: !!s };
+  } catch (e) { return { error: String((e && (e.message || e.exc_type)) || JSON.stringify(e)).slice(0, 200) }; }
+});
+ok('the counter is open for this probe', counter.open === true, counter.error || JSON.stringify(counter));
+if (!counter.open) { console.log(`RESULT ${report.filter(Boolean).length}/${report.length}`); await b.close(); process.exit(1); }
 // Take a table that is free right now: the map is keyed by table name, and a
-// hardcoded one is usually occupied by the time this runs in the full sequence.
 const pick = await p.evaluate(async (want) => {
   try {
     const free = ((await frappe.call('restaurant_management.house.free_tables', {})).message || [])

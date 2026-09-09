@@ -1,5 +1,4 @@
 // Resize a tile on a live floor by its corner handle, then by an edge handle,
-// then put the size back. Reads the tile and the saved data_style each time.
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'https://frappe.ikobriq.com', ROOM = process.env.ROOM || 'Upstairs', TABLE = process.env.TABLE || 'Table 11';
 const b = await chromium.launch();

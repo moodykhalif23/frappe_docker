@@ -1,5 +1,4 @@
 # frappe.get_abbr walks word initials, so "Cappuccino (Double)" abbreviated to
-# "C(" — a bracket as a product badge. Words that start with a letter only.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js"
 
 src = open(P).read()

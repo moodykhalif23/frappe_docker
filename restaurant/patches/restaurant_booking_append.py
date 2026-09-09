@@ -1,7 +1,6 @@
 
 	def _ensure_walkin_customer(self):
 		# v16 validates links before any doc hook fires, so insert()/save() are
-		# overridden to first turn a typed walk-in name into a real Customer.
 		if self.customer and not frappe.db.exists("Customer", self.customer):
 			customer = frappe.new_doc("Customer")
 			customer.customer_name = self.customer

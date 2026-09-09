@@ -1,5 +1,4 @@
 # Rooms and tables were named by random hash ("ocmhhmuk15"), with the readable
-# label hidden in `description` — which the doctype already declares unique.
 import json
 
 DT = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.json"

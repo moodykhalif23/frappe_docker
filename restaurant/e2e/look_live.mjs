@@ -1,5 +1,4 @@
 // Read-only look check on a live site's Menu Management: 6px corners, photo flush
-// with the card edges, no control overflowing its card, page ends at the last card.
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'https://frappe.ikobriq.com';
 const b = await chromium.launch();

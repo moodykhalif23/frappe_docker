@@ -1,7 +1,4 @@
 # Deleting a waiter poisons the books: their name stays on every check and
-# invoice as a Link, and consolidation at close re-saves each invoice, so link
-# validation fails and the day can never be banked. Staff who leave are
-# deactivated, never deleted — now the system holds that line itself.
 P = ("apps/restaurant_management/restaurant_management/restaurant_management/"
      "doctype/restaurant_waiter/restaurant_waiter.py")
 

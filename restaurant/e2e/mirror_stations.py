@@ -1,7 +1,4 @@
 # Mirror the live station accounts, waiters and a second room onto a test site,
-# so the multi-user drill runs here instead of in a client's books.
-#
-#   exec(open(".../mirror_stations.py").read(), globals()); run()
 
 import frappe
 

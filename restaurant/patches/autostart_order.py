@@ -1,5 +1,4 @@
 # First tap on a dish opens the check. Without this, add_item_in_order() runs its
-# `if (current_order != null)` guard, falls through and does nothing at all.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js"
 
 src = open(P).read()

@@ -1,6 +1,4 @@
 # The Restaurant workspace shipped shortcuts for menus and settings but none for
-# the reports or the waiter list, so the only way to reach them was to know their
-# names and type them into search.
 import json
 
 P = ("apps/restaurant_management/restaurant_management/restaurant_management"
@@ -44,8 +42,6 @@ for w in WANTED:
 if added:
     doc["content"] = json.dumps(content)
 # frappe re-imports a workspace only when the file is newer than the stored row:
-# stamp every bake, or a shortcut added on an earlier bake never reaches a site
-# that already holds the old stamp (five were missing on live for this)
 import datetime
 doc["modified"] = datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.000000")
 json.dump(doc, open(P, "w"), indent=1, sort_keys=True)

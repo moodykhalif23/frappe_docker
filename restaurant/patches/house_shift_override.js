@@ -1,20 +1,17 @@
 
 // One house shift: erpnext bills against the newest open POS Opening Entry per
-// profile, so the stock per-user lookup stranded every other waiter.
 window.RM_house_shift = function (pos, pos_profile) {
   const profile = pos_profile || (window.RM && RM.pos_profile && RM.pos_profile.name);
   return new Promise(resolve => {
     frappe.call("restaurant_management.house.house_shift", { pos_profile: profile }).then(({ message }) => {
       if (!message) {
         // Opening the drawer is a manager's act with a counted float, so the
-        // first waiter to ring a dish is told, not handed the opening dialog.
         frappe.msgprint({
           title: __("The counter is closed"),
           indicator: "red",
           message: __("A manager opens the day from the floor, with the float counted into the drawer. Nothing can be billed until then."),
         });
         // The pad still has to be set up, or its menu never loads and the floor
-        // looks broken. Billing stays refused: there is no opening entry to bill into.
         return frappe.call("restaurant_management.house.opening_floats", { pos_profile: profile })
           .then(({ message: floats }) => {
             if (floats) {

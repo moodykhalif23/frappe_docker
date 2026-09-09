@@ -1,7 +1,4 @@
 // Two screens. B seats a party, changes the table's seat count, then releases
-// it; A watches the tile. Each change must reach A within 2.5 s and, once
-// there, never revert to the older value. Test site only — it seats and releases.
-//   BASE=http://pos.localhost:8080 node propagation_probe.mjs
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'http://pos.localhost:8080', TABLE = process.env.TABLE || 'Table 9';
 const b = await chromium.launch();
@@ -15,8 +12,6 @@ const tile = (p) => p.evaluate((t) => { const el = Array.from(document.querySele
 const sample = async (secs) => { const out = []; const t0 = Date.now(); let last = null; while (Date.now() - t0 < secs * 1000) { const t = JSON.stringify(await tile(A)); if (t !== last) { out.push([Date.now() - t0, t]); last = t; } await A.waitForTimeout(150); } return out; };
 const settle = (seq, pred, within = 2500) => { const hit = seq.find(([, s]) => pred(JSON.parse(s))); if (!hit) return { ok: false, why: 'never reached' }; const after = seq.filter(([ms]) => ms > hit[0]); const reverted = after.some(([, s]) => !pred(JSON.parse(s))); return { ok: hit[0] <= within && !reverted, why: `reached at ${hit[0]}ms${reverted ? ', then reverted' : ''}` }; };
 // Take a table that is free right now rather than a hardcoded one: by the time
-// this runs in the full sequence, Table 9 is usually occupied and every
-// assertion then reads null against a tile that is not on the page.
 const pick = await B.evaluate(async (want) => {
   try {
     const free = ((await frappe.call('restaurant_management.house.free_tables', {})).message || [])

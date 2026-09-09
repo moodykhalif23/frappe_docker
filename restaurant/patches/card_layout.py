@@ -1,7 +1,4 @@
 # Photo-first menu card: picture on top, the name, then the price at the left
-# and a "- n +" pill at the right where n is what is already on the check.
-# "+" stays the app's own add-item control (one tap adds one), "-" takes one off
-# the check the way the cart's trash does, so no new server semantics appear.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js"
 
 src = open(P).read()

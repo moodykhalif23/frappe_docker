@@ -1,5 +1,4 @@
 // The money path: seat a party, ring a dish, take payment, and prove the table
-// came back free with a turn recorded against it. Writes real records.
 import { chromium } from 'playwright';
 // the floor demands a signed-in waiter before seating; answer the PIN pad
 const answerGate = async (pg, dlg) => {
@@ -31,7 +30,6 @@ const PASS = process.env.PASS || 'admin';
 const GUEST = process.env.GUEST || 'Checkout Test Party';
 
 // Submits a real POS Invoice that lands in the books — on a client's site that
-// is a fake sale, so a non-local target has to be asked for explicitly.
 if (!/^https?:\/\/(pos\.)?localhost/.test(BASE) && process.env.ALLOW_REAL_SALE !== '1') {
   console.error(`REFUSING: ${BASE} is not a local site and this test submits a real POS Invoice.`);
   console.error('Set ALLOW_REAL_SALE=1 only on a demo site, and cancel the invoice afterwards.');

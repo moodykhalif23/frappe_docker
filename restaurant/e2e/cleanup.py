@@ -1,7 +1,4 @@
 # Remove what the browser suites leave behind. Paid invoices are reported, never
-# cancelled — that is an accounting decision, not a test's.
-#
-#   exec(open(".../cleanup.py").read(), globals()); run()
 
 import frappe
 
@@ -20,7 +17,6 @@ def run():
 	for cust in customers:
 		invoices = frappe.get_all("POS Invoice", filters={"customer": cust, "docstatus": 1}, fields=["name"])
 		# An open Table Order keeps its table busy for good — deleting the booking
-		# alone leaves the floor a table short after every test run.
 		for o in frappe.get_all("Table Order", filters={"customer": cust},
 		                        fields=["name", "table", "docstatus", "status"]):
 			if o.status == "Invoiced":

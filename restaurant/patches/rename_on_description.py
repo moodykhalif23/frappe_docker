@@ -1,7 +1,4 @@
 # Rooms and tables are named by their description (clean_names.py). frappe's
-# _sync_autoname_field() then resets that field to the docname on every save, so
-# typing a new Description in "Update Table" was silently reverted while the
-# seat count saved. A changed description is a rename request: do the rename.
 P = ("apps/restaurant_management/restaurant_management/restaurant_management/"
      "doctype/restaurant_object/restaurant_object.py")
 

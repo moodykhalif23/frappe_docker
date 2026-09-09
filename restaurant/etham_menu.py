@@ -1,6 +1,4 @@
 # Etham Eatery food menu, Revision 1 (23 Aug 2026), transcribed from the printed
-# menu. Prices in KES. Coffee singles/doubles and juice small/big are separate
-# items because a POS sells them as separate buttons.
 
 VEG, NON_VEG = "Veg", "Non-Veg"
 

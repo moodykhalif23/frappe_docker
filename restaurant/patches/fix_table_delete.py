@@ -1,7 +1,4 @@
 # Deleting a table relied on _delete being a @property, because the app's
-# dispatcher returns getattr(doc, method) without calling it when no args are
-# passed. That is far too subtle: reading an attribute deleted a row. Make
-# _delete an ordinary method and have the caller pass args so it is invoked.
 P = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py"
 J = "apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js"
 

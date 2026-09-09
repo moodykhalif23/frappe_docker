@@ -1,6 +1,4 @@
 # How hard each table worked: parties served, covers, and how long they sat.
-# A turn is a booking with both a seating and a leaving stamp, so it only counts
-# once the check is paid.
 
 import frappe
 

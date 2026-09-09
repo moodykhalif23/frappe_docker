@@ -1,5 +1,4 @@
 # The room's Delete button was bound with DOUBLE_CLICK too: a single tap did
-# nothing and said nothing, which reads as "deleting rooms is broken".
 P = "apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js"
 
 src = open(P).read()

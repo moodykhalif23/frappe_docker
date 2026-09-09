@@ -1,5 +1,4 @@
 # The pad showed the receipt in a modal that embeds a PDF, and the embed never
-# laid out — the dialog opened with a title and nothing under it.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js"
 
 src = open(P).read()

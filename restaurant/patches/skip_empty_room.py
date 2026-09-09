@@ -1,5 +1,4 @@
 # The floor remembers the last room opened. If that room has no tables it looks
-# broken — the same panic an empty R 4 caused on the live floor.
 P = "apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js"
 
 src = open(P).read()

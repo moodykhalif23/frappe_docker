@@ -1,7 +1,4 @@
 # An M-Pesa payment landed as an amount and nothing else. make_invoice now takes
-# the codes the pay form sends, refuses an M-Pesa row without a well-formed one,
-# refuses a code that already paid another invoice, and stores it as the payment
-# row's reference_no — erpnext's own field, so every report can read it.
 P = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py"
 
 src = open(P).read()

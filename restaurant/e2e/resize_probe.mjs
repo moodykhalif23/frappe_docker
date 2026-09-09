@@ -1,5 +1,4 @@
 // Resize a tile by dragging its SE handle in edit mode; then use Update Table
-// and resize again — does the second resize still persist?
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'http://pos.localhost:8080', TABLE = process.env.TABLE || 'Table 10';
 const b = await chromium.launch();

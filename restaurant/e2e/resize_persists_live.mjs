@@ -1,6 +1,4 @@
 // On a live floor: resize a tile by its corner, HARD-RELOAD, read the tile and the
-// saved style, then put the size back. The complaint was "back to original after
-// a hard refresh" — this is that exact sequence.
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'https://frappe.ikobriq.com', ROOM = process.env.ROOM || 'Upstairs', TABLE = process.env.TABLE || 'Table 11';
 const b = await chromium.launch();

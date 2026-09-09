@@ -1,7 +1,4 @@
-// Paying by M-Pesa on the till: the code is asked for beside the amount, a
-// missing or malformed code is refused before anything is saved, a good one
-// pays and lands on the invoice's payment row as its reference.
-//   BASE=http://pos.localhost:8080 node mpesa_probe.mjs   (test site: bills a real invoice)
+// Paying by M-Pesa on the till: 
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'http://pos.localhost:8080', TABLE = process.env.TABLE || 'Table 9';
 const GUEST = 'Mpesa ' + Date.now().toString().slice(-4);

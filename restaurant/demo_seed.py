@@ -312,7 +312,6 @@ def seed():
         _ensure_customer(c)
 
     # Restaurant Booking/Table Order grant only the app's own roles — even a
-    # System Manager gets "Insufficient Permission" without these.
     staff = frappe.get_all("Has Role", filters={"role": "System Manager", "parenttype": "User"},
                            pluck="parent")
     for u in set(staff) - {"Administrator", "Guest"}:
@@ -334,7 +333,6 @@ def seed():
         prof.save(ignore_permissions=True)
 
     # the order pad's catalog comes from POS Profile.restaurant_menu — without
-    # this link the order screen shows an empty menu
     if not frappe.db.get_value("POS Profile", prof_name, "restaurant_menu"):
         frappe.db.set_value("POS Profile", prof_name, "restaurant_menu", menu_name)
 

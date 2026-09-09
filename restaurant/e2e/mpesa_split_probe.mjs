@@ -1,6 +1,4 @@
 // One bill, two M-Pesa transactions on the till: "+ another M-Pesa payment"
-// adds an amount and a code; the invoice carries two M-Pesa rows with both codes.
-//   BASE=http://pos.localhost:8080 node mpesa_split_probe.mjs   (test site: bills a real invoice)
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'http://pos.localhost:8080', TABLE = process.env.TABLE || 'Table 10';
 const GUEST = 'Split ' + Date.now().toString().slice(-4);
@@ -13,6 +11,19 @@ await p.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
 await p.fill('#login_email', 'cashier@etham.co.ke'); await p.fill('#login_password', 'Cashier@2026'); await p.click('button.btn-login');
 await p.waitForURL(/\/app|\/desk/, { timeout: 60000 }).catch(() => {});
 await p.goto(`${BASE}/app/restaurant-manage`, { waitUntil: 'domcontentloaded' }); await p.waitForTimeout(15000);
+// Running late in the sequence, this probe cannot assume the counter is open.
+const counter = await p.evaluate(async () => {
+  try {
+    let s = (await frappe.call('restaurant_management.house.house_shift', {})).message;
+    if (!s) {
+      await frappe.call('restaurant_management.house.open_day', { balances: JSON.stringify({ Cash: 5000 }) });
+      s = (await frappe.call('restaurant_management.house.house_shift', {})).message;
+    }
+    return { open: !!s };
+  } catch (e) { return { error: String((e && (e.message || e.exc_type)) || JSON.stringify(e)).slice(0, 200) }; }
+});
+ok('the counter is open for this probe', counter.open === true, counter.error || JSON.stringify(counter));
+if (!counter.open) { console.log(`RESULT ${report.filter(Boolean).length}/${report.length}`); await b.close(); process.exit(1); }
 await p.getByText('R 2', { exact: true }).first().click().catch(() => {}); await p.waitForTimeout(3000);
 await p.evaluate(() => localStorage.removeItem('rm_waiter_session'));
 await p.getByRole('button', { name: 'Seat guest' }).click(); await p.waitForTimeout(2500);

@@ -1,6 +1,4 @@
 # Splitting a check crashed twice over: divide() builds the moved item without
-# the customization fields update_item() reads with hard brackets, and the
-# raw-SQL update chokes on any non-string value, so a partial split died too.
 P = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py"
 
 src = open(P).read()

@@ -1,7 +1,4 @@
 # Opening a shared table's pad selected nothing: Complete answered "Not order
-# Selected" and only a dish-tap ever asked whose check it was. The pad now opens
-# on the check the waiter just created, selects a lone check itself, and only
-# asks when it genuinely cannot tell.
 P = "apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js"
 
 src = open(P).read()

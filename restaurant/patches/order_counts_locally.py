@@ -1,9 +1,4 @@
 # The Order button decides whether there is anything to send from
-# data.products_not_ordered — a count the SERVER computed when the check was
-# last fetched. On a freshly opened pad that is 0 until the next realtime sync,
-# so the button sits disabled and a double-click is a silent no-op. Seen on the
-# live site after every seating; never locally, where the sync wins the race.
-# Count the check's own lines instead.
 ORDER = "apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js"
 MANAGE = "apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js"
 

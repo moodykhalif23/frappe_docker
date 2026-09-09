@@ -1,5 +1,4 @@
 // Update Table must open with the record's numbers filled in, and a save that touches
-// nothing must keep them. Prints the fields, the posted payload and the record.
 import { chromium } from 'playwright';
 const BASE = 'http://pos.localhost:8080', TABLE = process.env.TABLE || 'Table 9', ROOM = process.env.ROOM || 'R 2';
 const b = await chromium.launch();

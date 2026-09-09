@@ -1,6 +1,4 @@
 # api.call() invokes whatever getattr returns. TableOrder.send is a @property —
-# getattr fires the dispatch and hands back data, which then gets *called*:
-# "'dict' object is not callable", seen on live under concurrent firing.
 P = "apps/restaurant_management/restaurant_management/api.py"
 
 src = open(P).read()

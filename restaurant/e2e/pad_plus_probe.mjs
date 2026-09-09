@@ -1,7 +1,4 @@
 // The pad's + is a door into the seating rule: it asks who is seating, opens
-// Seat guest locked to this table with the seats left, and the new party's
-// check appears in the pad — with its own waiter.
-//   BASE=http://pos.localhost:8080 node pad_plus_probe.mjs   (test site: seats parties)
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'http://pos.localhost:8080', TABLE = process.env.TABLE || 'Table 9';   // a six-seat table
 const G1 = 'Plus A ' + Date.now().toString().slice(-4), G2 = 'Plus B ' + Date.now().toString().slice(-4);

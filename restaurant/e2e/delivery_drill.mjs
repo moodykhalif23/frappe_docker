@@ -1,8 +1,4 @@
 // A delivery, end to end: a rider signs in by PIN, seats "the order" on a
-// Delivery slot with an address, fires it, the kitchen ticket shows where it
-// goes, the till completes it with the fee on the bill, and Sales by Waiter
-// credits the rider. Runs on a test site — it writes an invoice.
-//   BASE=http://pos.localhost:8080 node delivery_drill.mjs
 import { chromium } from 'playwright';
 
 const BASE = process.env.BASE || 'http://pos.localhost:8080';

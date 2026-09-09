@@ -1,5 +1,4 @@
 # Tables are named after their description now ("Table 1"), and the pad builds DOM
-# ids from that name — jQuery reads $("#items-container-Table 1") as two selectors.
 import re
 
 FILES = {

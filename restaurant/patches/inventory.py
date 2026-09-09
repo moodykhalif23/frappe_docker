@@ -1,5 +1,4 @@
 # What the kitchen actually burns: a sale, its recipe, and the stock that leaves.
-# COPY'd whole into the app, so a rebake always lands the current version.
 
 import frappe
 

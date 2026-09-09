@@ -1,7 +1,4 @@
 # desk_form.accept writes every field of the form onto the document, taking a
-# missing key as None. Save the Update Table dialog before its values have
-# loaded (a slow link, an eager tap) and the seat count is wiped to 0. When
-# updating an existing record, a field the client did not send stays as it is.
 P = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/desk_form/desk_form.py"
 
 src = open(P).read()

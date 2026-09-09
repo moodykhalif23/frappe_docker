@@ -1,5 +1,4 @@
 # A closed counter took new checks anyway: the pad's + button and every check
-# creation path run through Restaurant Object.add_order, which never asked.
 P = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py"
 
 src = open(P).read()

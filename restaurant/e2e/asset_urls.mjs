@@ -1,6 +1,4 @@
 // Every app script/style the floor loads, its version stamp and the CDN cache status.
-// Bare URLs (no ?v=) are the ones an edge cache serves stale after a deploy.
-// Which restaurant_management scripts/styles does the floor load, with or without a version stamp?
 import { chromium } from 'playwright';
 const BASE = process.env.BASE || 'https://frappe.ikobriq.com';
 const b = await chromium.launch();

@@ -1,6 +1,5 @@
 
 // Seats, not tables. A six-top with two guests on it has four seats to sell,
-// and each party on it keeps its own waiter.
 (() => {
   if (window.RM_seats) return;
 
@@ -23,7 +22,6 @@
   const CAN_BILL = CAPS.indexOf("POS Invoice") !== -1;
   const ROLES = frappe.user_roles || [];
   // Administrator holds every role, so a station role alone would strip its own
-  // floor bare. A real station is one that cannot bank the day.
   const IS_STATION = !CAN_BANK && frappe.session.user !== "Administrator";
   const IS_KITCHEN_STATION = IS_STATION && ROLES.indexOf("Kitchen Station") !== -1;
   const IS_WAITER_STATION = IS_STATION && ROLES.indexOf("Waiter Station") !== -1;
@@ -37,14 +35,12 @@
       if (this.mounted) return;
       this.mounted = true;
       // Release is rare and cashier-only, so it lives in the page menu: a sixth
-      // toolbar button pushes every one-tap control into an overflow dropdown.
       if (rm && rm.page && rm.page.add_menu_item && CAN_BANK) {
         rm.page.add_menu_item(__("Release a table"), () => RM_seats.release_dialog());
       }
       document.body.classList.toggle("rm-station-kitchen", IS_KITCHEN_STATION);
       document.body.classList.toggle("rm-station-waiter", IS_WAITER_STATION);
       // Editing the floor plan is a manager's job: without the permission the
-      // server refuses anyway, so do not offer the pencil at all.
       const CAN_EDIT_FLOOR = (CAPS.indexOf("Restaurant Object") !== -1);
       document.body.classList.toggle("rm-no-floor-edit", !CAN_EDIT_FLOOR);
       if (IS_KITCHEN_STATION) {
@@ -54,7 +50,6 @@
         setTimeout(hideFront, 1500);
         setTimeout(hideFront, 5000);
         // A kitchen screen hides tables, so a room of tables leaves it blank.
-        // Open where the boards actually are, whatever room that is.
         setTimeout(() => call("board_room").then((room) => {
           if (!room || !window.RM || !RM.objects || !RM.objects[room]) return;
           const cur = RM.current_room && RM.current_room.data;
@@ -78,9 +73,6 @@
       // a table freed anywhere (payment, release, close of day) repaints at once
       frappe.realtime.on("rm_table_freed", (d) => { RM_seats.invalidate(d && d.table); RM_seats.soon(100); });
       // A tile's own channel (its name) fires on any change to it — seats, size,
-      // name, release. Until fresh occupancy lands, that table must not be
-      // painted from the cached map: the repaint after the tile's re-render was
-      // putting the old seat count and old party badges back over fresh data.
       this.watch_tables();
 
       this.watch_floor();
@@ -88,7 +80,6 @@
     },
 
     // rm_reload_on_deploy: a tab opened before a redeploy runs the old scripts
-    // until someone reloads it; frappe only reloads for its own version.
     watch_build() {
       const mine = (() => {
         const s = Array.from(document.scripts).map(x => x.src).find(x => /restaurant-object-class\.js\?v=/.test(x));
@@ -136,8 +127,6 @@
 
     refresh() {
       // ordered: a slow, older response must never overwrite a newer one — and a
-      // caller whose request was overtaken gets the newer result, never the old
-      // map (the Release dialog once read "nothing held" off a stale map this way)
       const seq = (this.seq = (this.seq || 0) + 1);
       const mine = Promise.all([call("table_occupancy"), call("floor_waiters")]).then(([m, w]) => {
         if (seq !== RM_seats.seq) return RM_seats.inflight;
@@ -152,7 +141,6 @@
     },
 
     // Paying stacks bootstrap backdrops that outlive their dialog, leaving the
-    // floor dimmed and unclickable until a hard refresh.
     clear_orphan_backdrops() {
       const open = document.querySelectorAll(".modal.show").length;
       const backs = document.querySelectorAll(".modal-backdrop");
@@ -194,7 +182,6 @@
       if (this.stale && this.stale[name] && Date.now() - this.stale[name] < 5000) return;
 
       // Find the tile in the live document: a room re-render replaces the nodes
-      // the cached RestaurantObject still points at, so its JSHtml writes vanish.
       let el = null;
       $(".floor-map .d-table").each(function () {
         const label = $(this).find(".d-label").first().text().trim();
@@ -235,7 +222,6 @@
       existing.remove();
 
       // The section badge lives on live data, not the tile's first render — a
-      // released table must lose its initials without waiting for a reload.
       const holder = (this.holders || {})[name];
       let badge = el.find(".d-waiter-badge");
       if (!seats.parties.length && holder) {
@@ -302,7 +288,6 @@
       const orders = om.child_values || [];
       if (!orders.length) return false;
       // One question at a time, however many code paths ask it — but a dialog
-      // that got dismissed must not swallow every tap that follows.
       if (om.__picking) {
         if (om.__pick_dialog && om.__pick_dialog.$wrapper.is(":visible")) return true;
         om.__picking = false;

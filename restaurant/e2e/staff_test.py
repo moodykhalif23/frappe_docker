@@ -1,5 +1,4 @@
 # The floor's PIN pad as the shift clock: link a waiter to an Employee, sign in,
-# and the attendance record should be there. Requires hrms.
 
 import frappe
 from frappe.utils import add_days, today

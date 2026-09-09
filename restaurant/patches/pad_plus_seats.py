@@ -1,8 +1,4 @@
 # Two doors around the seating rule: the pad's + created another check on the
-# table with no party, no covers and no PIN, and a dish tapped with no check
-# selected did the same. Both now go through Seat guest, locked to this table.
-# A dish tapped while a party's checks have simply not loaded yet picks that
-# party's check instead of seating a new one.
 OM = "apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js"
 PI = "apps/restaurant_management/restaurant_management/public/restaurant/js/product-item-class.js"
 

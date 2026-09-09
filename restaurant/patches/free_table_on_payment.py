@@ -1,5 +1,4 @@
 # Paying the check left the booking Open, so the table only became free when its
-# two-hour window lapsed. Closing it here stamps the turn the report reads.
 P = "apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py"
 
 src = open(P).read()
@@ -16,7 +15,6 @@ ADD = """        frappe.db.set_value("Table Order", self.name, "docstatus", 1)
 """
 
 # An earlier bake freed every party on the table; on a shared table that evicted
-# the strangers sitting next to the one who paid.
 OLD_CALL = "free_table(self.table)"
 NEW_CALL = 'free_table(self.table, booking=self.get("booking"))'
 
