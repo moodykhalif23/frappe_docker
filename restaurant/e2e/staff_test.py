@@ -12,7 +12,9 @@ WAITER_PIN = "4917"
 def _cleanup():
 	for w in frappe.get_all("Restaurant Waiter", filters={"waiter_name": EMP_NAME}, fields=["name"]):
 		frappe.delete_doc("Restaurant Waiter", w.name, force=1, ignore_permissions=True)
-	for e in frappe.get_all("Employee", filters={"employee_name": EMP_NAME}, fields=["name"]):
+	# "Turn Waiter" is the legacy leak: frappe rebuilt employee_name from first+last name
+	for e in frappe.get_all("Employee", filters={"employee_name": ["in", [EMP_NAME, "Turn Waiter"]]},
+							fields=["name"]):
 		if house._has_hrms():
 			for c in frappe.get_all("Employee Checkin", filters={"employee": e.name}, fields=["name"]):
 				frappe.delete_doc("Employee Checkin", c.name, force=1, ignore_permissions=True)
@@ -26,8 +28,7 @@ def _make_employee():
 	doc = frappe.get_doc({
 		"doctype": "Employee",
 		"employee_name": EMP_NAME,
-		"first_name": "Turn",
-		"last_name": "Waiter",
+		"first_name": EMP_NAME,
 		"gender": frappe.db.get_value("Gender", {"name": "Female"}) or frappe.get_all("Gender", limit=1)[0].name,
 		"date_of_birth": add_days(today(), -365 * 25),
 		"date_of_joining": add_days(today(), -30),

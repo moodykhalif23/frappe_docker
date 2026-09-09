@@ -21,7 +21,9 @@ def ok(name, cond, detail=""):
 def _cleanup():
 	for w in frappe.get_all("Restaurant Waiter", filters={"waiter_name": EMP_NAME}, pluck="name"):
 		frappe.delete_doc("Restaurant Waiter", w, force=1, ignore_permissions=True)
-	for e in frappe.get_all("Employee", filters={"employee_name": EMP_NAME}, pluck="name"):
+	# "ZZ Probe" is the legacy leak: frappe rebuilt employee_name from first+last name
+	for e in frappe.get_all("Employee", filters={"employee_name": ["in", [EMP_NAME, "ZZ Probe"]]},
+							pluck="name"):
 		for c in frappe.get_all("Employee Checkin", filters={"employee": e}, pluck="name"):
 			frappe.delete_doc("Employee Checkin", c, force=1, ignore_permissions=True)
 		for a in frappe.get_all("Shift Assignment", filters={"employee": e}, pluck="name"):
@@ -44,7 +46,7 @@ def _fixture():
 	company = frappe.defaults.get_global_default("company") or frappe.get_all(
 		"Company", limit=1)[0].name
 	emp = frappe.get_doc({
-		"doctype": "Employee", "employee_name": EMP_NAME, "first_name": "ZZ", "last_name": "Probe",
+		"doctype": "Employee", "employee_name": EMP_NAME, "first_name": EMP_NAME,
 		"gender": frappe.get_all("Gender", limit=1)[0].name,
 		"date_of_birth": add_days(today(), -365 * 25), "date_of_joining": add_days(today(), -30),
 		"company": company, "designation": "Waiter", "status": "Active",
