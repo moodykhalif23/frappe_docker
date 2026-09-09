@@ -310,6 +310,12 @@ COPY restaurant/patches/order_counts_locally.py /tmp/order_counts_locally.py
 RUN python3 /tmp/order_counts_locally.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
+# money documents are voided by cancelling, never deleted; the series never rewinds
+COPY restaurant/patches/no_deleting_money.py /tmp/no_deleting_money.py
+RUN python3 /tmp/no_deleting_money.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/hooks.py').read())" \
+ && python3 -c "import ast; ast.parse(open('apps/frappe/frappe/model/naming.py').read())"
+
 # a dish joining the menu is sold as a recipe, never from stock
 COPY restaurant/patches/menu_hook.py /tmp/menu_hook.py
 RUN python3 /tmp/menu_hook.py \

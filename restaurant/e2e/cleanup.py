@@ -6,6 +6,7 @@ PATTERNS = ["%Test Party%", "%Test Queue%", "%Test Booking%", "%Test Waiter%", "
 
 
 def run():
+	frappe.flags.rm_test_teardown = True
 	removed = {"order": 0, "booking": 0, "customer": 0, "waiter": 0, "employee": 0, "checkin": 0}
 	kept = []
 

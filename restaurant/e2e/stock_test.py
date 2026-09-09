@@ -11,6 +11,7 @@ PLAIN = "ZZ Test Uncosted Dish"
 
 
 def _cleanup():
+    frappe.flags.rm_test_teardown = True
     # Order matters: a closing entry will not cancel while a shift is open, and
     for op in frappe.get_all("POS Opening Entry", filters={"status": "Open", "docstatus": 1}, pluck="name"):
         frappe.db.set_value("POS Opening Entry", op, "status", "Closed", update_modified=False)

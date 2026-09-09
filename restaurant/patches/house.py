@@ -281,6 +281,26 @@ def _ensure_readable_merge_log_names():
 						 for_doctype=True, validate_fields_for_doctype=False)
 
 
+def refuse_delete(doc, method=None):
+	"""Cancel voids a document and leaves the record; delete erases it."""
+	# Only the e2e teardowns set this, and only to clear their own ZZ Test data
+	if frappe.flags.get("rm_test_teardown"):
+		return
+	if doc.doctype in ("POS Invoice", "Sales Invoice", "POS Closing Entry"):
+		frappe.throw(frappe._(
+			"A {0} cannot be deleted — cancel it instead. Deleting erases the sale and"
+			" re-issues its number to the next bill, which no audit can follow.").format(
+			frappe._(doc.doctype)))
+	if doc.doctype == "Table Order":
+		# Unsent lines are a scratchpad; a fired line is food the kitchen cooked
+		fired = frappe.db.count("Order Entry Item", {"parent": doc.name, "qty": [">", 0],
+													 "status": ["not in", ["Pending", "Attending"]]})
+		if fired:
+			frappe.throw(frappe._(
+				"This check has {0} item(s) already sent to the kitchen. Use Release on the floor,"
+				" which voids it and keeps the record — deleting hides food that was cooked.").format(fired))
+
+
 def menu_sells_without_stock(menu=None):
 	"""A dish on the menu is sold as a recipe, never from stock: the Item form's
 	default (Maintain Stock on) makes the till refuse it with nothing in the
@@ -311,6 +331,33 @@ def menu_sells_without_stock_hook(doc, method=None):
 		menu_sells_without_stock(doc.name)
 	except Exception:
 		frappe.log_error(title="menu sells without stock")
+
+
+def _record_counted_drawer(closing, counted):
+	"""Write what was actually in the drawer, so the difference means something."""
+	if isinstance(counted, str):
+		counted = frappe.parse_json(counted or "{}")
+	counted = {str(k): frappe.utils.flt(v) for k, v in (counted or {}).items()}
+	for row in closing.get("payment_reconciliation") or []:
+		if row.mode_of_payment in counted:
+			row.closing_amount = counted[row.mode_of_payment]
+		row.difference = frappe.utils.flt(row.closing_amount) - frappe.utils.flt(row.expected_amount)
+
+
+@frappe.whitelist()
+def day_float(pos_profile=None):
+	"""What the till should hold per mode, for the close dialog to ask against."""
+	shift = _open_shift_doc(pos_profile)
+	if not shift:
+		return []
+	from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import (
+		make_closing_entry_from_opening,
+	)
+	draft = make_closing_entry_from_opening(shift)
+	return [{"mode_of_payment": r.mode_of_payment,
+			 "expected": frappe.utils.flt(r.expected_amount),
+			 "opening": frappe.utils.flt(r.opening_amount)}
+			for r in draft.get("payment_reconciliation") or []]
 
 
 @frappe.whitelist()
@@ -1047,10 +1094,11 @@ def release_table(table):
 
     for o in frappe.get_all("Table Order", filters={"table": table, "status": OPEN_ORDER_STATES},
                             fields=["name", "docstatus"]):
-        doc = frappe.get_doc("Table Order", o.name)
-        if doc.docstatus == 1:
-            doc.cancel()
-        frappe.delete_doc("Table Order", o.name, force=1, ignore_permissions=True)
+        if o.docstatus == 1:
+            frappe.get_doc("Table Order", o.name).cancel()
+        # Cancelled, never deleted: show_in_pos takes it off the floor and the food
+        frappe.db.set_value("Table Order", o.name, {"status": "Cancelled", "show_in_pos": 0},
+                            update_modified=False)
         closed_orders.append(o.name)
 
     now = frappe.utils.now_datetime()
@@ -1147,7 +1195,7 @@ def _heal_waiter_links():
 
 
 @frappe.whitelist()
-def close_day(pos_profile=None, force=0):
+def close_day(pos_profile=None, force=0, counted=None):
     """Close the selling day: bank the shift so tomorrow can open a fresh one.
 
     Refuses while checks are still open unless told otherwise — those tables
@@ -1173,6 +1221,7 @@ def close_day(pos_profile=None, force=0):
     _heal_series("POS Closing Entry", "POS-CLO%")
     healed = _heal_waiter_links()
     closing = make_closing_entry_from_opening(shift)
+    _record_counted_drawer(closing, counted)
     closing.posting_date = frappe.utils.today()
     closing.posting_time = frappe.utils.nowtime()
     closing.period_end_date = frappe.utils.now_datetime()
@@ -1196,8 +1245,13 @@ def close_day(pos_profile=None, force=0):
                                                              fields=["name", "description"])}
     open_detail = [{"order": o.name, "table": tables.get(o.table, o.table), "customer": o.customer or "",
                     "amount": frappe.utils.flt(o.amount)} for o in left]
+    variance = [{"mode_of_payment": r.mode_of_payment,
+                 "expected": frappe.utils.flt(r.expected_amount),
+                 "counted": frappe.utils.flt(r.closing_amount),
+                 "difference": frappe.utils.flt(r.difference)}
+                for r in closing.get("payment_reconciliation") or []]
     return {"closed": closing.name, "shift": shift.name, "waiters_restored": healed,
-            "open_checks_detail": open_detail,
+            "open_checks_detail": open_detail, "variance": variance,
             "invoices": summary["invoices"], "sales": summary["sales"],
             "open_checks_left": summary["open_checks"],
             "parties_closed": len(swept["parties_closed"]),

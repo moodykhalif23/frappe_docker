@@ -5,9 +5,41 @@
   const call = (m, args) => frappe.call("restaurant_management.house." + m, args || {}).then(r => r.message);
   const money = (n, c) => `${c || ""} ${frappe.format(n || 0, { fieldtype: "Float", precision: 2 })}`.trim();
 
+  // Ask what is actually in the drawer before banking, or the closing entry
+  const countDrawer = (profile) => call("day_float", { pos_profile: profile || "" }).then((rows) => {
+    if (!rows || !rows.length) return {};
+    return new Promise((resolve) => {
+      const d = new frappe.ui.Dialog({
+        title: __("Count the drawer"),
+        fields: [{ fieldtype: "HTML", options:
+          `<p class="text-muted small">${__("Type what you actually counted. The difference is recorded on the closing entry.")}</p>` }]
+          .concat(rows.map(r => ({
+            fieldname: "m_" + frappe.scrub(r.mode_of_payment), fieldtype: "Currency",
+            label: __("{0} — expected {1}", [r.mode_of_payment, format_currency(r.expected)]),
+            default: r.expected,
+          }))),
+        primary_action_label: __("Bank it"),
+        primary_action: (v) => {
+          d.hide();
+          const counted = {};
+          rows.forEach(r => { counted[r.mode_of_payment] = flt(v["m_" + frappe.scrub(r.mode_of_payment)]); });
+          resolve(counted);
+        },
+        secondary_action_label: __("Cancel"),
+        secondary_action: () => { d.hide(); resolve(null); },
+      });
+      d.show();
+    });
+  });
+
   const doClose = (profile, force) =>
-    call("close_day", { pos_profile: profile || "", force: force ? 1 : 0 })
+    countDrawer(profile).then((counted) => {
+      if (counted === null) return null;
+      return call("close_day", { pos_profile: profile || "", force: force ? 1 : 0,
+                                 counted: JSON.stringify(counted) });
+    })
       .then((res) => {
+        if (res === null) return;
         if (!res || !res.closed) {
           frappe.show_alert({ message: __("The counter was already closed"), indicator: "blue" });
           return;
@@ -17,11 +49,16 @@
         const standing = left.length ? "<br><br>" + __("{0} unpaid check(s) still open:", [left.length]) + "<ul style='margin:6px 0 0 18px'>" +
           left.map(c => `<li><b>${frappe.utils.escape_html(c.table)}</b> · ${frappe.utils.escape_html(c.customer || __("no guest name"))} · ${format_currency(c.amount)}</li>`).join("") +
           "</ul>" + __("Settle each one, or Release the table to void it.") : "";
+        // a drawer that does not match what was rung is the whole point of counting it
+        const off = (res.variance || []).filter(v => Math.abs(v.difference) > 0.005);
+        const cash = off.length ? "<br><br>" + __("Counted against expected:") + "<ul style='margin:6px 0 0 18px'>" +
+          off.map(v => `<li><b>${frappe.utils.escape_html(v.mode_of_payment)}</b> · ${__("expected")} ${format_currency(v.expected)} · ${__("counted")} ${format_currency(v.counted)} · <b>${v.difference > 0 ? __("over") : __("short")} ${format_currency(Math.abs(v.difference))}</b></li>`).join("") +
+          "</ul>" : "";
         frappe.msgprint({
           title: __("Day closed"),
-          indicator: left.length ? "orange" : "green",
+          indicator: (left.length || off.length) ? "orange" : "green",
           message: __("{0} banked {1} sale(s). {2} table section(s) released. Open the day again when you next serve.",
-            [res.closed, res.invoices, res.sections_cleared]) + standing,
+            [res.closed, res.invoices, res.sections_cleared]) + cash + standing,
         });
         RM_close_day.badge();
         window.RM_seats && RM_seats.refresh();
