@@ -316,6 +316,11 @@ RUN python3 /tmp/no_deleting_money.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/hooks.py').read())" \
  && python3 -c "import ast; ast.parse(open('apps/frappe/frappe/model/naming.py').read())"
 
+# a waiter sign-in is not refused for a geofence that was never assigned
+COPY restaurant/patches/checkin_geofence_order.py /tmp/checkin_geofence_order.py
+RUN python3 /tmp/checkin_geofence_order.py \
+ && python3 -c "import ast; ast.parse(open('apps/hrms/hrms/hr/doctype/employee_checkin/employee_checkin.py').read())"
+
 # a dish joining the menu is sold as a recipe, never from stock
 COPY restaurant/patches/menu_hook.py /tmp/menu_hook.py
 RUN python3 /tmp/menu_hook.py \
