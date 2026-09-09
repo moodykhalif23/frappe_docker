@@ -68,6 +68,7 @@ browser_suite "checkout and the turn" checkout.mjs
 browser_suite "changes reach the other screen" propagation_probe.mjs
 browser_suite "one bill, two M-Pesa transactions" mpesa_split_probe.mjs
 browser_suite "an overtaken refresh still returns fresh" refresh_order_probe.mjs
+browser_suite "closing the day counts the drawer" drawer_count_probe.mjs
 
 echo
 echo "================ verdict ================"
