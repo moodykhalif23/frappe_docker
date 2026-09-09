@@ -16,18 +16,33 @@ for _dt in ("POS Invoice", "Sales Invoice", "POS Closing Entry", "Table Order"):
 
 N = "apps/frappe/frappe/model/naming.py"
 nsrc = open(N).read()
-if "rm_series_never_rewinds" in nsrc:
-    print("no deleting money: series guard already applied")
-    raise SystemExit
 
-OLD = "def revert_series_if_last(key, name, doc=None):"
-if OLD not in nsrc:
-    raise SystemExit("no deleting money: revert_series_if_last not found")
-NEW = '''def revert_series_if_last(key, name, doc=None):
+# The first bake put the guard above the docstring, which stopped being one
+STALE = '''def revert_series_if_last(key, name, doc=None):
 	# rm_series_never_rewinds: handing a deleted number back makes the series unauditable
 	for _p in ("ACC-PSINV-", "ACC-SINV-", "POS-CLO-", "OR-", "RES-BOOK-"):
 		if _p in str(key or "") or str(name or "").startswith(_p):
 			return
+
 '''
-open(N, "w").write(nsrc.replace(OLD, NEW, 1))
+if STALE in nsrc:
+    nsrc = nsrc.replace(STALE, "def revert_series_if_last(key, name, doc=None):\n", 1)
+    open(N, "w").write(nsrc)
+    print("no deleting money: lifted the earlier guard back out of the docstring")
+
+if "rm_series_never_rewinds" in nsrc:
+    print("no deleting money: series guard already applied")
+    raise SystemExit
+
+# Both call sites pass a naming series or an autoname, and each starts with its prefix
+GUARD = '''	# rm_series_never_rewinds: handing a deleted number back makes the series unauditable
+	for _p in ("ACC-PSINV-", "ACC-SINV-", "POS-CLO-", "OR-", "RES-BOOK-"):
+		if str(key or "").startswith(_p) or str(name or "").startswith(_p):
+			return
+
+'''
+ANCHOR = '\tif ".#" in key:'
+if nsrc.count(ANCHOR) != 1:
+    raise SystemExit("no deleting money: revert_series_if_last anchor is not unique")
+open(N, "w").write(nsrc.replace(ANCHOR, GUARD + ANCHOR, 1))
 print("no deleting money: the series no longer rewinds for money documents")
