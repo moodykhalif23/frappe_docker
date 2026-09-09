@@ -345,18 +345,22 @@ def _record_counted_drawer(closing, counted):
 	if isinstance(counted, str):
 		counted = frappe.parse_json(counted or "{}")
 	counted = {str(k): frappe.utils.flt(v) for k, v in (counted or {}).items()}
+	if not counted:
+		return
 	floats = _shift_floats(frappe.get_doc("POS Opening Entry", closing.pos_opening_entry))
 	rows = {r.mode_of_payment: r for r in closing.get("payment_reconciliation") or []}
 	# a mode with a float but no sales gets no row from erpnext, so nobody counts it
-	for mode in floats:
-		if mode not in rows:
+	for mode in counted:
+		if mode not in rows and mode in floats:
 			rows[mode] = closing.append("payment_reconciliation", {"mode_of_payment": mode})
 	for mode, row in rows.items():
+		# a mode nobody counted keeps erpnext's row: never assert an unmeasured shortfall
+		if mode not in counted:
+			continue
 		sales = frappe.utils.flt(row.expected_amount)
 		row.opening_amount = floats.get(mode, 0.0)
 		row.expected_amount = sales + row.opening_amount
-		if mode in counted:
-			row.closing_amount = counted[mode]
+		row.closing_amount = counted[mode]
 		row.difference = frappe.utils.flt(row.closing_amount) - frappe.utils.flt(row.expected_amount)
 
 

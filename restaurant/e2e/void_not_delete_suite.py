@@ -98,6 +98,24 @@ def run():
 	   and abs(frappe.utils.flt(row.expected_amount) - want["expected"]) < 0.01,
 	   "opening=%s expected=%s (float %s + sales %s)" % (row.opening_amount, row.expected_amount,
 														 want["opening"], want["sales"]))
+	# closed from an old tab or the desk, with nobody asked: the record must not invent one
+	for empty in (None, "", "{}", {}):
+		blank = make_closing_entry_from_opening(shift)
+		house._record_counted_drawer(blank, empty)
+		bad = [r.mode_of_payment for r in blank.get("payment_reconciliation") or []
+			   if abs(frappe.utils.flt(r.difference)) > 0.005]
+		ok("closing with no count (%r) asserts no shortfall it never measured" % (empty,), not bad,
+		   json.dumps(bad))
+
+	partial = make_closing_entry_from_opening(shift)
+	others = [r["mode_of_payment"] for r in floats if r["mode_of_payment"] != mode]
+	house._record_counted_drawer(partial, json.dumps({mode: want["expected"] - 40}))
+	rows = {r.mode_of_payment: r for r in partial.get("payment_reconciliation") or []}
+	ok("counting one mode leaves the modes nobody counted alone",
+	   abs(frappe.utils.flt(rows[mode].difference) + 40) < 0.01
+	   and all(abs(frappe.utils.flt(rows[m].difference)) < 0.005 for m in others if m in rows),
+	   json.dumps({m: frappe.utils.flt(r.difference) for m, r in rows.items()}))
+
 	import inspect
 	ok("close_day takes the counted drawer", "counted" in inspect.signature(house.close_day).parameters)
 
