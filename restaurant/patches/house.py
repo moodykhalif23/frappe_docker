@@ -333,14 +333,30 @@ def menu_sells_without_stock_hook(doc, method=None):
 		frappe.log_error(title="menu sells without stock")
 
 
+def _shift_floats(shift):
+	"""The float counted in at opening, per mode. erpnext leaves it at zero on the
+	closing entry, so a drawer holding float plus takings always read as an overage."""
+	return {r.mode_of_payment: frappe.utils.flt(r.opening_amount)
+			for r in (shift.get("balance_details") or [])}
+
+
 def _record_counted_drawer(closing, counted):
-	"""Write what was actually in the drawer, so the difference means something."""
+	"""Write what the drawer actually held, so the difference means something."""
 	if isinstance(counted, str):
 		counted = frappe.parse_json(counted or "{}")
 	counted = {str(k): frappe.utils.flt(v) for k, v in (counted or {}).items()}
-	for row in closing.get("payment_reconciliation") or []:
-		if row.mode_of_payment in counted:
-			row.closing_amount = counted[row.mode_of_payment]
+	floats = _shift_floats(frappe.get_doc("POS Opening Entry", closing.pos_opening_entry))
+	rows = {r.mode_of_payment: r for r in closing.get("payment_reconciliation") or []}
+	# a mode with a float but no sales gets no row from erpnext, so nobody counts it
+	for mode in floats:
+		if mode not in rows:
+			rows[mode] = closing.append("payment_reconciliation", {"mode_of_payment": mode})
+	for mode, row in rows.items():
+		sales = frappe.utils.flt(row.expected_amount)
+		row.opening_amount = floats.get(mode, 0.0)
+		row.expected_amount = sales + row.opening_amount
+		if mode in counted:
+			row.closing_amount = counted[mode]
 		row.difference = frappe.utils.flt(row.closing_amount) - frappe.utils.flt(row.expected_amount)
 
 
@@ -354,10 +370,12 @@ def day_float(pos_profile=None):
 		make_closing_entry_from_opening,
 	)
 	draft = make_closing_entry_from_opening(shift)
-	return [{"mode_of_payment": r.mode_of_payment,
-			 "expected": frappe.utils.flt(r.expected_amount),
-			 "opening": frappe.utils.flt(r.opening_amount)}
-			for r in draft.get("payment_reconciliation") or []]
+	sales = {r.mode_of_payment: frappe.utils.flt(r.expected_amount)
+			 for r in (draft.get("payment_reconciliation") or [])}
+	floats = _shift_floats(shift)
+	modes = list(floats) + [m for m in sales if m not in floats]
+	return [{"mode_of_payment": m, "opening": floats.get(m, 0.0), "sales": sales.get(m, 0.0),
+			 "expected": floats.get(m, 0.0) + sales.get(m, 0.0)} for m in modes]
 
 
 @frappe.whitelist()

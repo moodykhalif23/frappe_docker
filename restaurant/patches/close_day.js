@@ -16,6 +16,7 @@
           .concat(rows.map(r => ({
             fieldname: "m_" + frappe.scrub(r.mode_of_payment), fieldtype: "Currency",
             label: __("{0} — expected {1}", [r.mode_of_payment, format_currency(r.expected)]),
+            description: __("float {0} + sales {1}", [format_currency(r.opening), format_currency(r.sales)]),
             default: r.expected,
           }))),
         primary_action_label: __("Bank it"),

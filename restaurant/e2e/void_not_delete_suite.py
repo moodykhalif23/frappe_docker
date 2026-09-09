@@ -72,18 +72,32 @@ def run():
 		house.open_day(balances=json.dumps({"Cash": 5000}))
 		frappe.db.commit()
 
+	shift = house._open_shift_doc(None)
 	floats = house.day_float()
 	ok("the close dialog is told what the till should hold",
 	   bool(floats) and all("expected" in r and "mode_of_payment" in r for r in floats),
 	   json.dumps(floats)[:150])
+	ok("expected is the float counted in plus what was rung on that mode",
+	   all(abs(r["expected"] - (r["opening"] + r["sales"])) < 0.01 for r in floats),
+	   json.dumps(floats)[:150])
+	ok("every mode the float went into is asked about, sales or no sales",
+	   set(house._shift_floats(shift)) <= {r["mode_of_payment"] for r in floats},
+	   json.dumps(house._shift_floats(shift)))
+
 	from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import make_closing_entry_from_opening
-	draft = make_closing_entry_from_opening(house._open_shift_doc(None))
-	mode = floats[0]["mode_of_payment"]
-	house._record_counted_drawer(draft, json.dumps({mode: floats[0]["expected"] + 250}))
+	draft = make_closing_entry_from_opening(shift)
+	want = floats[0]
+	mode = want["mode_of_payment"]
+	house._record_counted_drawer(draft, json.dumps({mode: want["expected"] + 250}))
 	row = [r for r in draft.payment_reconciliation if r.mode_of_payment == mode][0]
 	ok("a drawer counted 250 over reads as 250 over, not as a nil difference",
-	   abs(row.difference - 250) < 0.01 and abs(row.closing_amount - (floats[0]["expected"] + 250)) < 0.01,
+	   abs(row.difference - 250) < 0.01 and abs(row.closing_amount - (want["expected"] + 250)) < 0.01,
 	   "closing=%s expected=%s difference=%s" % (row.closing_amount, row.expected_amount, row.difference))
+	ok("and the closing entry records the float instead of leaving it at zero",
+	   abs(frappe.utils.flt(row.opening_amount) - want["opening"]) < 0.01
+	   and abs(frappe.utils.flt(row.expected_amount) - want["expected"]) < 0.01,
+	   "opening=%s expected=%s (float %s + sales %s)" % (row.opening_amount, row.expected_amount,
+														 want["opening"], want["sales"]))
 	import inspect
 	ok("close_day takes the counted drawer", "counted" in inspect.signature(house.close_day).parameters)
 
