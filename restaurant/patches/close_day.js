@@ -13,8 +13,9 @@
         title: __("Count the drawer"),
         fields: [{ fieldtype: "HTML", options:
           `<p class="text-muted small">${__("Type what you actually counted. The difference is recorded on the closing entry.")}</p>` }]
-          .concat(rows.map(r => ({
-            fieldname: "m_" + frappe.scrub(r.mode_of_payment), fieldtype: "Currency",
+          // indexed, not scrubbed: frappe.scrub("M-Pesa") keeps the hyphen
+          .concat(rows.map((r, i) => ({
+            fieldname: `m_${i}`, fieldtype: "Currency",
             label: __("{0} — expected {1}", [r.mode_of_payment, format_currency(r.expected)]),
             description: __("float {0} + sales {1}", [format_currency(r.opening), format_currency(r.sales)]),
             default: r.expected,
@@ -23,7 +24,7 @@
         primary_action: (v) => {
           d.hide();
           const counted = {};
-          rows.forEach(r => { counted[r.mode_of_payment] = flt(v["m_" + frappe.scrub(r.mode_of_payment)]); });
+          rows.forEach((r, i) => { counted[r.mode_of_payment] = flt(v[`m_${i}`]); });
           resolve(counted);
         },
         secondary_action_label: __("Cancel"),
