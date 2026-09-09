@@ -79,10 +79,28 @@ ok('the closing entry records the count, not a nil difference',
 ok('with the float on the record instead of zero',
   banked.row && Math.abs(banked.row.opening_amount - counter.rows[0].opening) < 0.01, JSON.stringify(banked.row || {}));
 
+// With the day now shut, the open dialog is reachable: it must ask for cash only.
+await p.locator('.modal.show .modal-footer .btn-primary, .modal.show .btn-modal-close').first().click().catch(() => {});
+await p.waitForTimeout(1500);
+await p.evaluate(() => window.RM_close_day && RM_close_day.open_day());
+await p.waitForTimeout(4000);
+const od = p.locator('.modal.show').last();
+const asked = await od.locator('.frappe-control[data-fieldtype="Currency"] .control-label').allTextContents().catch(() => []);
+ok('opening the day asks for a float on cash only',
+  asked.length > 0 && asked.every(t => /cash/i.test(t)) && !asked.some(t => /pesa/i.test(t)),
+  JSON.stringify(asked));
+const note = (await od.locator('.modal-body').innerText().catch(() => '') || '').replace(/\s+/g, ' ');
+ok('and says which modes open at zero, so no till balance is typed in',
+  /holds no drawer float and opens at zero/i.test(note), note.slice(0, 180));
+await od.locator('.modal-footer .btn-primary').first().click().catch(() => {});
+await p.waitForTimeout(8000);
+
 // Leave the counter as we found it, or every suite after this one fails.
 const reopened = await p.evaluate(async () => {
   try {
-    await frappe.call('restaurant_management.house.open_day', { balances: JSON.stringify({ Cash: 5000 }) });
+    if (!(await frappe.call('restaurant_management.house.house_shift', {})).message) {
+      await frappe.call('restaurant_management.house.open_day', { balances: JSON.stringify({ Cash: 5000 }) });
+    }
     return !!(await frappe.call('restaurant_management.house.house_shift', {})).message;
   } catch (e) { return String((e && (e.message || e.exc_type)) || JSON.stringify(e)).slice(0, 200); }
 });

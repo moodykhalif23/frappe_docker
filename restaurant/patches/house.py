@@ -1643,11 +1643,17 @@ def opening_floats(pos_profile=None):
     if not profile:
         frappe.throw(frappe._("No POS Profile is set up"))
     prof = frappe.get_doc("POS Profile", profile)
+    modes = [p.mode_of_payment for p in prof.payments] or ["Cash"]
+    # only a drawer holds a float; an M-Pesa opening balance is a phone balance
+    cash = {m.name for m in frappe.get_all("Mode of Payment", filters={"type": "Cash"},
+                                           fields=["name"])}
+    drawer = [m for m in modes if m in cash] or modes
     return {
         "profile": prof.name,
         "company": prof.company,
         "currency": frappe.db.get_value("Company", prof.company, "default_currency"),
-        "modes": [p.mode_of_payment for p in prof.payments] or ["Cash"],
+        "modes": drawer,
+        "not_counted": [m for m in modes if m not in drawer],
     }
 
 

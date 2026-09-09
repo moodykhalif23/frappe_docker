@@ -115,7 +115,9 @@
             title: __("Open the selling day"),
             fields: [
               { fieldtype: "HTML", options: `<p class="text-muted small">${
-                __("Count the float into the drawer, then open. Nothing can be billed until you do.")}</p>` },
+                __("Count the float into the drawer, then open. Nothing can be billed until you do.")}${
+                (f.not_counted || []).length ? "<br>" + __("{0} holds no drawer float and opens at zero — do not enter a till balance here.",
+                  [f.not_counted.join(", ")]) : ""}</p>` },
             ].concat(f.modes.map((m, i) => ({
               fieldname: `mode_${i}`, fieldtype: "Currency", label: __("{0} float", [m]),
               default: 0, description: i === 0 ? __("Counted, not guessed") : "",

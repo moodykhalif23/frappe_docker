@@ -89,6 +89,10 @@ def run():
 	ok("a phone or bank balance is never counted as money in the drawer",
 	   all(abs(r["opening"]) < 0.005 for r in floats if r["mode_of_payment"] in not_cash),
 	   json.dumps([r for r in floats if r["mode_of_payment"] in not_cash]))
+	fl = house.opening_floats()
+	ok("opening the day only asks for a float on the modes a drawer holds",
+	   not (set(fl["modes"]) & not_cash) and set(fl["not_counted"]) <= not_cash,
+	   json.dumps({"asked": fl["modes"], "opens at zero": fl["not_counted"]}))
 
 	from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import make_closing_entry_from_opening
 	draft = make_closing_entry_from_opening(shift)
