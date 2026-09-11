@@ -318,6 +318,11 @@ RUN python3 /tmp/no_deleting_money.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/hooks.py').read())" \
  && python3 -c "import ast; ast.parse(open('apps/frappe/frappe/model/naming.py').read())"
 
+# tapping an empty table seats a party first: PIN, waiter, covers, then the check
+COPY restaurant/patches/tile_seats.py /tmp/tile_seats.py
+RUN python3 /tmp/tile_seats.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
+
 # a bill's payment method belongs on the invoice, not buried in a child table
 COPY restaurant/patches/payment_modes_field.py /tmp/payment_modes_field.py
 RUN python3 /tmp/payment_modes_field.py

@@ -65,6 +65,14 @@ def _guard_real_trading(closings, pos_names):
 	return bad
 
 
+def _open_shift_blocks():
+	"""erpnext refuses to cancel a closing entry while its profile still has an open
+	shift, so a purge started during service unwinds part of the chain and then stops,
+	leaving the ledger half-reversed. Checked before anything is written."""
+	return frappe.get_all("POS Opening Entry", filters={"status": "Open"},
+						  fields=["name", "pos_profile", "period_start_date"])
+
+
 def _cancel(doctype, name):
 	doc = frappe.get_doc(doctype, name)
 	if doc.docstatus == 1:
@@ -93,6 +101,17 @@ def run(dry=False, cutoff=None):
 		return
 
 	print("PLAN " + json.dumps(plan, default=str))
+
+	blocking = _open_shift_blocks()
+	if blocking:
+		print("COUNTER_OPEN " + json.dumps(blocking, default=str))
+		if not dry:
+			print("REFUSED — close the day first. erpnext will not cancel a closing entry while"
+				  " its profile has an open shift, and a purge that stops halfway leaves the"
+				  " ledger half-unwound. Nothing was touched.")
+			return
+		print("(the counter is open: close the day before running this for real)")
+
 	if dry:
 		print("DRY RUN — nothing changed")
 		return
