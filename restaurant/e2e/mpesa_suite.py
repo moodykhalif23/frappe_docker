@@ -116,10 +116,11 @@ def run():
 	ok("the report lists each transaction on its own line", sorted(r.code for r in split_rows if r.invoice == inv3.name) == sorted([c1, c2]))
 
 	html = frappe.db.get_value("Print Format", "Etham Receipt", "html") or ""
-	ok("the receipt format prints the payment rows", "rm_payment_rows" in html)
-	if "rm_payment_rows" in html:
-		out = frappe.get_print("POS Invoice", inv.name, "Etham Receipt")
-		ok("the receipt shows the code", code in out and "M-Pesa" in out)
+	ok("the receipt is the compact one", "rm_receipt_v2" in html)
+	out = frappe.get_print("POS Invoice", inv.name, "Etham Receipt")
+	ok("the receipt shows the mode and its code", code in out and "M-Pesa" in out)
+	ok("with item, qty and amount in their own columns",
+	   'class="it"' in out and 'class="qt"' in out and 'class="am"' in out)
 
 	frappe.db.commit()
 	print("%d/%d passed" % (sum(PASSED), len(PASSED)))

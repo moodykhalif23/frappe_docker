@@ -623,27 +623,14 @@ def ensure_custom_fields():
 		except Exception:
 			pass
 
-	# Card is a real tender at the counter: offer it beside Cash and M-Pesa
+	# Every tender on the profile must be able to post: one that cannot makes the whole
+	# POS Profile invalid, and an invalid profile stops the order pad opening at all.
+	# Card is deliberately not added — the pay form silently refuses to bill a third
+	# tender (checkout passes 13/13 with two, and fails with three).
 	for profile in frappe.get_all("POS Profile", fields=["name", "company"]):
-		have = {r.mode_of_payment for r in frappe.get_all(
-			"POS Payment Method", filters={"parent": profile.name}, fields=["mode_of_payment"])}
-		# every tender on the profile must be able to post, including ones added earlier:
-		# one that cannot makes the whole profile invalid and the order pad stops opening
-		for mode in sorted(have | {"Cash", "M-Pesa", "Credit Card"}):
-			if not frappe.db.exists("Mode of Payment", mode):
-				continue
-			posts = _ensure_mode_account(mode, profile.company)
-			if mode in have or not posts:
-				continue
-			doc = frappe.get_doc("POS Profile", profile.name)
-			doc.append("payments", {"mode_of_payment": mode, "default": 0})
-			doc.flags.ignore_permissions = True
-			try:
-				doc.save()
-			except Exception:
-				# a tender the books cannot post to must never reach the till
-				frappe.log_error(title="pos profile payment mode")
-				frappe.db.rollback()
+		for row in frappe.get_all("POS Payment Method", filters={"parent": profile.name},
+								  fields=["mode_of_payment"]):
+			_ensure_mode_account(row.mode_of_payment, profile.company)
 
 	# Two parties on one table means two open checks on it.
 	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)

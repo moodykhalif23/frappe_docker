@@ -86,12 +86,11 @@ await p.evaluate(() => window.RM_close_day && RM_close_day.open_day());
 await p.waitForTimeout(4000);
 const od = p.locator('.modal.show').last();
 const asked = await od.locator('.frappe-control[data-fieldtype="Currency"] .control-label').allTextContents().catch(() => []);
-ok('opening the day asks for a float on cash only',
-  asked.length > 0 && asked.every(t => /cash/i.test(t)) && !asked.some(t => /pesa/i.test(t)),
+ok('opening the day asks about cash and the M-Pesa till alike',
+  asked.some(t => /cash/i.test(t)) && asked.some(t => /pesa/i.test(t)), JSON.stringify(asked));
+ok('naming each for what it is: a drawer float against a till balance',
+  asked.some(t => /cash float/i.test(t)) && asked.some(t => /pesa opening balance/i.test(t)),
   JSON.stringify(asked));
-const note = (await od.locator('.modal-body').innerText().catch(() => '') || '').replace(/\s+/g, ' ');
-ok('and says which modes open at zero, so no till balance is typed in',
-  /holds no drawer float and opens at zero/i.test(note), note.slice(0, 180));
 await od.locator('.modal-footer .btn-primary').first().click().catch(() => {});
 await p.waitForTimeout(8000);
 
