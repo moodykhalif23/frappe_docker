@@ -19,7 +19,8 @@ def run_report(name, filters):
 	"""Through frappe.desk.query_report.run — the path the desk takes, not an import."""
 	from frappe.desk.query_report import run
 	res = run(name, filters=json.dumps(filters), ignore_prepared_report=True)
-	return res.get("result") or []
+	# add_total_row appends a plain list; it is a display artifact, not a row of data
+	return [r for r in (res.get("result") or []) if isinstance(r, dict)]
 
 
 def keyed(rows, field="waiter"):
