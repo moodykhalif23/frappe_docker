@@ -115,13 +115,18 @@
             title: __("Open the selling day"),
             fields: [
               { fieldtype: "HTML", options: `<p class="text-muted small">${
-                __("Count the float into the drawer, then open. Nothing can be billed until you do.")}${
-                (f.not_counted || []).length ? "<br>" + __("{0} holds no drawer float and opens at zero — do not enter a till balance here.",
-                  [f.not_counted.join(", ")]) : ""}</p>` },
-            ].concat(f.modes.map((m, i) => ({
-              fieldname: `mode_${i}`, fieldtype: "Currency", label: __("{0} float", [m]),
-              default: 0, description: i === 0 ? __("Counted, not guessed") : "",
-            }))),
+                __("Count the cash into the drawer and read the till balance off the phone, then open. Nothing can be billed until you do.")}</p>` },
+            ].concat(f.modes.map((m, i) => {
+              // cash sits in a drawer and is counted; M-Pesa is a balance that is read
+              const isCash = (f.cash_modes || []).includes(m);
+              return {
+                fieldname: `mode_${i}`, fieldtype: "Currency",
+                label: isCash ? __("{0} float", [m]) : __("{0} opening balance", [m]),
+                default: 0,
+                description: isCash ? __("Counted into the drawer, not guessed")
+                                    : __("What the till shows before service"),
+              };
+            })),
             primary_action_label: __("Open the day"),
             primary_action: (values) => {
               const balances = {};

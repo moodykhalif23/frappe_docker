@@ -83,16 +83,16 @@ def run():
 	ok("every mode the float went into is asked about, sales or no sales",
 	   set(house._shift_floats(shift)) <= {r["mode_of_payment"] for r in floats},
 	   json.dumps(house._shift_floats(shift)))
-	# live opens the day with the M-Pesa till balance in the float box every single day
-	not_cash = {m.name for m in frappe.get_all("Mode of Payment", filters={"type": ["!=", "Cash"]},
-											   fields=["name"])}
-	ok("a phone or bank balance is never counted as money in the drawer",
-	   all(abs(r["opening"]) < 0.005 for r in floats if r["mode_of_payment"] in not_cash),
-	   json.dumps([r for r in floats if r["mode_of_payment"] in not_cash]))
+	# a till balance reconciles the same way a drawer does: opening plus takings
 	fl = house.opening_floats()
-	ok("opening the day only asks for a float on the modes a drawer holds",
-	   not (set(fl["modes"]) & not_cash) and set(fl["not_counted"]) <= not_cash,
-	   json.dumps({"asked": fl["modes"], "opens at zero": fl["not_counted"]}))
+	profile_modes = {r.mode_of_payment for r in frappe.get_all(
+		"POS Payment Method", filters={"parent": fl["profile"]}, fields=["mode_of_payment"])}
+	ok("opening the day asks about every mode the till takes",
+	   set(fl["modes"]) == profile_modes, json.dumps({"asked": fl["modes"],
+													  "profile": sorted(profile_modes)}))
+	ok("and says which of them is cash in a drawer",
+	   set(fl["cash_modes"]) <= set(fl["modes"]) and "Cash" in fl["cash_modes"],
+	   json.dumps(fl["cash_modes"]))
 
 	from erpnext.accounts.doctype.pos_closing_entry.pos_closing_entry import make_closing_entry_from_opening
 	draft = make_closing_entry_from_opening(shift)

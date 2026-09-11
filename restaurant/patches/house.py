@@ -338,13 +338,11 @@ def menu_sells_without_stock_hook(doc, method=None):
 
 
 def _shift_floats(shift):
-	"""The float counted into the drawer at opening, per mode. Only a cash drawer
-	holds one: an M-Pesa opening balance is a phone balance, not money in the till,
-	and erpnext leaves opening_amount at zero so the count reads as an overage."""
-	cash = {m.name for m in frappe.get_all("Mode of Payment", filters={"type": "Cash"},
-										   fields=["name"])}
+	"""What each mode held at opening — cash counted into the drawer, M-Pesa the till
+	balance. erpnext leaves opening_amount at zero, so without this a real count reads as
+	an overage; only a mode the cashier actually counts gets a difference written."""
 	return {r.mode_of_payment: frappe.utils.flt(r.opening_amount)
-			for r in (shift.get("balance_details") or []) if r.mode_of_payment in cash}
+			for r in (shift.get("balance_details") or [])}
 
 
 def _record_counted_drawer(closing, counted):
@@ -432,30 +430,17 @@ def _ensure_receipt_format():
 	margin, so a zero-margin format leaves the paper showing only the bill."""
 	name = "Etham Receipt"
 	if frappe.db.exists("Print Format", name):
-		# An earlier build created it without custom_format, which frappe ignores;
-		current = frappe.db.get_value("Print Format", name, "html") or ""
-		if "80mm auto" not in current:
-			base = current.split("</style>", 1)[-1] if "<style>" in current else current
-			frappe.db.set_value("Print Format", name, "html", _THERMAL_CSS + base,
-								update_modified=False)
-		frappe.db.set_value("Print Format", name, "custom_format", 1, update_modified=False)
-		current = frappe.db.get_value("Print Format", name, "html") or ""
-		if _RECEIPT_ROWS_MARK not in current and _RECEIPT_ROWS_ANCHOR in current:
-			frappe.db.set_value("Print Format", name, "html", _receipt_with_payment_rows(current),
-								update_modified=False)
+		if _RECEIPT_BUILD not in (frappe.db.get_value("Print Format", name, "html") or ""):
+			frappe.db.set_value("Print Format", name, {
+				"html": _COMPACT_RECEIPT, "custom_format": 1, "font_size": 9,
+				"pdf_generator": "wkhtmltopdf", "disabled": 0}, update_modified=False)
 		return name
 
-	import json
-	import os
-
-	src = os.path.join(frappe.get_app_path("erpnext"), "accounts", "print_format",
-					   "pos_invoice", "pos_invoice.json")
-	html = _receipt_with_payment_rows(json.load(open(src))["html"])
 	frappe.get_doc({
 		"doctype": "Print Format", "name": name, "doc_type": "POS Invoice",
 		"module": "Accounts", "print_format_type": "Jinja", "standard": "No",
-		"pdf_generator": "wkhtmltopdf", "disabled": 0, "font_size": 12, "custom_format": 1,
-		"html": _THERMAL_CSS + html,
+		"pdf_generator": "wkhtmltopdf", "disabled": 0, "font_size": 9, "custom_format": 1,
+		"html": _COMPACT_RECEIPT,
 	}).insert(ignore_permissions=True)
 	return name
 
@@ -484,6 +469,74 @@ def _receipt_with_payment_rows(html):
 
 
 # A Posiflex till prints an 80mm roll: the paper is the page, so the format
+# Item left, qty centre, amount right, and nothing that costs paper. The marker is
+# versioned so a later bake replaces the previous bake's receipt instead of keeping it.
+_RECEIPT_BUILD = "rm_receipt_v2"
+_COMPACT_RECEIPT = """<!-- rm_receipt_v2 -->
+<style>
+  @page { size: 80mm auto; margin: 0 }
+  html, body { width: 80mm; margin: 0 }
+  .print-format { width: 80mm; padding: 2mm 3mm; font-size: 9pt; line-height: 1.15;
+                  font-family: -apple-system, "Segoe UI", Roboto, sans-serif }
+  .rm-r table { width: 100%; border-collapse: collapse }
+  .rm-r td, .rm-r th { padding: 0.4mm 0; vertical-align: top }
+  .rm-r .hd { text-align: center; margin-bottom: 1mm }
+  .rm-r .hd .nm { font-size: 12pt; font-weight: 700; letter-spacing: .3px }
+  .rm-r .meta td { font-size: 8pt }
+  .rm-r hr { border: 0; border-top: 1px dashed #000; margin: 1mm 0 }
+  .rm-r .it { width: 58% }
+  .rm-r .qt { width: 14%; text-align: center }
+  .rm-r .am { width: 28%; text-align: right; white-space: nowrap }
+  .rm-r .hdr td { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .4px }
+  .rm-r .tot td { font-weight: 700; font-size: 10pt }
+  .rm-r .ft { text-align: center; font-size: 8pt; margin-top: 1.5mm }
+  @media screen { .print-format { margin: 0 auto } }
+</style>
+<div class="rm-r">
+  <div class="hd">
+    <div class="nm">{{ doc.company }}</div>
+    {%- set addr = frappe.db.get_value("Company", doc.company, "phone_no") -%}
+    {%- if addr %}<div>{{ addr }}</div>{% endif -%}
+  </div>
+  <hr>
+  <table class="meta">
+    <tr><td>{{ doc.name }}</td>
+        <td class="am">{{ frappe.utils.formatdate(doc.posting_date, "dd/MM/yy") }} {{ doc.posting_time[:5] }}</td></tr>
+    {%- if doc.get("waiter") or doc.get("customer") %}
+    <tr><td>{{ doc.get("waiter") or "" }}</td><td class="am">{{ doc.get("customer") or "" }}</td></tr>
+    {%- endif %}
+  </table>
+  <hr>
+  <table>
+    <tr class="hdr"><td class="it">Item</td><td class="qt">Qty</td><td class="am">Amount</td></tr>
+    {%- for i in doc.items %}
+    <tr>
+      <td class="it">{{ i.item_name }}</td>
+      <td class="qt">{{ i.qty | int if i.qty == i.qty | int else i.qty }}</td>
+      <td class="am">{{ "%.2f" | format(i.amount) }}</td>
+    </tr>
+    {%- endfor %}
+  </table>
+  <hr>
+  <table>
+    {%- if doc.total_taxes_and_charges %}
+    <tr><td>Subtotal</td><td class="am">{{ "%.2f" | format(doc.net_total) }}</td></tr>
+    <tr><td>Tax</td><td class="am">{{ "%.2f" | format(doc.total_taxes_and_charges) }}</td></tr>
+    {%- endif %}
+    <tr class="tot"><td>TOTAL</td><td class="am">{{ "%.2f" | format(doc.grand_total) }}</td></tr>
+    {%- for p in doc.payments if p.amount %}
+    <tr><td>{{ p.mode_of_payment }}{% if p.reference_no %} {{ p.reference_no }}{% endif %}</td>
+        <td class="am">{{ "%.2f" | format(p.amount) }}</td></tr>
+    {%- endfor %}
+    {%- if doc.change_amount %}
+    <tr><td>Change</td><td class="am">{{ "%.2f" | format(doc.change_amount) }}</td></tr>
+    {%- endif %}
+  </table>
+  <hr>
+  <div class="ft">Thank you</div>
+</div>
+"""
+
 _THERMAL_CSS = """<style>
   @page { size: 80mm auto; margin: 0 }
   html, body { width: 80mm; margin: 0 }
@@ -571,17 +624,26 @@ def ensure_custom_fields():
 			pass
 
 	# Card is a real tender at the counter: offer it beside Cash and M-Pesa
-	for profile in frappe.get_all("POS Profile", pluck="name"):
+	for profile in frappe.get_all("POS Profile", fields=["name", "company"]):
 		have = {r.mode_of_payment for r in frappe.get_all(
-			"POS Payment Method", filters={"parent": profile}, fields=["mode_of_payment"])}
-		for mode in ("Cash", "M-Pesa", "Credit Card"):
-			if mode in have or not frappe.db.exists("Mode of Payment", mode):
+			"POS Payment Method", filters={"parent": profile.name}, fields=["mode_of_payment"])}
+		# every tender on the profile must be able to post, including ones added earlier:
+		# one that cannot makes the whole profile invalid and the order pad stops opening
+		for mode in sorted(have | {"Cash", "M-Pesa", "Credit Card"}):
+			if not frappe.db.exists("Mode of Payment", mode):
 				continue
-			doc = frappe.get_doc("POS Profile", profile)
+			posts = _ensure_mode_account(mode, profile.company)
+			if mode in have or not posts:
+				continue
+			doc = frappe.get_doc("POS Profile", profile.name)
 			doc.append("payments", {"mode_of_payment": mode, "default": 0})
 			doc.flags.ignore_permissions = True
-			doc.flags.ignore_validate = True
-			doc.save()
+			try:
+				doc.save()
+			except Exception:
+				# a tender the books cannot post to must never reach the till
+				frappe.log_error(title="pos profile payment mode")
+				frappe.db.rollback()
 
 	# Two parties on one table means two open checks on it.
 	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)
@@ -614,6 +676,24 @@ def ensure_custom_fields():
 		frappe.db.set_value("Print Format", pf, "pdf_generator", "wkhtmltopdf", update_modified=False)
 	frappe.db.commit()
 	return "ok"
+
+
+def _ensure_mode_account(mode, company):
+	"""A mode with no account for the company makes the whole POS Profile invalid, and an
+	invalid profile stops the order pad opening at all."""
+	if frappe.db.exists("Mode of Payment Account", {"parent": mode, "company": company}):
+		return True
+	account = (frappe.db.get_value("Mode of Payment Account",
+								   {"parent": "M-Pesa", "company": company}, "default_account")
+			   or frappe.db.get_value("Company", company, "default_bank_account")
+			   or frappe.db.get_value("Company", company, "default_cash_account"))
+	if not account:
+		return False
+	doc = frappe.get_doc("Mode of Payment", mode)
+	doc.append("accounts", {"company": company, "default_account": account})
+	doc.flags.ignore_permissions = True
+	doc.save()
+	return True
 
 
 def payment_summary(doc):
@@ -1686,16 +1766,15 @@ def opening_floats(pos_profile=None):
         frappe.throw(frappe._("No POS Profile is set up"))
     prof = frappe.get_doc("POS Profile", profile)
     modes = [p.mode_of_payment for p in prof.payments] or ["Cash"]
-    # only a drawer holds a float; an M-Pesa opening balance is a phone balance
+    # a drawer holds a float, a till holds a balance: same sum, different words
     cash = {m.name for m in frappe.get_all("Mode of Payment", filters={"type": "Cash"},
                                            fields=["name"])}
-    drawer = [m for m in modes if m in cash] or modes
     return {
         "profile": prof.name,
         "company": prof.company,
         "currency": frappe.db.get_value("Company", prof.company, "default_currency"),
-        "modes": drawer,
-        "not_counted": [m for m in modes if m not in drawer],
+        "modes": modes,
+        "cash_modes": [m for m in modes if m in cash],
     }
 
 

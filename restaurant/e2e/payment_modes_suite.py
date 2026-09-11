@@ -44,6 +44,21 @@ def run():
 		ok("%s offers Cash, M-Pesa and Credit Card" % profile,
 		   {"Cash", "M-Pesa", "Credit Card"} <= modes, json.dumps(sorted(modes)))
 
+	# --- a tender with no account makes the whole profile invalid, and an invalid
+	# profile stops the order pad opening at all ---
+	for profile in frappe.get_all("POS Profile", filters={"disabled": 0}, fields=["name", "company"]):
+		try:
+			frappe.get_doc("POS Profile", profile.name).run_method("validate")
+			ok("%s still validates with every tender on it" % profile.name, True)
+		except Exception as e:
+			ok("%s still validates with every tender on it" % profile.name, False, str(e)[:160])
+		for row in frappe.get_all("POS Payment Method", filters={"parent": profile.name},
+								  fields=["mode_of_payment"]):
+			ok("%s can post to the books" % row.mode_of_payment,
+			   bool(frappe.db.exists("Mode of Payment Account",
+									 {"parent": row.mode_of_payment, "company": profile.company})),
+			   "no account for %s" % profile.company)
+
 	# --- a real bill gets stamped on submit ---
 	inv = frappe.get_all("POS Invoice", filters={"docstatus": 1}, limit=1,
 						 order_by="creation desc", pluck="name")
@@ -56,6 +71,22 @@ def run():
 		   frappe.db.get_value("POS Invoice", inv[0], "rm_paid_by") == live,
 		   "was %r, now %r" % (stamped, frappe.db.get_value("POS Invoice", inv[0], "rm_paid_by")))
 		ok("and the stamp says something", bool(live), live)
+
+	# --- the receipt must render, and stay short ---
+	inv2 = frappe.get_all("POS Invoice", filters={"docstatus": 1}, limit=1,
+						  order_by="creation desc", pluck="name")
+	if inv2:
+		from frappe.www.printview import get_html_and_style
+		html = (get_html_and_style(doc=frappe.get_doc("POS Invoice", inv2[0]).as_json(),
+								   print_format="Etham Receipt") or {}).get("html") or ""
+		ok("the receipt renders", "rm_receipt_v2" in html and "TOTAL" in html, html[:120])
+		ok("item, qty and amount each have a column",
+		   'class="it"' in html and 'class="qt"' in html and 'class="am"' in html)
+		doc2 = frappe.get_doc("POS Invoice", inv2[0])
+		for it in doc2.items:
+			ok("the receipt names %s" % it.item_name, it.item_name in html, it.item_name)
+			break
+		ok("and prints on 80mm with no page margin", "80mm auto" in html and "margin: 0" in html)
 
 	# --- it must never block a submit, whatever it is handed ---
 	broken = frappe._dict(doctype="POS Invoice", name="ZZ-NOPE", currency="KES")
