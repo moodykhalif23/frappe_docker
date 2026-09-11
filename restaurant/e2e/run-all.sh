@@ -76,6 +76,7 @@ browser_suite "an overtaken refresh still returns fresh" refresh_order_probe.mjs
 browser_suite "closing the day counts the drawer" drawer_count_probe.mjs
 browser_suite "clicking a waiter opens their day book" waiter_drill_probe.mjs
 browser_suite "an empty table seats before it bills" tile_seats_probe.mjs
+browser_suite "assets go in fast, in one sitting" asset_entry_probe.mjs
 
 echo
 echo "================ verdict ================"
