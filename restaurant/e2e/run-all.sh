@@ -62,6 +62,7 @@ server_suite "stale guest markers" stale_marker_suite.py
 server_suite "close day names what stays open" close_day_suite.py
 server_suite "a menu dish sells without stock" menu_sells_suite.py
 server_suite "the waiter day book agrees with the summary" waiter_day_book_suite.py
+server_suite "a bill says how it was paid" payment_modes_suite.py
 server_suite "a sale is voided, never deleted" void_not_delete_suite.py
 browser_suite "floor, waiter, order, dispatch" flow.mjs
 browser_suite "the door" door.mjs

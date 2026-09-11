@@ -174,6 +174,10 @@ LEFT_FIELD = {"fieldname": "left_at", "fieldtype": "Datetime", "label": "Left At
 # Hidden, not merely read-only: the machine sets it, and a visible read-only
 BOOKING_FIELD = {"fieldname": "booking", "fieldtype": "Link", "options": "Restaurant Booking",
 				 "label": "Party", "read_only": 1, "hidden": 1, "no_copy": 1}
+# How a bill was settled, summarised out of the payments child table so the invoice
+PAID_BY_FIELD = {"fieldname": "rm_paid_by", "fieldtype": "Data", "label": "Paid By",
+				 "read_only": 1, "no_copy": 1, "in_list_view": 1, "in_standard_filter": 1,
+				 "search_index": 1}
 # Checks seated in this room are deliveries: flagged for the kitchen, fee added.
 DELIVERY_ROOM_FIELD = {"fieldname": "delivery_room", "fieldtype": "Link", "options": "Restaurant Object",
 					   "label": "Delivery Room"}
@@ -541,7 +545,9 @@ def ensure_custom_fields():
 		"POS Invoice": [
 			dict(WAITER_FIELD, insert_after="customer", read_only=1),
 			dict(BOOKING_FIELD, insert_after="waiter"),
+			dict(PAID_BY_FIELD, insert_after="customer"),
 		],
+		"Sales Invoice": [dict(PAID_BY_FIELD, insert_after="customer")],
 		"Restaurant Booking": [
 			dict(WAITER_FIELD, insert_after="table"),
 			dict(SEATED_FIELD, insert_after="reservation_end_time"),
@@ -563,6 +569,19 @@ def ensure_custom_fields():
 			add_permission(dt, "Restaurant User", 0)
 		except Exception:
 			pass
+
+	# Card is a real tender at the counter: offer it beside Cash and M-Pesa
+	for profile in frappe.get_all("POS Profile", pluck="name"):
+		have = {r.mode_of_payment for r in frappe.get_all(
+			"POS Payment Method", filters={"parent": profile}, fields=["mode_of_payment"])}
+		for mode in ("Cash", "M-Pesa", "Credit Card"):
+			if mode in have or not frappe.db.exists("Mode of Payment", mode):
+				continue
+			doc = frappe.get_doc("POS Profile", profile)
+			doc.append("payments", {"mode_of_payment": mode, "default": 0})
+			doc.flags.ignore_permissions = True
+			doc.flags.ignore_validate = True
+			doc.save()
 
 	# Two parties on one table means two open checks on it.
 	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)
@@ -595,6 +614,29 @@ def ensure_custom_fields():
 		frappe.db.set_value("Print Format", pf, "pdf_generator", "wkhtmltopdf", update_modified=False)
 	frappe.db.commit()
 	return "ok"
+
+
+def payment_summary(doc):
+	"""Cash 120, M-Pesa 700/UIADV63661 — every mode on the bill, in one readable line."""
+	parts = []
+	for row in doc.get("payments") or []:
+		if not row.mode_of_payment or not frappe.utils.flt(row.amount):
+			continue
+		amount = frappe.utils.fmt_money(row.amount, currency=doc.get("currency"))
+		ref = (row.get("reference_no") or "").strip()
+		parts.append("%s %s%s" % (row.mode_of_payment, amount, ("/" + ref) if ref else ""))
+	return ", ".join(parts)
+
+
+def stamp_payment_modes(doc, method=None):
+	"""Never fatal: a bill must submit even if this display field cannot be written."""
+	try:
+		if not frappe.db.has_column(doc.doctype, "rm_paid_by"):
+			return
+		frappe.db.set_value(doc.doctype, doc.name, "rm_paid_by", payment_summary(doc),
+							update_modified=False)
+	except Exception:
+		frappe.log_error(title="stamp payment modes")
 
 
 def _initials(name):
