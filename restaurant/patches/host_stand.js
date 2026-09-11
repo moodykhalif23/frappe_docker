@@ -151,8 +151,13 @@
         return RM_waiter.confirm("seat").then(() => { this.__confirmed = true; this.open(); this.__confirmed = false; });
       }
       const for_table = this.__for; this.__for = null;
+      // "another" only when somebody is already sitting there
+      const sitting = for_table && window.RM_seats && RM_seats.seats
+        && ((RM_seats.seats(for_table.table) || {}).parties || []).length;
       const dialog = new frappe.ui.Dialog({
-        title: for_table ? __("Seat another party at {0}", [for_table.table]) : __("Seat a guest"),
+        title: !for_table ? __("Seat a guest")
+          : sitting ? __("Seat another party at {0}", [for_table.table])
+                    : __("Seat a guest at {0}", [for_table.table]),
         fields: [
           { fieldname: "guest_name", fieldtype: "Data", label: __("Guest name"), reqd: 1 },
           {
