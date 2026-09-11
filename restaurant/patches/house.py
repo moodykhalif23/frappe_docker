@@ -1843,3 +1843,38 @@ def _end_of_day_sweep():
 
     frappe.db.commit()
     return {"parties_closed": left, "sections_cleared": cleared}
+
+
+@frappe.whitelist()
+def floor_snapshot(room=None):
+	"""Occupancy and waiter badges together. The floor repaints from both or neither,
+	so asking for them separately buys nothing and costs a round trip."""
+	return {"occupancy": table_occupancy(room), "holders": floor_waiters()}
+
+
+@frappe.whitelist()
+def floor_boot(pos_profile=None, room=None):
+	"""Everything the floor needs to paint itself, in one round trip.
+
+	On a link to Nairobi each call costs about 300ms of waiting against 50ms of work,
+	so the number of trips is what a waiter feels, not the server. One slow or broken
+	piece must not take the whole screen down: each is fetched behind its own guard and
+	comes back null, letting the floor render what it has.
+	"""
+	out = {}
+	for key, fn in (
+		("shift", lambda: house_shift(pos_profile)),
+		("day", lambda: day_summary(pos_profile)),
+		("occupancy", lambda: table_occupancy(room)),
+		("holders", lambda: floor_waiters()),
+		("policy", lambda: waiter_policy()),
+		("board_room", lambda: board_room()),
+		("build", lambda: asset_version()),
+		("delivery", lambda: delivery_room()),
+	):
+		try:
+			out[key] = fn()
+		except Exception:
+			out[key] = None
+			frappe.log_error(title="floor boot: %s" % key)
+	return out

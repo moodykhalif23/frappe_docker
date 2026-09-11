@@ -128,7 +128,9 @@
     refresh() {
       // ordered: a slow, older response must never overwrite a newer one — and a
       const seq = (this.seq = (this.seq || 0) + 1);
-      const mine = Promise.all([call("table_occupancy"), call("floor_waiters")]).then(([m, w]) => {
+      const mine = call("floor_snapshot").then((snap) => {
+        const m = (snap && snap.occupancy) || {};
+        const w = (snap && snap.holders) || {};
         if (seq !== RM_seats.seq) return RM_seats.inflight;
         RM_seats.map = m || {};
         RM_seats.holders = w || {};
