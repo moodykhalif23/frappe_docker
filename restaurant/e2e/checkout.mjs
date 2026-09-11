@@ -126,14 +126,13 @@ ok('the pay form opens', await pay.count() > 0,
    (await pay.innerText().catch(() => '')).replace(/\s+/g, ' ').slice(0, 90));
 ok('covers do not block payment', errs.length === 0, JSON.stringify(errs.slice(0, 2)));
 
-const payBtn = pay.getByText(/^Pay\b/).first();
+const payBtn = pay.locator('a, button').filter({ hasText: /^Pay\b/ }).last();
 ok('a Pay button is offered', await payBtn.count() > 0);
-// a third tender makes the form taller: reach the button rather than clicking blind
 await payBtn.scrollIntoViewIfNeeded().catch(() => {});
 await page.waitForTimeout(500);
 ok('the Pay button is reachable without scrolling past the modal',
    await payBtn.isVisible().catch(() => false));
-await payBtn.click({ force: true });
+await payBtn.click();
 await page.waitForTimeout(12000);
 await shot('paid');
 ok('payment raises no page error', errs.length === 0, JSON.stringify(errs.slice(0, 2)));

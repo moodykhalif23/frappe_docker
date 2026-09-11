@@ -623,14 +623,24 @@ def ensure_custom_fields():
 		except Exception:
 			pass
 
-	# Every tender on the profile must be able to post: one that cannot makes the whole
-	# POS Profile invalid, and an invalid profile stops the order pad opening at all.
-	# Card is deliberately not added — the pay form silently refuses to bill a third
-	# tender (checkout passes 13/13 with two, and fails with three).
+	# Card is a real tender at the counter.
 	for profile in frappe.get_all("POS Profile", fields=["name", "company"]):
-		for row in frappe.get_all("POS Payment Method", filters={"parent": profile.name},
-								  fields=["mode_of_payment"]):
-			_ensure_mode_account(row.mode_of_payment, profile.company)
+		have = {r.mode_of_payment for r in frappe.get_all(
+			"POS Payment Method", filters={"parent": profile.name}, fields=["mode_of_payment"])}
+		for mode in sorted(have | {"Cash", "M-Pesa", "Credit Card"}):
+			if not frappe.db.exists("Mode of Payment", mode):
+				continue
+			if not _ensure_mode_account(mode, profile.company) or mode in have:
+				continue
+			doc = frappe.get_doc("POS Profile", profile.name)
+			doc.append("payments", {"mode_of_payment": mode, "default": 0})
+			doc.flags.ignore_permissions = True
+			try:
+				doc.save()
+			except Exception:
+				# a tender the books cannot post to must never reach the till
+				frappe.log_error(title="pos profile payment mode")
+				frappe.db.rollback()
 
 	# One table, one ticket: without this the kitchen gets a separate card per dish,
 	# so a party of three reads as three unrelated orders on the board.

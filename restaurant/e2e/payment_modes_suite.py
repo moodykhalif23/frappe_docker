@@ -41,11 +41,8 @@ def run():
 	for profile in frappe.get_all("POS Profile", filters={"disabled": 0}, pluck="name"):
 		modes = {r.mode_of_payment for r in frappe.get_all(
 			"POS Payment Method", filters={"parent": profile}, fields=["mode_of_payment"])}
-		ok("%s takes Cash and M-Pesa" % profile, {"Cash", "M-Pesa"} <= modes,
-		   json.dumps(sorted(modes)))
-		# a third tender makes the pay form save nothing, with no error shown
-		ok("and no third tender until the pay form can bill one", "Credit Card" not in modes,
-		   json.dumps(sorted(modes)))
+		ok("%s takes Cash, M-Pesa and Credit Card" % profile,
+		   {"Cash", "M-Pesa", "Credit Card"} <= modes, json.dumps(sorted(modes)))
 
 	# --- a tender with no account makes the whole profile invalid, and an invalid
 	# profile stops the order pad opening at all ---
