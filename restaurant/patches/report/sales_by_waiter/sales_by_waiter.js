@@ -20,4 +20,23 @@ frappe.query_reports["Sales by Waiter"] = {
       options: ["Check owner", "Lines fired"], default: "Check owner",
     },
   ],
+
+  formatter(value, row, column, data, default_formatter) {
+    // the waiter's name opens their day book on the same dates and the same basis
+    if (column.fieldname === "waiter" && data && data.waiter && data.waiter !== "Unassigned") {
+      const f = frappe.query_report.get_filter_values() || {};
+      const q = {
+        waiter: data.waiter,
+        from_date: f.from_date || frappe.datetime.get_today(),
+        to_date: f.to_date || frappe.datetime.get_today(),
+        view: f.credit === "Lines fired" ? "Per item" : "Per check",
+      };
+      if (f.pos_profile) q.pos_profile = f.pos_profile;
+      if (f.room) q.room = f.room;
+      const href = `/app/query-report/${encodeURIComponent("Waiter Day Book")}?${frappe.utils.get_url_from_dict(q)}`;
+      return `<a href="${href}" title="${__("Open this waiter's day book")}"
+              >${frappe.utils.escape_html(data.waiter)}</a>`;
+    }
+    return default_formatter(value, row, column, data);
+  },
 };

@@ -175,6 +175,8 @@ COPY restaurant/patches/floor_handles.css /tmp/floor_handles.css
 COPY restaurant/patches/door.css /tmp/door.css
 RUN cat /tmp/waiter_badge.css /tmp/seats.css /tmp/responsive.css /tmp/menu_card.css /tmp/door.css /tmp/floor_handles.css >> apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.css
 COPY --chown=frappe:frappe restaurant/patches/report/sales_by_waiter apps/restaurant_management/restaurant_management/restaurant_management/report/sales_by_waiter
+# one waiter's day, line by line, reached by clicking their name on Sales by Waiter
+COPY --chown=frappe:frappe restaurant/patches/report/waiter_day_book apps/restaurant_management/restaurant_management/restaurant_management/report/waiter_day_book
 
 # Build id, for telling at a glance which bake a browser is running. Do NOT append
 # it to asset URLs: frappe's assets.extn() reads the extension from after the "?",
