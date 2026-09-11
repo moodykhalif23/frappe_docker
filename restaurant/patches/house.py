@@ -632,6 +632,13 @@ def ensure_custom_fields():
 								  fields=["mode_of_payment"]):
 			_ensure_mode_account(row.mode_of_payment, profile.company)
 
+	# One table, one ticket: without this the kitchen gets a separate card per dish,
+	# so a party of three reads as three unrelated orders on the board.
+	for centre in frappe.get_all("Restaurant Object", filters={"type": "Production Center"},
+								 pluck="name"):
+		frappe.db.set_value("Restaurant Object", centre, "group_items_by_order", 1,
+							update_modified=False)
+
 	# Two parties on one table means two open checks on it.
 	frappe.db.set_single_value("Restaurant Settings", "multiple_pending_order", 1)
 

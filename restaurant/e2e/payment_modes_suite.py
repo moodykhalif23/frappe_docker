@@ -75,6 +75,28 @@ def run():
 		   "was %r, now %r" % (stamped, frappe.db.get_value("POS Invoice", inv[0], "rm_paid_by")))
 		ok("and the stamp says something", bool(live), live)
 
+	# --- one table, one ticket on the kitchen board ---
+	centres = frappe.get_all("Restaurant Object", filters={"type": "Production Center"},
+							 fields=["name", "group_items_by_order"])
+	ok("there is a production centre to fire to", bool(centres), json.dumps(centres, default=str))
+	for c in centres:
+		ok("%s groups a party's dishes into one ticket" % c.name,
+		   frappe.utils.cint(c.group_items_by_order) == 1, str(c.group_items_by_order))
+	order = frappe.get_all("Table Order", filters={"status": ["!=", "Cancelled"]},
+						   order_by="creation desc", limit=1, pluck="name")
+	if order and centres:
+		lines = frappe.get_all("Order Entry Item", filters={"parent": order[0], "qty": [">", 0]},
+							   fields=["identifier", "parent"], limit=3)
+		centre = frappe.get_doc("Restaurant Object", centres[0].name)
+		names = set()
+		for ln in lines:
+			entry = frappe.get_doc("Order Entry Item", {"identifier": ln.identifier})
+			names.add(centre.get_command_data(entry).get("order_name"))
+		if len(lines) > 1:
+			ok("every dish on one check lands under one ticket name", len(names) == 1,
+			   json.dumps(sorted(names)))
+			ok("and that name is the check, not the line", names == {order[0]}, json.dumps(sorted(names)))
+
 	# --- the receipt must render, and stay short ---
 	inv2 = frappe.get_all("POS Invoice", filters={"docstatus": 1}, limit=1,
 						  order_by="creation desc", pluck="name")
