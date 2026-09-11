@@ -67,10 +67,10 @@ def run():
 	   bundled <= apart * 1.6 + 0.05,
 	   "bundled %dms vs %dms apart" % (round(bundled * 1000), round(apart * 1000)))
 
-	ok("it is whitelisted for the floor to call",
-	   getattr(house.floor_boot, "whitelisted", False) or "floor_boot" in str(
-		   frappe.whitelisted.keys() if hasattr(frappe, "whitelisted") else ""),
-	   "not whitelisted")
+	ok("both are whitelisted for the floor to call",
+	   house.floor_boot in frappe.whitelisted and house.floor_snapshot in frappe.whitelisted,
+	   "boot=%s snapshot=%s" % (house.floor_boot in frappe.whitelisted,
+								house.floor_snapshot in frappe.whitelisted))
 
 	print("%d/%d passed" % (sum(PASSED), len(PASSED)))
 	if not all(PASSED):
