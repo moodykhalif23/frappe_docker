@@ -61,6 +61,7 @@ server_suite "M-Pesa by code" mpesa_suite.py
 server_suite "stale guest markers" stale_marker_suite.py
 server_suite "close day names what stays open" close_day_suite.py
 server_suite "a menu dish sells without stock" menu_sells_suite.py
+server_suite "the waiter day book agrees with the summary" waiter_day_book_suite.py
 server_suite "a sale is voided, never deleted" void_not_delete_suite.py
 browser_suite "floor, waiter, order, dispatch" flow.mjs
 browser_suite "the door" door.mjs
@@ -70,6 +71,7 @@ browser_suite "changes reach the other screen" propagation_probe.mjs
 browser_suite "one bill, two M-Pesa transactions" mpesa_split_probe.mjs
 browser_suite "an overtaken refresh still returns fresh" refresh_order_probe.mjs
 browser_suite "closing the day counts the drawer" drawer_count_probe.mjs
+browser_suite "clicking a waiter opens their day book" waiter_drill_probe.mjs
 
 echo
 echo "================ verdict ================"

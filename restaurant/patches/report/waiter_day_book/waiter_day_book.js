@@ -16,6 +16,7 @@ frappe.query_reports["Waiter Day Book"] = {
       // "Per item" is what was sold; "Per check" is what was banked
       fieldname: "view", label: __("Show"), fieldtype: "Select",
       options: ["Per item", "Per check"], default: "Per item",
+      description: __("Per item dates by when the check was opened and totals the food sent, matching Sales by Waiter on 'Lines fired'. Per check dates by when the bill was paid and totals the money banked, matching it on 'Check owner'."),
     },
     {
       fieldname: "include", label: __("Include"), fieldtype: "Select",

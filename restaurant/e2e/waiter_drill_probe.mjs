@@ -48,12 +48,27 @@ const grid = await p.evaluate(() => {
   } catch (e) { return { error: String(e).slice(0, 140) }; }
 });
 ok('it shows that waiter\'s rows', (grid.rows || 0) > 0, JSON.stringify(grid).slice(0, 200));
-ok('with the table, seats and time the request asked for',
-  ['time', 'table_name', 'covers', 'item', 'amount'].every(c => (grid.cols || []).includes(c)),
+ok('per check shows the tables served, the seats and when it was paid',
+  ['time', 'table_name', 'covers', 'items', 'amount', 'invoice'].every(c => (grid.cols || []).includes(c)),
   JSON.stringify(grid.cols));
 ok('every row belongs to the waiter that was clicked',
   await p.evaluate(w => (frappe.query_report.data || []).every(r => !r.waiter || r.waiter === w), waiter),
   waiter);
+
+// the other grain: what was actually sold, line by line
+await p.evaluate(() => frappe.query_report.set_filter_value('view', 'Per item'));
+await p.waitForTimeout(7000);
+const items = await p.evaluate(() => {
+  try {
+    return { rows: (frappe.query_report.data || []).length,
+             cols: (frappe.query_report.columns || []).map(c => c.fieldname),
+             first: (frappe.query_report.data || [])[0] || null };
+  } catch (e) { return { error: String(e).slice(0, 140) }; }
+});
+ok('per item names every dish sold, with qty, rate and the time it was fired',
+  ['time', 'item', 'qty', 'rate', 'amount', 'table_name', 'covers', 'check_id'].every(
+    c => (items.cols || []).includes(c)), JSON.stringify(items.cols));
+ok('and returns lines for that waiter', (items.rows || 0) > 0, JSON.stringify(items).slice(0, 200));
 
 ok('no page errors', errors.length === 0, errors.join(' | '));
 await done(report.every(Boolean) ? 0 : 1);

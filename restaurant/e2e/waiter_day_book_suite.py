@@ -95,6 +95,27 @@ def run():
 	ok("an unknown waiter returns an empty book, not the whole floor", empty == [],
 	   json.dumps(empty)[:120])
 
+	# --- the waiter filter is a value, never part of the statement ---
+	for probe in ("' or '1'='1", "x'; select 1 --", "Unassigned' or o.name like '%"):
+		try:
+			hostile = run_report(BOOK, dict(base, waiter=probe, view="Per item"))
+			ok("a quoted filter returns nothing rather than the whole floor: %r" % probe,
+			   hostile == [], json.dumps(hostile)[:110])
+		except Exception as e:
+			ok("a quoted filter is refused cleanly: %r" % probe, False, str(e)[:110])
+
+	# --- only the roles that may see every waiter's takings ---
+	roles = {r.role for r in frappe.get_all("Has Role", filters={"parent": BOOK,
+																 "parenttype": "Report"},
+											fields=["role"])}
+	ok("the book is restricted to the roles that run the floor",
+	   roles == {"Restaurant Manager", "System Manager", "Accounts Manager"}, json.dumps(sorted(roles)))
+	ok("and it is no more visible than the summary it drills into",
+	   roles == {r.role for r in frappe.get_all("Has Role", filters={"parent": SUMMARY,
+																	 "parenttype": "Report"},
+											   fields=["role"])},
+	   json.dumps(sorted(roles)))
+
 	# --- open checks appear only when asked for ---
 	billed = run_report(BOOK, dict(base, view="Per check", include="Billed only"))
 	everything = run_report(BOOK, dict(base, view="Per check", include="Billed and open"))
