@@ -642,6 +642,14 @@ def ensure_custom_fields():
 				frappe.log_error(title="pos profile payment mode")
 				frappe.db.rollback()
 
+	# Categories already made under erpnext's Asset Category carry over, so the two
+	# they set up by hand are not lost to a doctype that no longer demands accounts.
+	if frappe.db.exists("DocType", "Restaurant Asset Category"):
+		for cat in frappe.get_all("Asset Category", pluck="name"):
+			if not frappe.db.exists("Restaurant Asset Category", cat):
+				frappe.get_doc({"doctype": "Restaurant Asset Category",
+								"category_name": cat}).insert(ignore_permissions=True)
+
 	# One table, one ticket: without this the kitchen gets a separate card per dish,
 	# so a party of three reads as three unrelated orders on the board.
 	for centre in frappe.get_all("Restaurant Object", filters={"type": "Production Center"},

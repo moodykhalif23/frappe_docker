@@ -318,6 +318,13 @@ RUN python3 /tmp/no_deleting_money.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/hooks.py').read())" \
  && python3 -c "import ast; ast.parse(open('apps/frappe/frappe/model/naming.py').read())"
 
+# what the restaurant owns, counted rather than costed: erpnext's Asset refuses a
+# record with no purchase amount, which is the back-and-forth this replaces
+COPY --chown=frappe:frappe restaurant/patches/doctype/restaurant_asset_category apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_asset_category
+COPY --chown=frappe:frappe restaurant/patches/doctype/restaurant_asset apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_asset
+RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_asset/restaurant_asset.py').read())" \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_asset/restaurant_asset_list.js
+
 # tapping an empty table seats a party first: PIN, waiter, covers, then the check
 COPY restaurant/patches/tile_seats.py /tmp/tile_seats.py
 RUN python3 /tmp/tile_seats.py \

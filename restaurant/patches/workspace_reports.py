@@ -18,6 +18,7 @@ WANTED = [
      "report_ref_doctype": "Item", "doc_view": "Report", "block": "rmRestockBlk"},
     {"label": "Consumption Variance", "type": "Report", "link_to": "Consumption Variance",
      "report_ref_doctype": "Stock Ledger Entry", "doc_view": "Report", "block": "rmVarianceBlk"},
+    {"label": "Assets", "type": "DocType", "link_to": "Restaurant Asset", "block": "rmAssetBlk"},
     {"label": "Recipes", "type": "DocType", "link_to": "BOM", "block": "rmBomBlk"},
     {"label": "Stock Entry", "type": "DocType", "link_to": "Stock Entry", "block": "rmStockBlk"},
 ]

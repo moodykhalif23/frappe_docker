@@ -64,6 +64,7 @@ server_suite "a menu dish sells without stock" menu_sells_suite.py
 server_suite "the waiter day book agrees with the summary" waiter_day_book_suite.py
 server_suite "a bill says how it was paid" payment_modes_suite.py
 server_suite "the floor opens in one round trip" floor_boot_suite.py
+server_suite "assets are counted, not costed" asset_register_suite.py
 server_suite "a sale is voided, never deleted" void_not_delete_suite.py
 browser_suite "floor, waiter, order, dispatch" flow.mjs
 browser_suite "the door" door.mjs
