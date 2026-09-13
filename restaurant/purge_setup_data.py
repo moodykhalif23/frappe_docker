@@ -148,9 +148,6 @@ def run(dry=False, cutoff=None):
 				done["unlinked"].append({dt: name, "missing_booking": bk})
 	frappe.db.commit()
 
-	# cancelling the closing entry unconsolidates, cancels the merge log and its
-	# a setup-day shift already standing open — left so by an earlier attempt, whose
-	# cancelled closing re-opened it — blocks every cancel below. Close those first.
 	for o in openings:
 		if frappe.db.get_value("POS Opening Entry", o, ["status", "docstatus"], as_dict=True) == \
 				frappe._dict(status="Open", docstatus=1):
@@ -163,6 +160,20 @@ def run(dry=False, cutoff=None):
 
 	for c in closings:
 		shift = frappe.db.get_value("POS Closing Entry", c, "pos_opening_entry")
+		# erpnext's own cancel_merge_logs cancels the logs first: a submitted log still
+		# pointing at the closing trips frappe's back-link check before on_cancel runs.
+		# Cancelling a log un-consolidates its bills and cancels the Sales Invoice.
+		for log in frappe.db.sql_list("""
+			select distinct m.name from `tabPOS Invoice Merge Log` m
+			where m.pos_closing_entry = %(c)s
+			   or m.name in (select parent from `tabPOS Invoice Reference`
+							 where parenttype = 'POS Invoice Merge Log' and pos_invoice in
+								(select pos_invoice from `tabPOS Invoice Reference`
+								  where parenttype = 'POS Closing Entry' and parent = %(c)s))
+		""", {"c": c}):
+			done["cancelled"].append({"POS Invoice Merge Log": log,
+									  "result": _cancel("POS Invoice Merge Log", log)})
+		frappe.db.commit()
 		done["cancelled"].append({"POS Closing Entry": c, "result": _cancel("POS Closing Entry", c)})
 		frappe.db.commit()
 		# on_cancel re-opens the shift, and erpnext will not cancel the next closing
