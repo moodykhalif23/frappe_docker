@@ -36,7 +36,7 @@ def _targets(cutoff):
 	""", cutoff, as_dict=True)
 	names = [p["name"] for p in pos]
 	if not names:
-		return pos, [], [], [], []
+		return pos, [], [], [], [], [], []
 	sales = [p["consolidated_invoice"] for p in pos if p["consolidated_invoice"]]
 	logs = frappe.db.sql_list("""
 		select distinct parent from `tabPOS Invoice Reference`
@@ -49,7 +49,20 @@ def _targets(cutoff):
 	checks = frappe.db.sql_list("""
 		select name from `tabTable Order` where link_invoice in %(n)s or date(creation) < %(c)s
 	""", {"n": tuple(names), "c": cutoff})
-	return pos, sales, logs, closings, checks
+	# the seatings behind those checks: a waiter's bookings count as history, and the
+	# waiter guard refuses to delete anyone who still has some
+	bookings = frappe.db.sql_list("""
+		select name from `tabRestaurant Booking`
+		where date(creation) < %(c)s
+		   or name in (select booking from `tabTable Order` where name in %(k)s and booking is not null)
+	""", {"c": cutoff, "k": tuple(checks) or ("",)})
+	# the shifts those closings banked: cancelling a closing entry re-opens its opening
+	# entry, which then blocks the next cancel — so each must be closed straight after
+	openings = frappe.db.sql_list("""
+		select name from `tabPOS Opening Entry`
+		where (pos_closing_entry in %(c)s or date(period_start_date) < %(d)s) and docstatus < 2
+	""", {"c": tuple(closings) or ("",), "d": cutoff})
+	return pos, sales, logs, closings, checks, bookings, openings
 
 
 def _guard_real_trading(closings, pos_names):
@@ -65,11 +78,13 @@ def _guard_real_trading(closings, pos_names):
 	return bad
 
 
-def _open_shift_blocks():
+def _open_shift_blocks(cutoff):
 	"""erpnext refuses to cancel a closing entry while its profile still has an open
 	shift, so a purge started during service unwinds part of the chain and then stops,
-	leaving the ledger half-reversed. Checked before anything is written."""
-	return frappe.get_all("POS Opening Entry", filters={"status": "Open"},
+	leaving the ledger half-reversed. Checked before anything is written. A setup-day
+	shift left open (or re-opened by an earlier attempt) is a target, not a blocker."""
+	return frappe.get_all("POS Opening Entry",
+						  filters={"status": "Open", "period_start_date": [">=", cutoff]},
 						  fields=["name", "pos_profile", "period_start_date"])
 
 
@@ -85,9 +100,10 @@ def _cancel(doctype, name):
 def run(dry=False, cutoff=None):
 	frappe.set_user("Administrator")
 	cutoff = cutoff or CUTOFF
-	pos, sales, logs, closings, checks = _targets(cutoff)
+	pos, sales, logs, closings, checks, bookings, openings = _targets(cutoff)
 	plan = {"cutoff": cutoff, "pos_invoices": pos, "sales_invoices": sales,
 			"merge_logs": logs, "closing_entries": closings, "checks": checks,
+			"bookings": bookings, "opening_entries": openings,
 			"waiters": [w for w in WAITERS if frappe.db.exists("Restaurant Waiter", w)]}
 	if not pos:
 		print("PURGE nothing before %s; already clean" % cutoff)
@@ -102,7 +118,7 @@ def run(dry=False, cutoff=None):
 
 	print("PLAN " + json.dumps(plan, default=str))
 
-	blocking = _open_shift_blocks()
+	blocking = _open_shift_blocks(cutoff)
 	if blocking:
 		print("COUNTER_OPEN " + json.dumps(blocking, default=str))
 		if not dry:
@@ -122,7 +138,26 @@ def run(dry=False, cutoff=None):
 
 	# cancelling the closing entry unconsolidates, cancels the merge log and its
 	for c in closings:
+		shift = frappe.db.get_value("POS Closing Entry", c, "pos_opening_entry")
 		done["cancelled"].append({"POS Closing Entry": c, "result": _cancel("POS Closing Entry", c)})
+		frappe.db.commit()
+		# on_cancel re-opens the shift, and erpnext will not cancel the next closing
+		# while any shift on the profile is open
+		if shift and frappe.db.exists("POS Opening Entry", shift):
+			try:
+				done["cancelled"].append({"POS Opening Entry": shift,
+										  "result": _cancel("POS Opening Entry", shift)})
+			except Exception as e:
+				frappe.db.set_value("POS Opening Entry", shift, "status", "Closed", update_modified=False)
+				done["cancelled"].append({"POS Opening Entry": shift, "result": "closed (%s)" % str(e)[:60]})
+			frappe.db.commit()
+	for o in openings:
+		if frappe.db.get_value("POS Opening Entry", o, "docstatus") == 1:
+			try:
+				done["cancelled"].append({"POS Opening Entry": o, "result": _cancel("POS Opening Entry", o)})
+			except Exception as e:
+				frappe.db.set_value("POS Opening Entry", o, "status", "Closed", update_modified=False)
+				done["cancelled"].append({"POS Opening Entry": o, "result": "closed (%s)" % str(e)[:60]})
 	frappe.db.commit()
 
 	for p in pos:
@@ -133,7 +168,8 @@ def run(dry=False, cutoff=None):
 
 	for dt, names in (("POS Invoice Merge Log", logs), ("Sales Invoice", sales),
 					  ("POS Invoice", [p["name"] for p in pos]),
-					  ("POS Closing Entry", closings), ("Table Order", checks)):
+					  ("POS Closing Entry", closings), ("POS Opening Entry", openings),
+					  ("Table Order", checks), ("Restaurant Booking", bookings)):
 		for name in names:
 			if not frappe.db.exists(dt, name):
 				continue
@@ -158,7 +194,7 @@ def run(dry=False, cutoff=None):
 	frappe.flags.rm_test_teardown = False
 
 	print("PURGED " + json.dumps(done, default=str))
-	left, _, _, _, _ = _targets(cutoff)
+	left = _targets(cutoff)[0]
 	print("LEFT_BEFORE_CUTOFF " + str(len(left)))
 	print("SERIES_AFTER " + json.dumps(frappe.db.sql(
 		"select name, `current` from tabSeries where name in "
