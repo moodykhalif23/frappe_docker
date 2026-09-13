@@ -134,9 +134,33 @@ def run(dry=False, cutoff=None):
 
 	# the till's own guards exist to stop exactly this; lifted only for this purge
 	frappe.flags.rm_test_teardown = True
-	done = {"cancelled": [], "deleted": []}
+	done = {"cancelled": [], "deleted": [], "unlinked": []}
+
+	# a target that points at a seating which no longer exists cannot be cancelled:
+	# frappe re-validates every Link on save. It is about to be deleted anyway.
+	for dt, names in (("POS Invoice", [p["name"] for p in pos]), ("Table Order", checks)):
+		if not frappe.db.has_column(dt, "booking"):
+			continue
+		for name in names:
+			bk = frappe.db.get_value(dt, name, "booking")
+			if bk and not frappe.db.exists("Restaurant Booking", bk):
+				frappe.db.set_value(dt, name, "booking", None, update_modified=False)
+				done["unlinked"].append({dt: name, "missing_booking": bk})
+	frappe.db.commit()
 
 	# cancelling the closing entry unconsolidates, cancels the merge log and its
+	# a setup-day shift already standing open — left so by an earlier attempt, whose
+	# cancelled closing re-opened it — blocks every cancel below. Close those first.
+	for o in openings:
+		if frappe.db.get_value("POS Opening Entry", o, ["status", "docstatus"], as_dict=True) == \
+				frappe._dict(status="Open", docstatus=1):
+			try:
+				done["cancelled"].append({"POS Opening Entry": o, "result": _cancel("POS Opening Entry", o)})
+			except Exception as e:
+				frappe.db.set_value("POS Opening Entry", o, "status", "Closed", update_modified=False)
+				done["cancelled"].append({"POS Opening Entry": o, "result": "closed (%s)" % str(e)[:60]})
+	frappe.db.commit()
+
 	for c in closings:
 		shift = frappe.db.get_value("POS Closing Entry", c, "pos_opening_entry")
 		done["cancelled"].append({"POS Closing Entry": c, "result": _cancel("POS Closing Entry", c)})
