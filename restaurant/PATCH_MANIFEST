@@ -1,0 +1,35 @@
+# What must be true of the image AFTER every patch has run.
+#
+# Patches guard themselves with string matches, and a guard that false-positives
+# or that cannot recognise its own older output skips silently — the bake goes
+# green and ships stale code. This manifest is the end-state check: it runs last
+# and fails the build if any expected marker is missing. Same idea as
+# PINNED_APPS/assert_pins.py, one layer up.
+#
+# Format:  <path relative to frappe-bench> :: <substring that must be present>
+# Blank lines and #-comments ignored. Paths are relative to the bench root.
+
+# --- printing: the 80mm rebuild -------------------------------------------
+apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_order_80mm_v1
+apps/restaurant_management/restaurant_management/house.py :: rm_order_80mm_v1 bill
+apps/restaurant_management/restaurant_management/house.py :: format_time(doc.posting_time
+
+# --- fire-to-kitchen ------------------------------------------------------
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py :: rm_order_status_sent
+apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js :: "Pending", "Attending", "", null, undefined
+apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js :: item.item_group === undefined
+
+# --- kitchen copy + reprint ----------------------------------------------
+apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js :: params.set("kitchen", "1")
+apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js :: RM_print_ticket(data.order_name || data.name, true)
+apps/restaurant_management/restaurant_management/house.py :: def recent_bills(
+apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js :: add_menu_item(__("Reprint a bill")
+apps/restaurant_management/restaurant_management/hooks.py :: rm_reprint_list_hook
+apps/restaurant_management/restaurant_management/public/js/pos_invoice_list.js :: rm_reprint_invoice
+
+# --- walk-in default ------------------------------------------------------
+apps/restaurant_management/restaurant_management/house.py :: rm_walkin_default
+apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js :: rm_walkin_default
+
+# --- the etham menu export bridge ----------------------------------------
+apps/restaurant_management/restaurant_management/etham_api.py :: def menu_export

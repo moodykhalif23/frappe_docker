@@ -399,3 +399,69 @@ RUN { echo ';'; cat /tmp/close_day.js; } >> apps/restaurant_management/restauran
 RUN grep -q 'RM_close_day.mount(this)' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  || sed -i 's|window.RM_door \&\& RM_door.mount(this);|window.RM_door \&\& RM_door.mount(this); window.RM_close_day \&\& RM_close_day.mount(this);|' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+
+# the public QR menu (etham.cli.ke) pulls the live menu through this endpoint
+COPY restaurant/patches/etham_api.py apps/restaurant_management/restaurant_management/etham_api.py
+RUN python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/etham_api.py').read())"
+
+# the Order (fire-to-kitchen) button greyed out for freshly-added lines
+COPY restaurant/patches/order_button_pending.py /tmp/order_button_pending.py
+RUN python3 /tmp/order_button_pending.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js
+
+# a fired check stayed Attending, so the kitchen board filtered it out
+COPY restaurant/patches/order_status_sent.py /tmp/order_status_sent.py
+RUN python3 /tmp/order_status_sent.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
+
+# the kitchen/bar board rendered no tickets in grouped mode
+COPY restaurant/patches/kitchen_board_group.py /tmp/kitchen_board_group.py
+RUN python3 /tmp/kitchen_board_group.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js
+
+# the table bill / kitchen ticket wasted ~145mm of 80mm roll per slip
+COPY restaurant/patches/order_account_80mm.html /tmp/order_account_80mm.html
+COPY restaurant/patches/order_account_80mm.py /tmp/order_account_80mm.py
+RUN python3 /tmp/order_account_80mm.py \
+ && python3 -c "import json; json.load(open('apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json'))"
+
+# point the real bill/ticket format (Etham Order Bill) at the 80mm template
+COPY restaurant/patches/bill_format_80mm.py /tmp/bill_format_80mm.py
+RUN python3 /tmp/bill_format_80mm.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/house.py').read())"
+# wire the price-free kitchen copy (kitchen=1) on board prints
+COPY restaurant/patches/kitchen_copy.py /tmp/kitchen_copy.py
+RUN python3 /tmp/kitchen_copy.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js
+
+# the receipt threw on every render (posting_time is a timedelta, not sliceable)
+COPY restaurant/patches/receipt_time_fix.py /tmp/receipt_time_fix.py
+RUN python3 /tmp/receipt_time_fix.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/house.py').read())"
+
+# seating a walk-in demanded a typed name every time (and minted a Customer per typo)
+COPY restaurant/patches/walkin_default.py /tmp/walkin_default.py
+RUN python3 /tmp/walkin_default.py \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/house.py').read())"
+
+# a bill that failed to print was unreachable once the check was invoiced
+COPY restaurant/patches/reprint.js /tmp/reprint.js
+COPY restaurant/patches/reprint_bill.py /tmp/reprint_bill.py
+RUN python3 /tmp/reprint_bill.py \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/house.py').read())"
+
+# Reprint button on the POS Invoice list rows
+COPY restaurant/patches/pos_invoice_list.js /tmp/pos_invoice_list.js
+COPY restaurant/patches/reprint_list.py /tmp/reprint_list.py
+RUN python3 /tmp/reprint_list.py \
+ && node --check apps/restaurant_management/restaurant_management/public/js/pos_invoice_list.js \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/hooks.py').read())"
+
+# LAST STEP, ON PURPOSE: a patch guard that matches the wrong thing skips
+# silently and the bake still goes green. This asserts the end state instead.
+COPY restaurant/PATCH_MANIFEST /tmp/PATCH_MANIFEST
+COPY restaurant/patches/assert_markers.py /tmp/assert_markers.py
+RUN python3 /tmp/assert_markers.py

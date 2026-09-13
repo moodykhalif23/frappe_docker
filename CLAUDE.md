@@ -24,6 +24,21 @@ what is shipped and what is deliberately not. Read it before touching anything.
 ## Iron rules (each learned the hard way)
 
 1. **Verify fixes inside the image**, never by reading the dockerfile or a live container: `docker run --rm custom-erpnext:<tag> grep -c <fix> <file>`. Live-container seds evaporate on the next `compose up`; a sed that doesn't match exits 0 silently.
+2a. **The bake verifies itself.** `restaurant/PATCH_MANIFEST` lists, per file,
+   a marker each patch must leave behind; `restaurant/patches/assert_markers.py`
+   runs as the LAST dockerfile step and fails the build if any is missing. This
+   exists because a guard that matches the wrong thing skips *silently* and the
+   bake still goes green — it has shipped stale code twice (`grep -q
+   restaurant_manage` matching `restaurant_management`, and a guard that could
+   not tell an old build of its own block from the current one). When you add a
+   patch, add its marker to the manifest. If the build fails here, fix the
+   patch — do not delete the manifest line.
+   For blocks appended to a file, prefer `restaurant/patches/_patchlib.py`:
+   `block()` derives the marker from a hash of the content, so editing the asset
+   forces re-application and a stale copy cannot survive; `once()` asserts its
+   post-condition. Guard on something ONLY the applied patch produces — never a
+   label the new content also contains.
+
 2. **Every patch step must be idempotent** — the patch dockerfile builds FROM its own output, so steps run again on every rebake. Guard appends with `grep -q` on a *distinctive* token: `grep -q restaurant_manage` once matched `restaurant_management` and silently skipped a patch.
    Mind the strip step too: appended blocks are cut and re-appended every bake, so **anything a
    later patch appends after them is cut as well** — a helper `def` appended to the end of

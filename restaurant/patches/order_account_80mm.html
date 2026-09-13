@@ -1,0 +1,174 @@
+<!-- rm_order_80mm_v1 -->
+<style>
+  /* ---- page geometry: 80mm continuous roll, 72mm printable (576 dots @203dpi) ---- */
+  @page { size: 80mm auto; margin: 0 }
+  html, body { width: 80mm; margin: 0; padding: 0; background: #fff }
+  .print-format {
+    width: 80mm; margin: 0; padding: 2mm 4mm 0;
+    font-size: 9pt; line-height: 1.15; color: #000; background: #fff;
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;
+  }
+  @media screen { .print-format { margin: 0 auto } }
+
+  /* ---- kill Frappe's page-break machinery: .page-break carries
+     page-break-after:always (and sometimes min-height), which ejects a full
+     page per block on a continuous roll ---- */
+  @media print {
+    .page-break, .print-format .page-break, .page-break-inner {
+      page-break-after: auto !important; break-after: auto !important;
+      page-break-before: auto !important; break-before: auto !important;
+      min-height: 0 !important; height: auto !important;
+      margin: 0 !important; padding: 0 !important; border: 0 !important;
+    }
+    .print-format, .rm-o, .rm-o table, .rm-o tr {
+      page-break-after: auto !important; break-after: auto !important;
+      page-break-inside: auto !important; break-inside: auto !important;
+    }
+    html, body { height: auto !important; min-height: 0 !important }
+  }
+
+
+  /* ---- neutralise anything Frappe injects around us (logo letterhead, gutters) ---- */
+  .print-format .letter-head, .letter-head, #header-html, #footer-html { display: none !important }
+  .print-format-gutter, #print-format-container { margin: 0 !important; padding: 0 !important; background: none !important }
+
+  /* ---- own every bit of geometry; no Bootstrap table classes anywhere ---- */
+  .rm-o, .rm-o div, .rm-o p, .rm-o table { margin: 0; padding: 0 }
+  .rm-o table { width: 100%; border-collapse: collapse; table-layout: fixed }
+  .print-format .rm-o td, .rm-o td { padding: .4mm 0 !important; line-height: 1.15 !important;
+                                     vertical-align: top; text-align: left; border: 0 !important }
+  .rm-o hr { height: 0; border: 0; border-top: 1px dashed #000; margin: 1mm 0 }
+
+  .rm-o .nm   { font-size: 11pt; font-weight: 700; letter-spacing: .3px; text-align: center }
+  .rm-o .sub  { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .6px; text-align: center }
+  .rm-o .meta td { font-size: 8pt }
+  .rm-o .meta .r { width: 52%; text-align: right; white-space: normal; word-break: break-word }
+  .rm-o .hdr td  { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .4px }
+  .rm-o .b    { font-weight: 700 }
+  .rm-o .sm   { font-size: 7.5pt }
+
+  /* bill columns (72mm content: 41.8 / 8.6 / 21.6 mm) */
+  .rm-o .it { width: 58%; word-break: break-word; overflow-wrap: break-word }
+  .rm-o .qt { width: 12%; text-align: center }
+  .rm-o .am { width: 30%; text-align: right; white-space: nowrap }
+
+  /* totals: wider money column so a formatted currency value can never wrap,
+     right edge still lines up with the item amounts above */
+  .rm-o .tt td      { font-size: 8.5pt }
+  .rm-o .tt .tl     { width: 54% }
+  .rm-o .tt .am     { width: 46% }
+  .rm-o .tt .tot td { font-size: 11pt; font-weight: 700; padding-top: .6mm }
+
+  /* kitchen ticket: qty first and large, because the cook scans the left edge */
+  .rm-o .ktbl  { font-size: 15pt; font-weight: 700; line-height: 1.05; text-align: center }
+  .print-format .rm-o .krow td, .rm-o .krow td { padding: .7mm 0 !important }
+  .rm-o .kq    { width: 16%; font-size: 11pt; font-weight: 700; text-align: left }
+  .rm-o .kn    { width: 84%; font-size: 11pt; line-height: 1.1; word-break: break-word }
+  .rm-o .knote { font-size: 8.5pt; font-style: italic }
+
+  /* one deliberate lead for the auto-cutter; 0 if the driver already feeds-and-cuts */
+  .rm-o .tail { height: 6mm }
+</style>
+
+{#- ============================================================
+     COPY SELECTOR
+     kitchen copy  = no money at all (item + qty + note + table)
+     customer bill = full money columns + totals        <-- DEFAULT
+     Driven by, in order: printview/print args ?kitchen=1  |  ?copy=kitchen
+     Falls back to the bill whenever the flag is absent or unreadable.
+     ============================================================ -#}
+{%- set _fd = frappe.form_dict if frappe.form_dict is mapping else {} -%}
+{%- set _raw = _fd.get("kitchen") or _fd.get("copy") or doc.get("kitchen_copy") or "" -%}
+{%- set kitchen = (_raw | string | lower | trim) in ["1", "true", "yes", "on", "kitchen", "k"] -%}
+
+{#- merge identical lines (same item AND same rate) on the BILL only.
+    Set to false if entry_items is already aggregated upstream. -#}
+{%- set MERGE_BILL_LINES = true -%}
+
+{%- macro fq(v) -%}{{ v | int if v == v | int else "%g" | format(v) }}{%- endmacro -%}
+
+{#- build a safe render list: every value coerced, nothing can raise -#}
+{%- set rows = [] -%}
+{%- set seen = {} -%}
+{%- for it in (doc.get("entry_items") or []) -%}
+  {%- set _n1 = it.get("notes") -%}
+  {%- set _n2 = it.get("special_instructions") -%}
+  {%- set note = ((_n1 if _n1 is string else "") or (_n2 if _n2 is string else "")) | trim -%}
+  {%- set row = {
+        "n": it.get("item_name") or it.get("item_code") or "",
+        "q": it.get("qty") | float,
+        "a": it.get("amount") | float,
+        "r": it.get("rate") | float,
+        "s": it.get("serial_no") if it.get("serial_no") is string else "",
+        "note": note } -%}
+  {%- set key = (row["n"] ~ "|" ~ row["r"] | string) -%}
+  {%- if kitchen or not MERGE_BILL_LINES or key not in seen -%}
+    {%- set _void = seen.update({key: rows | length}) -%}
+    {%- set _void = rows.append(row) -%}
+  {%- else -%}
+    {%- set prev = rows[seen[key]] -%}
+    {%- set _void = prev.update({"q": prev["q"] + row["q"], "a": prev["a"] + row["a"]}) -%}
+    {%- if row["note"] and row["note"] not in prev["note"] -%}
+      {%- set _void = prev.update({"note": (prev["note"] ~ "; " ~ row["note"]) | trim("; ")}) -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+
+<div class="rm-o">
+{%- if kitchen %}
+  {#- ---------------- KITCHEN TICKET — no prices, no totals ---------------- -#}
+  <div class="ktbl">{{ doc.table_description or doc.name }}</div>
+  <div class="sub">Kitchen{% if doc.creation %} &middot; {{ frappe.utils.format_datetime(doc.creation, "HH:mm") }}{% endif %}</div>
+  <hr>
+  <table class="meta">
+    <tr>
+      <td>{{ doc.name }}{% if doc.get("waiter") %} &middot; {{ doc.get("waiter") }}{% endif %}</td>
+      <td class="r">{{ rows | length }} line{% if rows | length != 1 %}s{% endif %}</td>
+    </tr>
+  </table>
+  <hr>
+  <table>
+    {%- for r in rows %}
+    <tr class="krow">
+      <td class="kq">{{ fq(r["q"]) }}</td>
+      <td class="kn">{{ r["n"] }}{% if r["note"] %}<div class="knote">{{ r["note"] | e }}</div>{% endif %}</td>
+    </tr>
+    {%- endfor %}
+  </table>
+{%- else %}
+  {#- ---------------- CUSTOMER BILL ---------------- -#}
+  <div class="nm">{{ doc.get("company") or "" }}</div>
+  <hr>
+  <table class="meta">
+    <tr>
+      <td class="b">{{ doc.table_description or "" }}</td>
+      <td class="r">{% if doc.creation %}{{ frappe.utils.format_datetime(doc.creation, "dd/MM/yy HH:mm") }}{% endif %}</td>
+    </tr>
+    <tr>
+      <td>{{ doc.name }}</td>
+      <td class="r">{{ doc.customer_name or "" }}</td>
+    </tr>
+  </table>
+  <hr>
+  <table>
+    <tr class="hdr"><td class="it">{{ _("Item") }}</td><td class="qt">{{ _("Qty") }}</td><td class="am">{{ _("Amount") }}</td></tr>
+    {%- for r in rows %}
+    <tr>
+      <td class="it">{{ r["n"] }}{% if r["q"] != 1 and r["r"] %} <span class="sm">@{{ "%.2f" | format(r["r"]) }}</span>{% endif %}{% if r["s"] %} <span class="sm">SR {{ r["s"] | replace("\n", ", ") | e }}</span>{% endif %}</td>
+      <td class="qt">{{ fq(r["q"]) }}</td>
+      <td class="am">{{ "%.2f" | format(r["a"]) }}</td>
+    </tr>
+    {%- endfor %}
+  </table>
+  <hr>
+  <table class="tt">
+    {%- if doc.get("tax") | float %}
+    <tr><td class="tl">{{ _("Tax") }}</td><td class="am">{{ doc.get_formatted("tax") }}</td></tr>
+    {%- endif %}
+    <tr class="tot"><td class="tl">{{ _("Total") }}</td><td class="am">{{ doc.get_formatted("amount") }}</td></tr>
+  </table>
+  <hr>
+{%- endif %}
+  <div class="tail"></div>
+</div>
