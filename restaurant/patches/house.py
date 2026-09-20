@@ -185,6 +185,62 @@ DELIVERY_ROOM_FIELD = {"fieldname": "delivery_room", "fieldtype": "Link", "optio
 RECHECK_FIELD = {"fieldname": "waiter_recheck_seconds", "fieldtype": "Int", "label": "Waiter PIN Recheck (seconds)",
 				 "default": "90", "description": "A waiter's PIN is asked again for a seat or an order after this many seconds. Blank = 90; 1 = every time."}
 
+# rm_unsent_at_payment: what to do, at the moment a bill is paid, with lines the
+# kitchen was never told about. Default is the option that cannot raise a ticket
+# for food already on the table; see TableOrder._rm_settle_unsent for the
+# measurements behind that choice.
+# rm_bill_payment: what the guest is told about paying, printed on the customer
+# bill. M-Pesa is 354 of the last 446 payments here and the bill carried no way
+# to pay at all. Content lives in the database because it is the owner's to
+# change and must survive a deploy; the layout stays in the template, because a
+# broken template means no bill prints on a live till.
+# rm_bill_payment: the till number gets its OWN field rather than a line of free
+# text, because it has to be rendered big and bold and a free-text block cannot
+# single one line out. M-Pesa is 354 of the last 446 payments here.
+BILL_TILL_FIELD = {
+	"fieldname": "rm_bill_till_number", "fieldtype": "Data",
+	"label": "M-Pesa Buy Goods Till (printed large on the customer bill)",
+	"description": ("Just the digits, e.g. 746775. Printed under the total in large bold type "
+					"with the heading M-PESA BUY GOODS TILL. Blank prints nothing. "
+					"Customer bill only — never a kitchen ticket.")
+}
+
+
+BILL_PAYMENT_FIELD = {
+	"fieldname": "rm_bill_payment_details", "fieldtype": "Small Text",
+	"label": "How to pay (printed on the customer bill)",
+	"description": ("Printed under the total on the CUSTOMER BILL only — never on a kitchen "
+					"ticket. One line each, e.g. 'M-PESA Paybill 247247' then "
+					"'Account: your table number'. Leave blank to print nothing.")
+}
+
+
+UNSENT_AT_PAYMENT_FIELD = {
+	"fieldname": "rm_unsent_at_payment", "fieldtype": "Select",
+	"label": "Unsent items, at payment",
+	"options": "Record as served\nSend to kitchen\nLeave as is",
+	"default": "Record as served",
+	"description": ("Record as served: close them quietly so reports stop showing them as pending — "
+					"no ticket is raised for food already eaten. Send to kitchen: fire them for real, "
+					"right for counter service, a re-cook instruction for dine-in. "
+					"Leave as is: do nothing. The cashier is told the count either way.")
+}
+
+# rm_kot_rounds: which trip to the kitchen a dish went out on. Stamped by
+# TableOrder.send under a row lock; the board groups by it so each fire is its
+# own ticket and the chef's progress lives on the dishes, not on the check.
+# no_copy: a duplicated or amended order has not been to the kitchen.
+KOT_ROUND_FIELD = {"fieldname": "kot_round", "fieldtype": "Int", "label": "KOT Round",
+				   "read_only": 1, "no_copy": 1, "default": "0",
+				   "description": "0 = fired before rounds were kept, or not yet fired."}
+# The kill switch, per production centre. Off and the board draws exactly one
+# card per check as it always did — but progress still lives on the dishes, so
+# turning it off does NOT bring back the bug where an addition un-did the round
+# before it.
+KOT_ROUNDS_FIELD = {"fieldname": "kot_rounds", "fieldtype": "Check", "default": "1",
+					"label": "A ticket per fired round",
+					"description": "Each trip to the kitchen appears as its own ticket on this board."}
+
 
 def _ensure_procurement():
 	"""Reordering out of the box: supplier shelves ready to fill, and stock that
@@ -549,6 +605,53 @@ _THERMAL_CSS = """<style>
 """
 
 
+# rm_status_labels: labels the floor reads, corrected in place. Only an exact
+# match is touched, so a label someone has deliberately reworded is left alone.
+_RM_STATUS_LABELS = {
+	# ("Status Order PC", field): (what it says wrongly, what it should say)
+	("Sent", "message"): ("Whiting", "Waiting"),
+}
+
+
+def _ensure_status_labels():
+	"""The kitchen board's pill for a fired ticket said "Whiting"."""
+	fixed = []
+	for (name, field), (wrong, right) in _RM_STATUS_LABELS.items():
+		if not frappe.db.exists("Status Order PC", name):
+			continue
+		if (frappe.db.get_value("Status Order PC", name, field) or "") == wrong:
+			frappe.db.set_value("Status Order PC", name, field, right, update_modified=False)
+			fixed.append("%s.%s" % (name, field))
+	return fixed
+
+
+def _ensure_order_account_template():
+	"""rm_order_account_sync: put the 80mm template from the app FILE onto the
+	Order Account record.
+
+	Order Account is a STANDARD print format, so its html lives inside its .json
+	and `get_print` renders from the DATABASE row. frappe's importer skips a
+	standard doc whose file timestamp matches the row it already holds, so a
+	bake can ship a new template that `bench migrate` and `reload-doc` both
+	decline to import — and the bill, which is copied from this record, stays a
+	build behind with nothing to show for it. That happened. Copy it outright."""
+	import json, os
+	path = os.path.join(frappe.get_app_path("restaurant_management"),
+						"restaurant_management", "print_format", "order_account",
+						"order_account.json")
+	try:
+		html = (json.load(open(path)).get("html") or "")
+	except Exception:
+		return None
+	if not html:
+		return None
+	if (frappe.db.get_value("Print Format", "Order Account", "html") or "") != html:
+		frappe.db.set_value("Print Format", "Order Account", {
+			"html": html, "font_size": 9, "margin_top": 0, "margin_bottom": 0,
+			"margin_left": 0, "margin_right": 0}, update_modified=False)
+	return "Order Account"
+
+
 def _ensure_bill_format():
 	"""The waiter's bill, branded and without the browser's URL across the top."""
 	name = "Etham Order Bill"
@@ -589,8 +692,14 @@ def ensure_custom_fields():
 		pass
 	from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
+	# rm_kot_rounds: has the switch ever existed before this deploy? Captured
+	# BEFORE the field is created, because the answer stops being knowable after.
+	_kot_switch_existed = bool(frappe.db.exists(
+		"Custom Field", {"dt": "Restaurant Object", "fieldname": "kot_rounds"}))
+
 	create_custom_fields({
-		"Restaurant Object": [dict(WAITER_FIELD, insert_after="current_user")],
+		"Restaurant Object": [dict(WAITER_FIELD, insert_after="current_user"),
+							  dict(KOT_ROUNDS_FIELD, insert_after="group_items_by_order")],  # rm_kot_rounds
 		"Table Order": [
 			dict(WAITER_FIELD, insert_after="customer"),
 			dict(BOOKING_FIELD, insert_after="waiter"),
@@ -607,9 +716,33 @@ def ensure_custom_fields():
 			dict(LEFT_FIELD, insert_after="seated_at"),
 		],
 		"Restaurant Settings": [dict(DELIVERY_ROOM_FIELD, insert_after="multiple_pending_order"),
-								dict(RECHECK_FIELD, insert_after="delivery_room")],
-		"Order Entry Item": [dict(WAITER_FIELD, insert_after="item_name", read_only=1)],
+								dict(RECHECK_FIELD, insert_after="delivery_room"),
+								dict(UNSENT_AT_PAYMENT_FIELD, insert_after="waiter_recheck_seconds"),  # rm_unsent_at_payment
+								dict(BILL_TILL_FIELD, insert_after="rm_unsent_at_payment"),  # rm_bill_payment
+								dict(BILL_PAYMENT_FIELD, insert_after="rm_bill_till_number")],  # rm_bill_payment
+		"Order Entry Item": [dict(WAITER_FIELD, insert_after="item_name", read_only=1),
+							  dict(KOT_ROUND_FIELD, insert_after="ordered_time")],  # rm_kot_rounds
 	}, ignore_validate=True)
+
+	# rm_kot_rounds: create_custom_fields' default only reaches rows made after
+	# it, so the centres that already exist would come up with the switch off and
+	# nobody would know why nothing changed.
+	#
+	# ONE-SHOT, and that is the whole point. This runs on EVERY deploy. If a
+	# manager unticks "A ticket per fired round" to get the board back to one card
+	# per check mid-service, the next deploy — very possibly the one carrying the
+	# fix for whatever made them untick it — must not silently turn it back on.
+	# The switch is the documented rollback; a rollback that cannot outlive a
+	# deploy is not a rollback.
+	if not _kot_switch_existed:
+		try:
+			for pc in frappe.get_all("Restaurant Object", filters={"type": "Production Center"},
+									 pluck="name"):
+				if frappe.db.get_value("Restaurant Object", pc, "kot_rounds") in (None, 0, "0"):
+					frappe.db.set_value("Restaurant Object", pc, "kot_rounds", 1,
+										update_modified=False)
+		except Exception:
+			frappe.log_error(title="kot_rounds default")
 
 	# The pad's client flow reads these before an item can land; without them a
 	from frappe.permissions import add_permission
@@ -667,6 +800,8 @@ def ensure_custom_fields():
 			frappe.db.set_value("Custom Field", cf, {"hidden": 1, "reqd": 0}, update_modified=False)
 
 	receipt = _ensure_receipt_format()
+	_ensure_status_labels()  # rm_status_labels
+	_ensure_order_account_template()  # rm_order_account_sync
 	_ensure_bill_format()
 	try:
 		_ensure_delivery()

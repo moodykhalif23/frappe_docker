@@ -460,6 +460,44 @@ RUN python3 /tmp/reprint_list.py \
  && node --check apps/restaurant_management/restaurant_management/public/js/pos_invoice_list.js \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/hooks.py').read())"
 
+# a kitchen ticket per FIRED ROUND. Adding to an open check used to drag the
+# ticket the chef was already cooking back to "Sent"; progress now lives on the
+# dishes, and each trip to the kitchen is its own card. The three steps below
+# ship together or the board half-applies — the manifest enforces that.
+COPY restaurant/patches/kot_rounds_order.py /tmp/kot_rounds_order.py
+RUN python3 /tmp/kot_rounds_order.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
+
+COPY restaurant/patches/kot_rounds_board.py /tmp/kot_rounds_board.py
+RUN python3 /tmp/kot_rounds_board.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())"
+
+COPY restaurant/patches/kot_rounds_js.py /tmp/kot_rounds_js.py
+RUN python3 /tmp/kot_rounds_js.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js
+
+# deleting a check erased food the kitchen had already cooked: _delete emptied
+# the child table before either guard could look at it
+COPY restaurant/patches/order_delete_guard.py /tmp/order_delete_guard.py
+RUN python3 /tmp/order_delete_guard.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
+
+# the kitchen board's pill for a fired ticket read "Whiting"
+COPY restaurant/patches/status_label_fix.py /tmp/status_label_fix.py
+RUN python3 /tmp/status_label_fix.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/setup/install.py').read())"
+
+# splitting a check truncated fractional quantities off the bill
+COPY restaurant/patches/divide_qty_fix.py /tmp/divide_qty_fix.py
+RUN python3 /tmp/divide_qty_fix.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
+
+# bills were being paid for food the kitchen was never told about
+COPY restaurant/patches/unsent_at_payment.py /tmp/unsent_at_payment.py
+RUN python3 /tmp/unsent_at_payment.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
+
 # LAST STEP, ON PURPOSE: a patch guard that matches the wrong thing skips
 # silently and the bake still goes green. This asserts the end state instead.
 COPY restaurant/PATCH_MANIFEST /tmp/PATCH_MANIFEST

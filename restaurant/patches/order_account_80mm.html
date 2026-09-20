@@ -1,4 +1,4 @@
-<!-- rm_order_80mm_v1 -->
+<!-- rm_order_80mm_v2 -->
 <style>
   /* ---- page geometry: 80mm continuous roll, 72mm printable (576 dots @203dpi) ---- */
   @page { size: 80mm auto; margin: 0 }
@@ -67,6 +67,16 @@
   .rm-o .kn    { width: 84%; font-size: 11pt; line-height: 1.1; word-break: break-word }
   .rm-o .knote { font-size: 8.5pt; font-style: italic }
 
+  /* how to pay: the till number is the one thing a guest must read across a
+     table, in a hurry, on thermal paper — so it gets the largest type on the
+     slip, bigger even than the total */
+  .rm-o .pay        { text-align: center; line-height: 1.25; margin: .5mm 0 }
+  .rm-o .pay .h     { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .6px }
+  .rm-o .pay .tilll { font-size: 8.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .5px }
+  .rm-o .pay .till  { font-size: 26pt; font-weight: 700; letter-spacing: 2px;
+                      line-height: 1.1; margin: .4mm 0 .8mm }
+  .rm-o .pay .l     { font-size: 9.5pt; font-weight: 700; word-break: break-word }
+
   /* one deliberate lead for the auto-cutter; 0 if the driver already feeds-and-cuts */
   .rm-o .tail { height: 6mm }
 </style>
@@ -82,6 +92,14 @@
 {%- set _raw = _fd.get("kitchen") or _fd.get("copy") or doc.get("kitchen_copy") or "" -%}
 {%- set kitchen = (_raw | string | lower | trim) in ["1", "true", "yes", "on", "kitchen", "k"] -%}
 
+{#- ONE FIRED ROUND: ?kot_round=N prints only the dishes sent on that trip to
+    the kitchen. A round ticket that carried the whole check would hand the pass
+    food already on the table, as a cook instruction — on the one surface that
+    cannot be dimmed or taken back. Absent, and on the customer bill always,
+    this is empty and every line prints: the bill is the whole check. -#}
+{%- set _rnd = (_fd.get("kot_round") or "") | string | trim -%}
+{%- set kot_round = _rnd if (kitchen and _rnd) else "" -%}
+
 {#- merge identical lines (same item AND same rate) on the BILL only.
     Set to false if entry_items is already aggregated upstream. -#}
 {%- set MERGE_BILL_LINES = true -%}
@@ -92,6 +110,7 @@
 {%- set rows = [] -%}
 {%- set seen = {} -%}
 {%- for it in (doc.get("entry_items") or []) -%}
+  {%- if not kot_round or (it.get("kot_round") | string | trim) == kot_round -%}
   {%- set _n1 = it.get("notes") -%}
   {%- set _n2 = it.get("special_instructions") -%}
   {%- set note = ((_n1 if _n1 is string else "") or (_n2 if _n2 is string else "")) | trim -%}
@@ -101,6 +120,7 @@
         "a": it.get("amount") | float,
         "r": it.get("rate") | float,
         "s": it.get("serial_no") if it.get("serial_no") is string else "",
+        "t": it.get("ordered_time"),
         "note": note } -%}
   {%- set key = (row["n"] ~ "|" ~ row["r"] | string) -%}
   {%- if kitchen or not MERGE_BILL_LINES or key not in seen -%}
@@ -113,13 +133,20 @@
       {%- set _void = prev.update({"note": (prev["note"] ~ "; " ~ row["note"]) | trim("; ")}) -%}
     {%- endif -%}
   {%- endif -%}
+  {%- endif -%}
 {%- endfor -%}
 
 <div class="rm-o">
 {%- if kitchen %}
   {#- ---------------- KITCHEN TICKET — no prices, no totals ---------------- -#}
   <div class="ktbl">{{ doc.table_description or doc.name }}</div>
-  <div class="sub">Kitchen{% if doc.creation %} &middot; {{ frappe.utils.format_datetime(doc.creation, "HH:mm") }}{% endif %}</div>
+  {#- the time is this ROUND's, not the table's: two fires are two tickets, and
+      the chef matches the paper to the card by the clock on it. Deliberately
+      not "Round 2" — Kitchen sees only food and Bar only drinks, so Kitchen can
+      legitimately see round 1 and round 3 and never round 2, and a ticket that
+      says Round 3 with no Round 2 behind it sends a chef to the phone. -#}
+  {%- set _fired = (rows[0]["t"] if rows and rows[0]["t"] else doc.creation) -%}
+  <div class="sub">Kitchen{% if _fired %} &middot; {{ frappe.utils.format_datetime(_fired, "HH:mm") }}{% endif %}</div>
   <hr>
   <table class="meta">
     <tr>
@@ -169,6 +196,22 @@
     <tr class="tot"><td class="tl">{{ _("Total") }}</td><td class="am">{{ doc.get_formatted("amount") }}</td></tr>
   </table>
   <hr>
+  {#- HOW TO PAY. The text is Restaurant Settings > "How to pay", so the owner
+     edits it in the desk and it survives every deploy; only the layout lives
+     here. Customer bill ONLY — a kitchen ticket never carries money. -#}
+  {%- set _till = frappe.db.get_single_value("Restaurant Settings", "rm_bill_till_number") or "" -%}
+  {%- set _pay  = frappe.db.get_single_value("Restaurant Settings", "rm_bill_payment_details") or "" -%}
+  {%- if (_till | trim) or (_pay | trim) %}
+  <div class="pay">
+    <div class="h">{{ _("How to pay") }}</div>
+    {%- if _till | trim %}
+    <div class="tilll">M-Pesa Buy Goods Till</div>
+    <div class="till">{{ _till | trim }}</div>
+    {%- endif %}
+    {%- for _l in _pay.split("\n") %}{% if _l | trim %}<div class="l">{{ _l | trim }}</div>{% endif %}{% endfor %}
+  </div>
+  <hr>
+  {%- endif %}
 {%- endif %}
   <div class="tail"></div>
 </div>
