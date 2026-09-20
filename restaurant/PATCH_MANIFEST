@@ -10,8 +10,8 @@
 # Blank lines and #-comments ignored. Paths are relative to the bench root.
 
 # --- printing: the 80mm rebuild -------------------------------------------
-apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_order_80mm_v1
-apps/restaurant_management/restaurant_management/house.py :: rm_order_80mm_v1 bill
+apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_order_80mm_v2
+apps/restaurant_management/restaurant_management/house.py :: rm_order_bill_sync
 apps/restaurant_management/restaurant_management/house.py :: format_time(doc.posting_time
 
 # --- the day report slip --------------------------------------------------
@@ -25,7 +25,7 @@ apps/restaurant_management/restaurant_management/public/restaurant/js/process-ma
 
 # --- kitchen copy + reprint ----------------------------------------------
 apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js :: params.set("kitchen", "1")
-apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js :: RM_print_ticket(data.order_name || data.name, true)
+apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js :: RM_print_ticket(data.order_name || data.name, true, data.kot_round)
 apps/restaurant_management/restaurant_management/house.py :: def recent_bills(
 apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js :: add_menu_item(__("Reprint a bill")
 apps/restaurant_management/restaurant_management/hooks.py :: rm_reprint_list_hook
@@ -37,3 +37,30 @@ apps/restaurant_management/restaurant_management/restaurant_management/page/rest
 
 # --- the etham menu export bridge ----------------------------------------
 apps/restaurant_management/restaurant_management/etham_api.py :: def menu_export
+
+# --- a kitchen ticket per fired round ------------------------------------
+# The python and the JS MUST ship together: the board branches on a flag the
+# server computes, and half of this feature is worse than none of it.
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py :: rm_kot_rounds_board
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py :: rm_kot_round_stamp
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py :: rm_delete_guard
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py :: item_tax_template=item.get(
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py :: rm_divide_qty
+apps/restaurant_management/restaurant_management/public/restaurant/js/process-manage-class.js :: rm_kot_rounds_js
+apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js :: params.set("kot_round"
+apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js :: rm_kot_rounds_js
+apps/restaurant_management/restaurant_management/public/restaurant/js/order-item-class.js :: rm_kot_rounds_js
+apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js :: method: "send",
+apps/restaurant_management/restaurant_management/house.py :: KOT_ROUND_FIELD
+apps/restaurant_management/restaurant_management/house.py :: KOT_ROUNDS_FIELD
+apps/restaurant_management/restaurant_management/house.py :: rm_order_account_sync
+apps/restaurant_management/restaurant_management/house.py :: rm_status_labels
+apps/restaurant_management/restaurant_management/house.py :: _kot_switch_existed
+apps/restaurant_management/restaurant_management/house.py :: UNSENT_AT_PAYMENT_FIELD
+apps/restaurant_management/restaurant_management/house.py :: BILL_PAYMENT_FIELD
+apps/restaurant_management/restaurant_management/house.py :: BILL_TILL_FIELD
+apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_bill_till_number
+apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_bill_payment_details
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py :: def _rm_settle_unsent
+apps/restaurant_management/restaurant_management/setup/install.py :: rm_status_labels
+apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: kot_round

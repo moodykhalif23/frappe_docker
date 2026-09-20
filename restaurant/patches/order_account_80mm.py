@@ -13,17 +13,28 @@
 # editing it in the UI would be lost on the next app update. Idempotent.
 import json, os
 
-MARK = "rm_order_80mm_v1"
+MARK = "rm_order_80mm_v2"
 JSON_PATH = "apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json"
 HTML_PATH = "/tmp/order_account_80mm.html"
 
 d = json.load(open(JSON_PATH))
-if MARK in (d.get("html") or ""):
-    print("order_account_80mm: already patched")
+html = open(HTML_PATH).read()
+# Compare CONTENT, never the version marker. Guarding on MARK meant editing the
+# template without remembering to bump v2 -> v3 left the installed html
+# untouched while the patch cheerfully printed "already patched" — and the
+# manifest could not see it either, because the stale template still contains
+# every literal the manifest asserts. bill_format_80mm.py was burned by exactly
+# this and already compares content; this is the other half of that lesson.
+assert MARK in html, "new template is missing its marker"
+if (d.get("html") or "") == html:
+    print("order_account_80mm: already current")
 else:
-    html = open(HTML_PATH).read()
-    assert MARK in html, "new template is missing its marker"
     d["html"] = html
+    # frappe's importer skips a standard doc whose file `modified` matches the
+    # row it already has, so editing the html alone leaves the DB one build
+    # behind and `bench migrate` / reload-doc silently do nothing. Only bumped
+    # when the template actually changed — the MARK guard above sees to that.
+    d["modified"] = __import__("datetime").datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S.%f")
     d["font_size"] = 9          # stop Print Settings' site-wide 14 applying
     d["margin_top"] = 0
     d["margin_bottom"] = 0

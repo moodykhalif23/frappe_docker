@@ -26,7 +26,10 @@ else:
 # --- process-manage-class.js: board prints are the kitchen copy ---
 p2 = RM + '/public/restaurant/js/process-manage-class.js'
 t = open(p2).read()
-if 'RM_print_ticket(data.order_name || data.name, true)' not in t:
+# the guard stops at the kitchen flag on purpose: kot_rounds_js later adds a
+# third argument, and a guard that cannot recognise its own widened output
+# re-enters on the next bake and dies on a vanished anchor
+if 'RM_print_ticket(data.order_name || data.name, true' not in t:
     c1 = 'if (this.group_items_by_order) return RM_print_ticket(data.order_name || data.name);'
     assert t.count(c1) == 1, 'board anchor %d' % t.count(c1)
     t = t.replace(c1, 'if (this.group_items_by_order) return RM_print_ticket(data.order_name || data.name, true);')
