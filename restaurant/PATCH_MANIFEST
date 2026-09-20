@@ -14,6 +14,10 @@ apps/restaurant_management/restaurant_management/restaurant_management/print_for
 apps/restaurant_management/restaurant_management/house.py :: rm_order_80mm_v1 bill
 apps/restaurant_management/restaurant_management/house.py :: format_time(doc.posting_time
 
+# --- the day report slip --------------------------------------------------
+apps/restaurant_management/restaurant_management/house.py :: rm_day_report_v1
+apps/restaurant_management/restaurant_management/house.py :: rm_unpaid_at_close
+
 # --- fire-to-kitchen ------------------------------------------------------
 apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py :: rm_order_status_sent
 apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js :: "Pending", "Attending", "", null, undefined

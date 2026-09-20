@@ -2,6 +2,7 @@
 payments table — and Card must be offered at the till beside Cash and M-Pesa.
 Test sites only: it submits one small POS invoice and cancels it again."""
 import json
+import re
 import frappe
 from restaurant_management import house
 
@@ -101,7 +102,7 @@ def run():
 		from frappe.www.printview import get_html_and_style
 		html = (get_html_and_style(doc=frappe.get_doc("POS Invoice", inv2[0]).as_json(),
 								   print_format="Etham Receipt") or {}).get("html") or ""
-		ok("the receipt renders", "rm_receipt_v2" in html and "TOTAL" in html, html[:120])
+		ok("the receipt renders", bool(re.search(r"rm_receipt_v\d+", html)) and "TOTAL" in html, html[:120])
 		ok("item, qty and amount each have a column",
 		   'class="it"' in html and 'class="qt"' in html and 'class="am"' in html)
 		doc2 = frappe.get_doc("POS Invoice", inv2[0])

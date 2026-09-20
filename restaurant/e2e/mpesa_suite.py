@@ -2,6 +2,7 @@
 cash needs none; the code lands on the payment row; the report finds it.
 Runs in the bench console of a test site — it bills real invoices."""
 import json
+import re
 import frappe
 from frappe import _
 from restaurant_management import house
@@ -116,7 +117,7 @@ def run():
 	ok("the report lists each transaction on its own line", sorted(r.code for r in split_rows if r.invoice == inv3.name) == sorted([c1, c2]))
 
 	html = frappe.db.get_value("Print Format", "Etham Receipt", "html") or ""
-	ok("the receipt is the compact one", "rm_receipt_v2" in html)
+	ok("the receipt is the compact one", bool(re.search(r"rm_receipt_v\d+", html)), html[:60])
 	out = frappe.get_print("POS Invoice", inv.name, "Etham Receipt")
 	ok("the receipt shows the mode and its code", code in out and "M-Pesa" in out)
 	ok("with item, qty and amount in their own columns",

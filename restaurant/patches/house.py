@@ -178,6 +178,13 @@ BOOKING_FIELD = {"fieldname": "booking", "fieldtype": "Link", "options": "Restau
 PAID_BY_FIELD = {"fieldname": "rm_paid_by", "fieldtype": "Data", "label": "Paid By",
 				 "read_only": 1, "no_copy": 1, "in_list_view": 1, "in_standard_filter": 1,
 				 "search_index": 1}
+
+UNPAID_FIELD = {"fieldname": "rm_unpaid_at_close", "fieldtype": "Currency",
+				"label": "Unpaid At Close", "read_only": 1, "no_copy": 1}
+UNPAID_N_FIELD = {"fieldname": "rm_unpaid_checks", "fieldtype": "Int",
+				  "label": "Unpaid Checks", "read_only": 1, "no_copy": 1}
+UNPAID_LIST_FIELD = {"fieldname": "rm_unpaid_list", "fieldtype": "Small Text",
+					 "label": "Unpaid Detail", "read_only": 1, "no_copy": 1}
 # Checks seated in this room are deliveries: flagged for the kitchen, fee added.
 DELIVERY_ROOM_FIELD = {"fieldname": "delivery_room", "fieldtype": "Link", "options": "Restaurant Object",
 					   "label": "Delivery Room"}
@@ -549,6 +556,130 @@ _THERMAL_CSS = """<style>
 """
 
 
+_DAY_REPORT_BUILD = "rm_day_report_v1"
+_DAY_REPORT_HTML = """<!-- rm_day_report_v1 -->
+<style>
+  @page { size: 80mm auto; margin: 0 }
+  html, body { width: 80mm; margin: 0; padding: 0; background: #fff }
+  .print-format { width: 80mm; margin: 0; padding: 2mm 4mm 0; font-size: 9pt; line-height: 1.2;
+    color: #000; background: #fff; font-variant-numeric: tabular-nums;
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif }
+  @media screen { .print-format { margin: 0 auto } }
+  @media print {
+    .page-break, .print-format .page-break { page-break-after: auto !important;
+      break-after: auto !important; min-height: 0 !important; margin: 0 !important }
+    html, body { height: auto !important; min-height: 0 !important }
+  }
+  .print-format .letter-head, .letter-head, #header-html, #footer-html { display: none !important }
+  .rm-d table { width: 100%; border-collapse: collapse; table-layout: fixed }
+  .print-format .rm-d td, .rm-d td { padding: .45mm 0 !important; vertical-align: top;
+    border: 0 !important; line-height: 1.2 !important }
+  .rm-d hr { height: 0; border: 0; border-top: 1px dashed #000; margin: 1.2mm 0 }
+  .rm-d .nm { font-size: 12pt; font-weight: 700; text-align: center; letter-spacing: .3px }
+  .rm-d .ttl { font-size: 8pt; text-align: center; text-transform: uppercase; letter-spacing: 1px }
+  .rm-d .sec { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .5px; font-weight: 700 }
+  .rm-d .r { text-align: right; white-space: nowrap }
+  .rm-d .lbl { width: 52% }
+  .rm-d .big td { font-size: 11pt; font-weight: 700; padding-top: .8mm !important }
+  .rm-d .sm { font-size: 7.5pt }
+  .rm-d .ft { text-align: center; font-size: 7.5pt; margin-top: 2mm }
+  .rm-d .tail { height: 6mm }
+</style>
+{%- macro money(v) -%}{{ "%.2f" | format(v | float) }}{%- endmacro -%}
+{%- set rows = doc.get("payment_reconciliation") or [] -%}
+{%- set ns = namespace(open_total=0, sales_total=0, counted_total=0, diff_total=0) -%}
+{%- for r in rows -%}
+  {%- set ns.open_total = ns.open_total + (r.opening_amount | float) -%}
+  {%- set ns.sales_total = ns.sales_total + (r.expected_amount | float) - (r.opening_amount | float) -%}
+  {%- set ns.counted_total = ns.counted_total + (r.closing_amount | float) -%}
+  {%- set ns.diff_total = ns.diff_total + (r.difference | float) -%}
+{%- endfor -%}
+<div class="rm-d">
+  <div class="nm">{{ doc.company }}</div>
+  <div class="ttl">Day Report</div>
+  <hr>
+  <table>
+    <tr><td class="lbl">Date</td><td class="r">{{ frappe.utils.formatdate(doc.posting_date, "dd/MM/yyyy") }}</td></tr>
+    <tr><td class="lbl">Opened</td><td class="r">{{ frappe.utils.format_datetime(doc.period_start_date, "dd/MM HH:mm") }}</td></tr>
+    <tr><td class="lbl">Closed</td><td class="r">{{ frappe.utils.format_datetime(doc.period_end_date, "dd/MM HH:mm") }}</td></tr>
+    <tr><td class="lbl">Cashier</td><td class="r">{{ doc.user }}</td></tr>
+    <tr><td class="lbl sm">Shift</td><td class="r sm">{{ doc.name }}</td></tr>
+  </table>
+  <hr>
+  <table>
+    <tr><td colspan="2" class="sec">Opened with</td></tr>
+    {%- for r in rows %}
+    <tr><td class="lbl">{{ r.mode_of_payment }}</td><td class="r">{{ money(r.opening_amount) }}</td></tr>
+    {%- endfor %}
+    <tr><td class="lbl sm">Total on hand</td><td class="r sm">{{ money(ns.open_total) }}</td></tr>
+  </table>
+  <hr>
+  <table>
+    <tr><td colspan="2" class="sec">Sales taken</td></tr>
+    {%- for r in rows %}
+    <tr><td class="lbl">{{ r.mode_of_payment }}</td>
+        <td class="r">{{ money((r.expected_amount | float) - (r.opening_amount | float)) }}</td></tr>
+    {%- endfor %}
+    <tr class="big"><td class="lbl">TOTAL SALES</td><td class="r">{{ money(doc.grand_total) }}</td></tr>
+    <tr><td class="lbl sm">Bills</td><td class="r sm">{{ (doc.get("pos_transactions") or []) | length }}</td></tr>
+    <tr><td class="lbl sm">Items</td><td class="r sm">{{ doc.total_quantity | int }}</td></tr>
+  </table>
+  <hr>
+  <table>
+    <tr><td colspan="3" class="sec">Counted at close</td></tr>
+    {%- for r in rows %}
+    <tr><td style="width:40%">{{ r.mode_of_payment }}</td>
+        <td class="r" style="width:32%">{{ money(r.closing_amount) }}</td>
+        <td class="r" style="width:28%">{% if (r.difference | float) %}{{ money(r.difference) }}{% else %}&mdash;{% endif %}</td></tr>
+    {%- endfor %}
+    <tr><td class="sm">Total counted</td><td class="r sm">{{ money(ns.counted_total) }}</td>
+        <td class="r sm">{% if ns.diff_total %}{{ money(ns.diff_total) }}{% else %}&mdash;{% endif %}</td></tr>
+  </table>
+  {%- set unpaid = doc.get("rm_unpaid_at_close") | float -%}
+  {%- set unpaid_n = doc.get("rm_unpaid_checks") | int -%}
+  <hr>
+  <table>
+    <tr><td colspan="2" class="sec">Not yet paid</td></tr>
+    {%- if unpaid_n %}
+    {%- for line in (doc.get("rm_unpaid_list") or "").split("\\n") if line.strip() %}
+    {%- set bits = line.split("|") %}
+    <tr><td class="lbl sm">{{ bits[0] | trim }}{% if bits | length > 1 %} &middot; {{ bits[1] | trim }}{% endif %}</td>
+        <td class="r sm">{{ bits[2] | trim if bits | length > 2 else "" }}</td></tr>
+    {%- endfor %}
+    <tr class="big"><td class="lbl">{{ unpaid_n }} check(s)</td><td class="r">{{ money(unpaid) }}</td></tr>
+    {%- else %}
+    <tr><td colspan="2" class="sm">Nothing left on a table.</td></tr>
+    {%- endif %}
+  </table>
+  <hr>
+  <table>
+    <tr class="big"><td class="lbl">CLOSED AT</td><td class="r">{{ money(doc.grand_total) }}</td></tr>
+  </table>
+  <div class="ft">{{ frappe.utils.format_datetime(frappe.utils.now(), "dd/MM/yyyy HH:mm") }}</div>
+  <div class="tail"></div>
+</div>
+"""
+
+
+def _ensure_day_report_format():
+	"""The slip the cashier tears off at close: what the till opened with, what each
+	tender took, what was counted, and what is still owed on tables."""
+	name = "Etham Day Report"
+	if frappe.db.exists("Print Format", name):
+		if _DAY_REPORT_BUILD not in (frappe.db.get_value("Print Format", name, "html") or ""):
+			frappe.db.set_value("Print Format", name, {
+				"html": _DAY_REPORT_HTML, "custom_format": 1, "font_size": 9,
+				"pdf_generator": "wkhtmltopdf", "disabled": 0}, update_modified=False)
+		return name
+	frappe.get_doc({
+		"doctype": "Print Format", "name": name, "doc_type": "POS Closing Entry",
+		"module": "Accounts", "print_format_type": "Jinja", "standard": "No",
+		"pdf_generator": "wkhtmltopdf", "disabled": 0, "font_size": 9, "custom_format": 1,
+		"html": _DAY_REPORT_HTML,
+	}).insert(ignore_permissions=True)
+	return name
+
+
 def _ensure_bill_format():
 	"""The waiter's bill, branded and without the browser's URL across the top."""
 	name = "Etham Order Bill"
@@ -601,6 +732,9 @@ def ensure_custom_fields():
 			dict(PAID_BY_FIELD, insert_after="customer"),
 		],
 		"Sales Invoice": [dict(PAID_BY_FIELD, insert_after="customer")],
+		"POS Closing Entry": [dict(UNPAID_FIELD, insert_after="grand_total"),
+							  dict(UNPAID_N_FIELD, insert_after="rm_unpaid_at_close"),
+							  dict(UNPAID_LIST_FIELD, insert_after="rm_unpaid_checks")],
 		"Restaurant Booking": [
 			dict(WAITER_FIELD, insert_after="table"),
 			dict(SEATED_FIELD, insert_after="reservation_end_time"),
@@ -668,6 +802,7 @@ def ensure_custom_fields():
 
 	receipt = _ensure_receipt_format()
 	_ensure_bill_format()
+	_ensure_day_report_format()
 	try:
 		_ensure_delivery()
 	except Exception:
@@ -1404,6 +1539,18 @@ def close_day(pos_profile=None, force=0, counted=None):
                                                              fields=["name", "description"])}
     open_detail = [{"order": o.name, "table": tables.get(o.table, o.table), "customer": o.customer or "",
                     "amount": frappe.utils.flt(o.amount)} for o in left]
+    # stamped on the closing entry so the day report prints a fact, not a re-query
+    try:
+        frappe.db.set_value("POS Closing Entry", closing.name, {
+            "rm_unpaid_at_close": sum(o["amount"] for o in open_detail),
+            "rm_unpaid_checks": len(open_detail),
+            "rm_unpaid_list": "\n".join(
+                "%s | %s | %s" % (o["table"] or "-", o["customer"] or "-",
+                                  frappe.utils.fmt_money(o["amount"])) for o in open_detail)[:2000],
+        }, update_modified=False)
+    except Exception:
+        frappe.log_error(title="stamp unpaid at close")
+
     variance = [{"mode_of_payment": r.mode_of_payment,
                  "expected": frappe.utils.flt(r.expected_amount),
                  "counted": frappe.utils.flt(r.closing_amount),
