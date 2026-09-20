@@ -109,7 +109,13 @@ def run():
 		for it in doc2.items:
 			ok("the receipt names %s" % it.item_name, it.item_name in html, it.item_name)
 			break
-		ok("and prints on 80mm with no page margin", "80mm auto" in html and "margin: 0" in html)
+		# an explicit height, never "auto": Chrome discards `size: 80mm auto` and falls
+		# back to Letter, feeding 279mm of roll for an 80mm slip
+		page = re.search(r"@page \{ size: 80mm (\d+)mm; margin: 0 \}", html)
+		ok("the page is 80mm wide with no margin", bool(page), html[:160])
+		ok("and its height is a real number, not auto",
+		   bool(page) and 40 < int(page.group(1)) < 400 and "80mm auto" not in html,
+		   page.group(1) + "mm" if page else "no @page rule")
 
 	# --- it must never block a submit, whatever it is handed ---
 	broken = frappe._dict(doctype="POS Invoice", name="ZZ-NOPE", currency="KES")

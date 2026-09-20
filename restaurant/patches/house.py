@@ -437,7 +437,8 @@ def _ensure_receipt_format():
 	margin, so a zero-margin format leaves the paper showing only the bill."""
 	name = "Etham Receipt"
 	if frappe.db.exists("Print Format", name):
-		if _RECEIPT_BUILD not in (frappe.db.get_value("Print Format", name, "html") or ""):
+		# the template itself is the guard: an edit always reaches the stored record
+		if (frappe.db.get_value("Print Format", name, "html") or "").strip() != _COMPACT_RECEIPT.strip():
 			frappe.db.set_value("Print Format", name, {
 				"html": _COMPACT_RECEIPT, "custom_format": 1, "font_size": 9,
 				"pdf_generator": "wkhtmltopdf", "disabled": 0}, update_modified=False)
@@ -478,12 +479,12 @@ def _receipt_with_payment_rows(html):
 # A Posiflex till prints an 80mm roll: the paper is the page, so the format
 # Item left, qty centre, amount right, and nothing that costs paper. The marker is
 # versioned so a later bake replaces the previous bake's receipt instead of keeping it.
-_RECEIPT_BUILD = "rm_receipt_v2"
-_COMPACT_RECEIPT = """<!-- rm_receipt_v2 -->
+_RECEIPT_BUILD = "rm_receipt_v4"
+_COMPACT_RECEIPT = """<!-- rm_receipt_v4 -->
 <style>
-  @page { size: 80mm auto; margin: 0 }
-  html, body { width: 80mm; margin: 0 }
-  .print-format { width: 80mm; padding: 2mm 3mm; font-size: 9pt; line-height: 1.15;
+  html, body { width: 80mm; margin: 0; box-sizing: border-box }
+  *, *::before, *::after { box-sizing: inherit }
+  .print-format { width: 80mm; box-sizing: border-box; padding: 2mm 3mm; font-size: 9pt; line-height: 1.15;
                   font-family: -apple-system, "Segoe UI", Roboto, sans-serif }
   .rm-r table { width: 100%; border-collapse: collapse }
   .rm-r td, .rm-r th { padding: 0.4mm 0; vertical-align: top }
@@ -499,6 +500,12 @@ _COMPACT_RECEIPT = """<!-- rm_receipt_v2 -->
   .rm-r .ft { text-align: center; font-size: 8pt; margin-top: 1.5mm }
   @media screen { .print-format { margin: 0 auto } }
 </style>
+{#- an explicit page height: Chrome ignores `auto` and would feed a Letter page per
+    bill. Counted off the rows drawn below, on the same measured line as the day
+    report: about 4.5mm a row over a 51mm frame. -#}
+{%- set _rows = 6 + (doc.items | length) + (doc.payments | selectattr("amount") | list | length)
+				  + (2 if doc.total_taxes_and_charges else 0) + (1 if doc.change_amount else 0) -%}
+<style>@page { size: 80mm {{ 51 + (9 * _rows) // 2 }}mm; margin: 0 }</style>
 <div class="rm-r">
   <div class="hd">
     <div class="nm">{{ doc.company }}</div>
@@ -508,7 +515,7 @@ _COMPACT_RECEIPT = """<!-- rm_receipt_v2 -->
   <hr>
   <table class="meta">
     <tr><td>{{ doc.name }}</td>
-        <td class="am">{{ frappe.utils.formatdate(doc.posting_date, "dd/MM/yy") }} {{ doc.posting_time[:5] }}</td></tr>
+        <td class="am">{{ frappe.utils.formatdate(doc.posting_date, "dd/MM/yy") }} {{ frappe.utils.format_time(doc.posting_time, "HH:mm") }}</td></tr>
     {%- if doc.get("waiter") or doc.get("customer") %}
     <tr><td>{{ doc.get("waiter") or "" }}</td><td class="am">{{ doc.get("customer") or "" }}</td></tr>
     {%- endif %}
@@ -559,9 +566,9 @@ _THERMAL_CSS = """<style>
 _DAY_REPORT_BUILD = "rm_day_report_v1"
 _DAY_REPORT_HTML = """<!-- rm_day_report_v1 -->
 <style>
-  @page { size: 80mm auto; margin: 0 }
-  html, body { width: 80mm; margin: 0; padding: 0; background: #fff }
-  .print-format { width: 80mm; margin: 0; padding: 2mm 4mm 0; font-size: 9pt; line-height: 1.2;
+  html, body { width: 80mm; margin: 0; padding: 0; background: #fff; box-sizing: border-box }
+  *, *::before, *::after { box-sizing: inherit }
+  .print-format { width: 80mm; box-sizing: border-box; margin: 0; padding: 2mm 4mm 0; font-size: 9pt; line-height: 1.2;
     color: #000; background: #fff; font-variant-numeric: tabular-nums;
     font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif }
   @media screen { .print-format { margin: 0 auto } }
@@ -587,6 +594,14 @@ _DAY_REPORT_HTML = """<!-- rm_day_report_v1 -->
 </style>
 {%- macro money(v) -%}{{ "%.2f" | format(v | float) }}{%- endmacro -%}
 {%- set rows = doc.get("payment_reconciliation") or [] -%}
+{#- Chrome discards `size: 80mm auto` and falls back to Letter, feeding 279mm of roll
+    for 160mm of slip. Give it an explicit height, counted off the rows below:
+    5 meta + (modes+2) opened + (modes+4) sales + (modes+2) counted + unpaid + 1 total.
+    Measured: content is about 40mm + 4.37mm a row, and the wrapper adds ~11mm
+    below it before the page ends. -#}
+{%- set _unpaid_n = doc.get("rm_unpaid_checks") | int -%}
+{%- set _lines = 14 + 3 * (rows | length) + (2 if not _unpaid_n else _unpaid_n + 2) -%}
+<style>@page { size: 80mm {{ 51 + (9 * _lines) // 2 }}mm; margin: 0 }</style>
 {%- set ns = namespace(open_total=0, sales_total=0, counted_total=0, diff_total=0) -%}
 {%- for r in rows -%}
   {%- set ns.open_total = ns.open_total + (r.opening_amount | float) -%}
@@ -666,7 +681,9 @@ def _ensure_day_report_format():
 	tender took, what was counted, and what is still owed on tables."""
 	name = "Etham Day Report"
 	if frappe.db.exists("Print Format", name):
-		if _DAY_REPORT_BUILD not in (frappe.db.get_value("Print Format", name, "html") or ""):
+		# compare the template itself, never a hand-bumped marker: a marker that is
+		# forgotten leaves the stored record frozen on an older build for good
+		if (frappe.db.get_value("Print Format", name, "html") or "").strip() != _DAY_REPORT_HTML.strip():
 			frappe.db.set_value("Print Format", name, {
 				"html": _DAY_REPORT_HTML, "custom_format": 1, "font_size": 9,
 				"pdf_generator": "wkhtmltopdf", "disabled": 0}, update_modified=False)
