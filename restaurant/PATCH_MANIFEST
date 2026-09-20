@@ -13,6 +13,8 @@
 apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_order_80mm_v2
 apps/restaurant_management/restaurant_management/house.py :: rm_order_bill_sync
 apps/restaurant_management/restaurant_management/house.py :: format_time(doc.posting_time
+# frappe's table CSS puts 10px on every cell and doubles the slip
+apps/restaurant_management/restaurant_management/house.py :: padding: 0.4mm 0 !important
 
 # --- the day report slip --------------------------------------------------
 apps/restaurant_management/restaurant_management/house.py :: rm_day_report_v1

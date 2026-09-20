@@ -66,6 +66,7 @@ server_suite "a bill says how it was paid" payment_modes_suite.py
 server_suite "the floor opens in one round trip" floor_boot_suite.py
 server_suite "assets are counted, not costed" asset_register_suite.py
 server_suite "a sale is voided, never deleted" void_not_delete_suite.py
+server_suite "the slips fit the 80mm roll" slip_fit_suite.py
 browser_suite "floor, waiter, order, dispatch" flow.mjs
 browser_suite "the door" door.mjs
 browser_suite "seats, parties and the counter" seats.mjs
@@ -77,6 +78,7 @@ browser_suite "closing the day counts the drawer" drawer_count_probe.mjs
 browser_suite "clicking a waiter opens their day book" waiter_drill_probe.mjs
 browser_suite "an empty table seats before it bills" tile_seats_probe.mjs
 browser_suite "assets go in fast, in one sitting" asset_entry_probe.mjs
+browser_suite "both slips print as one 80mm page" slip_print_probe.mjs
 
 echo
 echo "================ verdict ================"

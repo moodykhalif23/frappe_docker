@@ -535,33 +535,49 @@ def _receipt_with_payment_rows(html):
 # A Posiflex till prints an 80mm roll: the paper is the page, so the format
 # Item left, qty centre, amount right, and nothing that costs paper. The marker is
 # versioned so a later bake replaces the previous bake's receipt instead of keeping it.
-_RECEIPT_BUILD = "rm_receipt_v4"
-_COMPACT_RECEIPT = """<!-- rm_receipt_v4 -->
+_RECEIPT_BUILD = "rm_receipt_v5"
+_COMPACT_RECEIPT = """<!-- rm_receipt_v5 -->
 <style>
   html, body { width: 80mm; margin: 0; box-sizing: border-box }
   *, *::before, *::after { box-sizing: inherit }
   .print-format { width: 80mm; box-sizing: border-box; padding: 2mm 3mm; font-size: 9pt; line-height: 1.15;
                   font-family: -apple-system, "Segoe UI", Roboto, sans-serif }
-  .rm-r table { width: 100%; border-collapse: collapse }
-  .rm-r td, .rm-r th { padding: 0.4mm 0; vertical-align: top }
+  .rm-r table { width: 100%; border-collapse: collapse; table-layout: fixed }
+  {#- frappe's own table CSS puts 10px on every cell, which doubles the height of
+      the slip; the day report already had to say this louder than that. -#}
+  .print-format .rm-r td, .rm-r td, .rm-r th { padding: 0.4mm 0 !important; vertical-align: top;
+    border: 0 !important; line-height: 1.2 !important }
+  .print-format .letter-head, .letter-head, #header-html, #footer-html { display: none !important }
+  @media print {
+    .page-break, .print-format .page-break { page-break-after: auto !important;
+      break-after: auto !important; min-height: 0 !important; margin: 0 !important }
+    html, body { height: auto !important; min-height: 0 !important }
+  }
   .rm-r .hd { text-align: center; margin-bottom: 1mm }
   .rm-r .hd .nm { font-size: 12pt; font-weight: 700; letter-spacing: .3px }
   .rm-r .meta td { font-size: 8pt }
   .rm-r hr { border: 0; border-top: 1px dashed #000; margin: 1mm 0 }
-  .rm-r .it { width: 58% }
-  .rm-r .qt { width: 14%; text-align: center }
-  .rm-r .am { width: 28%; text-align: right; white-space: nowrap }
+  .rm-r .it { width: 66% }
+  .rm-r .qt { width: 10%; text-align: center }
+  .rm-r .am { width: 24%; text-align: right; white-space: nowrap }
   .rm-r .hdr td { font-size: 7.5pt; text-transform: uppercase; letter-spacing: .4px }
   .rm-r .tot td { font-weight: 700; font-size: 10pt }
   .rm-r .ft { text-align: center; font-size: 8pt; margin-top: 1.5mm }
   @media screen { .print-format { margin: 0 auto } }
 </style>
 {#- an explicit page height: Chrome ignores `auto` and would feed a Letter page per
-    bill. Counted off the rows drawn below, on the same measured line as the day
-    report: about 4.5mm a row over a 51mm frame. -#}
+    bill. Fitted across eight bill shapes, 1 to 25 dishes: 4.49mm a printed row over
+    an 18.7mm frame, rounded up for the till's own fonts. A dish name too long for
+    the item column wraps, so it is counted as the extra row it draws - miss one and
+    the slip spills onto a whole second page. -#}
+{%- set _wrapped = [] -%}
+{%- for i in doc.items if (i.item_name | length) > 28 -%}
+  {%- set _ = _wrapped.append(((i.item_name | length) - 1) // 28) -%}
+{%- endfor -%}
 {%- set _rows = 6 + (doc.items | length) + (doc.payments | selectattr("amount") | list | length)
-				  + (2 if doc.total_taxes_and_charges else 0) + (1 if doc.change_amount else 0) -%}
-<style>@page { size: 80mm {{ 51 + (9 * _rows) // 2 }}mm; margin: 0 }</style>
+				  + (2 if doc.total_taxes_and_charges else 0) + (1 if doc.change_amount else 0)
+				  + (_wrapped | sum) -%}
+<style>@page { size: 80mm {{ 23 + (9 * _rows) // 2 }}mm; margin: 0 }</style>
 <div class="rm-r">
   <div class="hd">
     <div class="nm">{{ doc.company }}</div>
@@ -655,8 +671,10 @@ _DAY_REPORT_HTML = """<!-- rm_day_report_v1 -->
     5 meta + (modes+2) opened + (modes+4) sales + (modes+2) counted + unpaid + 1 total.
     Measured: content is about 40mm + 4.37mm a row, and the wrapper adds ~11mm
     below it before the page ends. -#}
+{#- an unpaid check draws about 1.65 rows: the table and the guest wrap once in
+    the label column. Measured from one check to twenty. -#}
 {%- set _unpaid_n = doc.get("rm_unpaid_checks") | int -%}
-{%- set _lines = 14 + 3 * (rows | length) + (2 if not _unpaid_n else _unpaid_n + 2) -%}
+{%- set _lines = 14 + 3 * (rows | length) + (2 if not _unpaid_n else 2 + (33 * _unpaid_n) // 20) -%}
 <style>@page { size: 80mm {{ 51 + (9 * _lines) // 2 }}mm; margin: 0 }</style>
 {%- set ns = namespace(open_total=0, sales_total=0, counted_total=0, diff_total=0) -%}
 {%- for r in rows -%}
