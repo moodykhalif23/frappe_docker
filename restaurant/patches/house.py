@@ -567,7 +567,9 @@ _COMPACT_RECEIPT = """<!-- rm_receipt_v5 -->
 </style>
 {#- an explicit page height: Chrome ignores `auto` and would feed a Letter page per
     bill. Fitted across eight bill shapes, 1 to 25 dishes: 4.49mm a printed row over
-    an 18.7mm frame, rounded up for the till's own fonts. A dish name too long for
+    an 18.7mm frame, and the frame carries 8mm more because the live print wrapper
+    is taller than a local one and a wide dish name can wrap uncounted. A name too
+    long for
     the item column wraps, so it is counted as the extra row it draws - miss one and
     the slip spills onto a whole second page. -#}
 {%- set _wrapped = [] -%}
@@ -577,7 +579,7 @@ _COMPACT_RECEIPT = """<!-- rm_receipt_v5 -->
 {%- set _rows = 6 + (doc.items | length) + (doc.payments | selectattr("amount") | list | length)
 				  + (2 if doc.total_taxes_and_charges else 0) + (1 if doc.change_amount else 0)
 				  + (_wrapped | sum) -%}
-<style>@page { size: 80mm {{ 23 + (9 * _rows) // 2 }}mm; margin: 0 }</style>
+<style>@page { size: 80mm {{ 27 + (9 * _rows) // 2 }}mm; margin: 0 }</style>
 <div class="rm-r">
   <div class="hd">
     <div class="nm">{{ doc.company }}</div>
@@ -817,6 +819,29 @@ def _ensure_order_account_template():
 	return "Order Account"
 
 
+def _ensure_default_print_formats():
+	"""rm_default_print_formats: name the 80mm format on the doctype itself.
+
+	The desk's Print screen falls back to "Standard" when a doctype names no
+	default - the full form dump, with no @page rule, which Chrome renders at
+	Letter height. On an 80mm roll that is 279mm of paper per press, and it is
+	how the day report came out as a field-by-field form instead of a slip."""
+	for dt, fmt in (("POS Closing Entry", "Etham Day Report"),
+					("POS Invoice", "Etham Receipt"),
+					("Table Order", "Etham Order Bill")):
+		if not frappe.db.exists("Print Format", fmt):
+			continue
+		existing = frappe.db.get_value("Property Setter",
+									   {"doc_type": dt, "property": "default_print_format"}, "name")
+		if existing:
+			if frappe.db.get_value("Property Setter", existing, "value") != fmt:
+				frappe.db.set_value("Property Setter", existing, "value", fmt)
+			continue
+		frappe.get_doc({"doctype": "Property Setter", "doctype_or_field": "DocType",
+						"doc_type": dt, "property": "default_print_format",
+						"property_type": "Data", "value": fmt}).insert(ignore_permissions=True)
+
+
 def _ensure_bill_format():
 	"""The waiter's bill, branded and without the browser's URL across the top."""
 	name = "Etham Order Bill"
@@ -972,6 +997,7 @@ def ensure_custom_fields():
 	_ensure_order_account_template()  # rm_order_account_sync
 	_ensure_bill_format()
 	_ensure_day_report_format()
+	_ensure_default_print_formats()
 	try:
 		_ensure_delivery()
 	except Exception:

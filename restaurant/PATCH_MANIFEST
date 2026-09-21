@@ -10,7 +10,7 @@
 # Blank lines and #-comments ignored. Paths are relative to the bench root.
 
 # --- printing: the 80mm rebuild -------------------------------------------
-apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_order_80mm_v2
+apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_order_80mm_v3
 apps/restaurant_management/restaurant_management/house.py :: rm_order_bill_sync
 apps/restaurant_management/restaurant_management/house.py :: format_time(doc.posting_time
 # frappe's table CSS puts 10px on every cell and doubles the slip
@@ -18,6 +18,7 @@ apps/restaurant_management/restaurant_management/house.py :: padding: 0.4mm 0 !i
 
 # --- the day report slip --------------------------------------------------
 apps/restaurant_management/restaurant_management/house.py :: rm_day_report_v1
+apps/restaurant_management/restaurant_management/house.py :: rm_default_print_formats
 apps/restaurant_management/restaurant_management/house.py :: rm_unpaid_at_close
 
 # --- fire-to-kitchen ------------------------------------------------------

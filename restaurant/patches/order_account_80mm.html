@@ -1,7 +1,6 @@
-<!-- rm_order_80mm_v2 -->
+<!-- rm_order_80mm_v3 -->
 <style>
   /* ---- page geometry: 80mm continuous roll, 72mm printable (576 dots @203dpi) ---- */
-  @page { size: 80mm auto; margin: 0 }
   html, body { width: 80mm; margin: 0; padding: 0; background: #fff }
   .print-format {
     width: 80mm; margin: 0; padding: 2mm 4mm 0;
@@ -136,6 +135,15 @@
   {%- endif -%}
 {%- endfor -%}
 
+{#- An explicit page height. `size: 80mm auto` is discarded by Chrome, which
+    then feeds a Letter page - 279mm of roll for a 100mm bill, and two of them
+    for a long check. Fitted on eight real checks: 4.44mm a drawn row over a
+    45mm frame, counted off `rows` after merging, plus the how-to-pay block when
+    the owner has filled it in. -#}
+{%- set _till_h = frappe.db.get_single_value("Restaurant Settings", "rm_bill_till_number") or "" -%}
+{%- set _pay_h = frappe.db.get_single_value("Restaurant Settings", "rm_bill_payment_details") or "" -%}
+<style>@page { size: 80mm {{ 73 + (9 * (rows | length)) // 2
+  + (14 if ((_till_h | trim) or (_pay_h | trim)) else 0) }}mm; margin: 0 }</style>
 <div class="rm-o">
 {%- if kitchen %}
   {#- ---------------- KITCHEN TICKET — no prices, no totals ---------------- -#}
