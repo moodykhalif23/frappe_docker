@@ -498,6 +498,29 @@ COPY restaurant/patches/unsent_at_payment.py /tmp/unsent_at_payment.py
 RUN python3 /tmp/unsent_at_payment.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
 
+# the Order button prints the round it fired, and a table's back button asks
+# before leaving dishes unsent: a kitchen ticket only ever printed by hand.
+# restaurant/PATCH_MANIFEST is root-owned on this box, so these steps assert
+# their own end state (same check assert_markers.py makes).
+COPY restaurant/patches/kitchen_autoprint.py /tmp/kitchen_autoprint.py
+RUN python3 /tmp/kitchen_autoprint.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())" \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js \
+ && grep -q rm_kitchen_autoprint apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
+ && grep -q rm_kitchen_autoprint apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js \
+ && grep -q rm_kitchen_autoprint apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
+ && grep -q rm_kitchen_nudge apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js
+
+# the receipt and bill keep the page size and printable width proven on the
+# till's paper (the bill's lives in order_account_80mm.html)
+COPY restaurant/patches/receipt_80mm_auto.py /tmp/receipt_80mm_auto.py
+RUN python3 /tmp/receipt_80mm_auto.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/house.py').read())" \
+ && grep -q rm_receipt_80mm_auto apps/restaurant_management/restaurant_management/house.py \
+ && grep -q rm_printable_72mm apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json
+
 # LAST STEP, ON PURPOSE: a patch guard that matches the wrong thing skips
 # silently and the bake still goes green. This asserts the end state instead.
 COPY restaurant/PATCH_MANIFEST /tmp/PATCH_MANIFEST
