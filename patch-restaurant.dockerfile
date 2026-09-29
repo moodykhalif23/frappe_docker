@@ -502,9 +502,13 @@ RUN python3 /tmp/unsent_at_payment.py \
 # before leaving dishes unsent: a kitchen ticket only ever printed by hand.
 # restaurant/PATCH_MANIFEST is root-owned on this box, so these steps assert
 # their own end state (same check assert_markers.py makes).
+# check_globals.py fails the step if a patched function calls a global the
+# module never defines — the failure a marker check cannot see.
 COPY restaurant/patches/kitchen_autoprint.py /tmp/kitchen_autoprint.py
+COPY restaurant/patches/check_globals.py /tmp/check_globals.py
 RUN python3 /tmp/kitchen_autoprint.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())" \
+ && python3 /tmp/check_globals.py apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/pay-form-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-manage-class.js \

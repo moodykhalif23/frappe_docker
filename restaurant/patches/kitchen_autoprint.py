@@ -46,15 +46,19 @@ def edit(path, guard, pairs, append=None):
 
 
 # ------------------------------------------------------------------ server ---
-SEND_TAIL = '''        #self.synchronize_data = dict(status=["Sent"])
+# The switch is read INLINE in send, never from a helper appended to the end of
+# table_order.py: the dockerfile cuts that file back to its appended waiter
+# block ("\n    def _party(") on every bake and re-appends the block, so anything
+# after it is gone on the next build. v1 of this patch did append a helper;
+# the first bake worked, a rebuild would have left send calling a function that
+# no longer existed. check_globals.py now fails the build on that.
+SEND_HEAD = '''        #self.synchronize_data = dict(status=["Sent"])
         self.synchronize(dict(status=["Sent"]))
 
-        return self.data()
 '''
-SEND_TAIL_NEW = '''        #self.synchronize_data = dict(status=["Sent"])
-        self.synchronize(dict(status=["Sent"]))
-
-        # rm_kitchen_autoprint: tell the station that fired WHICH round it fired
+SEND_TAIL = SEND_HEAD + '''        return self.data()
+'''
+SEND_TAIL_V1 = SEND_HEAD + '''        # rm_kitchen_autoprint: tell the station that fired WHICH round it fired
         # and whether to print it. Printing is the station's job (the till's
         # kiosk Chrome prints silently); only the server knows what it stamped.
         out = self.data()
@@ -63,8 +67,25 @@ SEND_TAIL_NEW = '''        #self.synchronize_data = dict(status=["Sent"])
         out["rm_print_kitchen"] = 1 if items_to_return and _rm_print_kitchen_on_send() else 0
         return out
 '''
-SETTING_FN = '''
-def _rm_print_kitchen_on_send():
+SEND_TAIL_NEW = SEND_HEAD + '''        # rm_kitchen_autoprint: tell the station that fired WHICH round it fired
+        # and whether to print it. Printing is the station's job (the till's
+        # kiosk Chrome prints silently); only the server knows what it stamped.
+        # Restaurant Settings > Print kitchen ticket on Send, read with get_value
+        # (not get_single_value) so a site without the field reads as ON instead
+        # of throwing in the middle of a fire. Inline on purpose — see the patch.
+        try:
+            _pk = frappe.db.get_value("Restaurant Settings", "Restaurant Settings",
+                                      "rm_print_kitchen_on_send")
+        except Exception:
+            _pk = None
+        out = self.data()
+        out["rm_fired"] = len(items_to_return)
+        out["rm_kot_round"] = kot_round or None
+        out["rm_print_kitchen"] = 1 if items_to_return and (
+            _pk in (None, "") or frappe.utils.cint(_pk)) else 0
+        return out
+'''
+HELPER_V1 = '''def _rm_print_kitchen_on_send():
     """rm_kitchen_autoprint: Restaurant Settings > Print kitchen ticket on Send.
     get_value, not get_single_value: a site without the field reads as ON
     instead of throwing in the middle of a fire."""
@@ -75,7 +96,28 @@ def _rm_print_kitchen_on_send():
         return True
     return True if v in (None, "") else bool(frappe.utils.cint(v))
 '''
-edit(TO, GUARD, [(SEND_TAIL, SEND_TAIL_NEW, 1)], append=SETTING_FN)
+
+s = open(TO).read()
+if SEND_TAIL_NEW in s:
+    print("kitchen_autoprint: table_order.py already present")
+else:
+    if SEND_TAIL_V1 in s:
+        assert s.count(SEND_TAIL_V1) == 1
+        s = s.replace(SEND_TAIL_V1, SEND_TAIL_NEW, 1)
+        print("kitchen_autoprint: table_order.py upgraded from the v1 helper call")
+    else:
+        assert s.count(SEND_TAIL) == 1, "send tail seen %d times" % s.count(SEND_TAIL)
+        s = s.replace(SEND_TAIL, SEND_TAIL_NEW, 1)
+        print("kitchen_autoprint: patched table_order.py")
+    open(TO, 'w').write(s)
+# a v1 helper still sitting at the end of the file is dead weight; drop it
+s = open(TO).read()
+if HELPER_V1 in s:
+    s = s.replace("\n\n\n" + HELPER_V1, "\n", 1).replace(HELPER_V1, "", 1)
+    open(TO, 'w').write(s)
+    print("kitchen_autoprint: removed the v1 helper")
+s = open(TO).read()
+assert SEND_TAIL_NEW in s and "_rm_print_kitchen_on_send" not in s, "table_order.py end state wrong"
 
 # ------------------------------------------------------------------ client ---
 PRINT_URL = 'window.RM_print_url = window.RM_print_url || function (url) {'
