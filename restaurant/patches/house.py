@@ -536,7 +536,7 @@ def _receipt_with_payment_rows(html):
 # Item left, qty centre, amount right, and nothing that costs paper. The marker is
 # versioned so a later bake replaces the previous bake's receipt instead of keeping it.
 _RECEIPT_BUILD = "rm_receipt_v5"
-# rm_receipt_80mm_auto: page `80mm auto` + 72mm printable width, proven on the
+# rm_receipt_80mm_auto: page `80mm auto` + text centred under the 72mm head, proven on the
 # till's CT-S300 (see restaurant/patches/receipt_80mm_auto.py). The note inside
 # the template that Chrome ignores `auto` does not hold on the till: under kiosk
 # Chrome the CITIZEN driver has no media matching a computed height, so Chrome
@@ -572,9 +572,16 @@ _COMPACT_RECEIPT = """<!-- rm_receipt_v5 -->
   .rm-r .ft { text-align: center; font-size: 8pt; margin-top: 1.5mm }
   @media screen { .print-format { margin: 0 auto } }
 
-/* rm_printable_72mm: CT-S300 prints only ~72mm of the 80mm roll; keep all content inside the print head so the right-edge amount column cannot clip */
-.print-format{width:72mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:2mm !important;padding-right:2mm !important}
+/* rm_printable_72mm (v2, centred): the CT-S300's 72mm print head sits in the MIDDLE of the 80mm roll, about 4-76mm,
+   so text is kept to 6-74mm: centred under the head with 2mm to spare each side. v1 pinned a 72mm box to the paper's
+   left edge, which put the first letter of every line outside the head. Text width is still 68mm, so nothing reflows. */
+.print-format{width:80mm !important;max-width:80mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:6mm !important;padding-right:6mm !important}
 .rm-o table,.print-format table{width:100% !important}
+/* the date+time and the waiter/guest cells sat in the 24% amount column with nowrap and ran past the text edge */
+.rm-r .meta td.am{width:46%}
+.rm-r .am{width:30%}
+.rm-r .it{width:60%}
+.rm-r td{overflow-wrap:anywhere}
 </style>
 {#- an explicit page height: Chrome ignores `auto` and would feed a Letter page per
     bill. Fitted across eight bill shapes, 1 to 25 dishes: 4.49mm a printed row over
