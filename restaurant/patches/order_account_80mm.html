@@ -80,8 +80,10 @@
   /* one deliberate lead for the auto-cutter; 0 if the driver already feeds-and-cuts */
   .rm-o .tail { height: 6mm }
 
-/* rm_printable_72mm: CT-S300 prints only ~72mm of the 80mm roll; keep all content inside the print head so the right-edge amount column cannot clip */
-.print-format{width:72mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:2mm !important;padding-right:2mm !important}
+/* rm_printable_72mm (v2, centred): the CT-S300's 72mm print head sits in the MIDDLE of the 80mm roll, about 4-76mm,
+   so text is kept to 6-74mm: centred under the head with 2mm to spare each side. v1 pinned a 72mm box to the paper's
+   left edge, which put the first letter of every line outside the head. Text width is still 68mm, so nothing reflows. */
+.print-format{width:80mm !important;max-width:80mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:6mm !important;padding-right:6mm !important}
 .rm-o table,.print-format table{width:100% !important}
 </style>
 
