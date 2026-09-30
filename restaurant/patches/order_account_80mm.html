@@ -1,6 +1,7 @@
-<!-- rm_order_80mm_v3 -->
+<!-- rm_order_80mm_v2 -->
 <style>
   /* ---- page geometry: 80mm continuous roll, 72mm printable (576 dots @203dpi) ---- */
+  @page { size: 80mm auto; margin: 0 }
   html, body { width: 80mm; margin: 0; padding: 0; background: #fff }
   .print-format {
     width: 80mm; margin: 0; padding: 2mm 4mm 0;
@@ -78,6 +79,10 @@
 
   /* one deliberate lead for the auto-cutter; 0 if the driver already feeds-and-cuts */
   .rm-o .tail { height: 6mm }
+
+/* rm_printable_72mm: CT-S300 prints only ~72mm of the 80mm roll; keep all content inside the print head so the right-edge amount column cannot clip */
+.print-format{width:72mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:2mm !important;padding-right:2mm !important}
+.rm-o table,.print-format table{width:100% !important}
 </style>
 
 {#- ============================================================
@@ -135,15 +140,6 @@
   {%- endif -%}
 {%- endfor -%}
 
-{#- An explicit page height. `size: 80mm auto` is discarded by Chrome, which
-    then feeds a Letter page - 279mm of roll for a 100mm bill, and two of them
-    for a long check. Fitted on eight real checks: 4.44mm a drawn row over a
-    45mm frame, counted off `rows` after merging, plus the how-to-pay block when
-    the owner has filled it in. -#}
-{%- set _till_h = frappe.db.get_single_value("Restaurant Settings", "rm_bill_till_number") or "" -%}
-{%- set _pay_h = frappe.db.get_single_value("Restaurant Settings", "rm_bill_payment_details") or "" -%}
-<style>@page { size: 80mm {{ 73 + (9 * (rows | length)) // 2
-  + (14 if ((_till_h | trim) or (_pay_h | trim)) else 0) }}mm; margin: 0 }</style>
 <div class="rm-o">
 {%- if kitchen %}
   {#- ---------------- KITCHEN TICKET — no prices, no totals ---------------- -#}
@@ -207,8 +203,8 @@
   {#- HOW TO PAY. The text is Restaurant Settings > "How to pay", so the owner
      edits it in the desk and it survives every deploy; only the layout lives
      here. Customer bill ONLY — a kitchen ticket never carries money. -#}
-  {%- set _till = frappe.db.get_single_value("Restaurant Settings", "rm_bill_till_number") or "" -%}
-  {%- set _pay  = frappe.db.get_single_value("Restaurant Settings", "rm_bill_payment_details") or "" -%}
+  {%- set _till = frappe.db.get_value("Restaurant Settings", "Restaurant Settings", "rm_bill_till_number") or "" -%}
+  {%- set _pay  = frappe.db.get_value("Restaurant Settings", "Restaurant Settings", "rm_bill_payment_details") or "" -%}
   {%- if (_till | trim) or (_pay | trim) %}
   <div class="pay">
     <div class="h">{{ _("How to pay") }}</div>

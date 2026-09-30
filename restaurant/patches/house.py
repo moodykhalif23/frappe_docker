@@ -536,6 +536,13 @@ def _receipt_with_payment_rows(html):
 # Item left, qty centre, amount right, and nothing that costs paper. The marker is
 # versioned so a later bake replaces the previous bake's receipt instead of keeping it.
 _RECEIPT_BUILD = "rm_receipt_v5"
+# rm_receipt_80mm_auto: page `80mm auto` + 72mm printable width, proven on the
+# till's CT-S300 (see restaurant/patches/receipt_80mm_auto.py). The note inside
+# the template that Chrome ignores `auto` does not hold on the till: under kiosk
+# Chrome the CITIZEN driver has no media matching a computed height, so Chrome
+# falls back to its 3.27 m roll and prints metres of blank paper, while `auto`
+# sizes to the roll and cuts. The template is byte-identical to the live
+# receipt, so a deploy leaves the stored record alone.
 _COMPACT_RECEIPT = """<!-- rm_receipt_v5 -->
 <style>
   html, body { width: 80mm; margin: 0; box-sizing: border-box }
@@ -564,12 +571,14 @@ _COMPACT_RECEIPT = """<!-- rm_receipt_v5 -->
   .rm-r .tot td { font-weight: 700; font-size: 10pt }
   .rm-r .ft { text-align: center; font-size: 8pt; margin-top: 1.5mm }
   @media screen { .print-format { margin: 0 auto } }
+
+/* rm_printable_72mm: CT-S300 prints only ~72mm of the 80mm roll; keep all content inside the print head so the right-edge amount column cannot clip */
+.print-format{width:72mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:2mm !important;padding-right:2mm !important}
+.rm-o table,.print-format table{width:100% !important}
 </style>
 {#- an explicit page height: Chrome ignores `auto` and would feed a Letter page per
     bill. Fitted across eight bill shapes, 1 to 25 dishes: 4.49mm a printed row over
-    an 18.7mm frame, and the frame carries 8mm more because the live print wrapper
-    is taller than a local one and a wide dish name can wrap uncounted. A name too
-    long for
+    an 18.7mm frame, rounded up for the till's own fonts. A dish name too long for
     the item column wraps, so it is counted as the extra row it draws - miss one and
     the slip spills onto a whole second page. -#}
 {%- set _wrapped = [] -%}
@@ -579,7 +588,7 @@ _COMPACT_RECEIPT = """<!-- rm_receipt_v5 -->
 {%- set _rows = 6 + (doc.items | length) + (doc.payments | selectattr("amount") | list | length)
 				  + (2 if doc.total_taxes_and_charges else 0) + (1 if doc.change_amount else 0)
 				  + (_wrapped | sum) -%}
-<style>@page { size: 80mm {{ 27 + (9 * _rows) // 2 }}mm; margin: 0 }</style>
+<style>@page { size: 80mm auto; margin: 0 }</style>
 <div class="rm-r">
   <div class="hd">
     <div class="nm">{{ doc.company }}</div>
@@ -826,10 +835,15 @@ def _ensure_default_print_formats():
 	default - the full form dump, with no @page rule, which Chrome renders at
 	Letter height. On an 80mm roll that is 279mm of paper per press, and it is
 	how the day report came out as a field-by-field form instead of a slip."""
-	for dt, fmt in (("POS Closing Entry", "Etham Day Report"),
-					("POS Invoice", "Etham Receipt"),
-					("Table Order", "Etham Order Bill")):
-		if not frappe.db.exists("Print Format", fmt):
+	# The closing slip is the owner's daily report wherever it exists: Etham
+	# Z-Report (group and item sales, per-waiter sales and commission, cash
+	# check), live since 29 Sep 2026. The day report is the fallback on a site
+	# that has not got it.
+	for dt, fmts in (("POS Closing Entry", ("Etham Z-Report", "Etham Day Report")),
+					 ("POS Invoice", ("Etham Receipt",)),
+					 ("Table Order", ("Etham Order Bill",))):
+		fmt = next((f for f in fmts if frappe.db.exists("Print Format", f)), None)
+		if not fmt:
 			continue
 		existing = frappe.db.get_value("Property Setter",
 									   {"doc_type": dt, "property": "default_print_format"}, "name")
