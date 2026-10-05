@@ -1,6 +1,7 @@
 # rm_till_withdrawal: the owners' phone page. Paste the Safaricom SMS, check what
 # was read, press Record — it posts the withdrawal and its journal entry at once.
 import frappe
+import frappe.sessions  # get_csrf_token; imported by the request path anyway, said here on purpose
 from frappe.utils import now_datetime
 
 no_cache = 1
