@@ -6,7 +6,9 @@
 # roll: the receipt printed at the top of metres of blank paper (21 Sep 2026).
 # `size: 80mm auto` — what the bill and kitchen ticket use — sizes to the roll
 # and cuts cleanly. The print head also reaches only ~72mm of the 80mm roll, so
-# the right-hand amount column clipped; rm_printable_72mm keeps content inside.
+# the right-hand amount column clipped. rm_printable_72mm (v2) centres the text at
+# 6-74mm under the ~4-76mm head; v1 pinned it to the paper's left edge and
+# clipped every line's first letter (1 Oct 2026).
 #
 # Both fixes went onto the live "Etham Receipt" record first. Without this
 # patch, _ensure_receipt_format() copies the old template back over it on the
@@ -20,10 +22,7 @@ HEAD = '_COMPACT_RECEIPT = """'
 PAGE_OLD = '<style>@page { size: 80mm {{ 23 + (9 * _rows) // 2 }}mm; margin: 0 }</style>'
 PAGE_NEW = '<style>@page { size: 80mm auto; margin: 0 }</style>'
 W_ANCHOR = '  @media screen { .print-format { margin: 0 auto } }\n'
-W_ADD = ('\n'
-         '/* rm_printable_72mm: CT-S300 prints only ~72mm of the 80mm roll; keep all content inside the print head so the right-edge amount column cannot clip */\n'
-         '.print-format{width:72mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:2mm !important;padding-right:2mm !important}\n'
-         '.rm-o table,.print-format table{width:100% !important}\n')
+W_ADD = '\n' + "/* rm_printable_72mm (v2, centred): the CT-S300's 72mm print head sits in the MIDDLE of the 80mm roll, about 4-76mm,\n   so text is kept to 6-74mm: centred under the head with 2mm to spare each side. v1 pinned a 72mm box to the paper's\n   left edge, which put the first letter of every line outside the head. Text width is still 68mm, so nothing reflows. */\n.print-format{width:80mm !important;max-width:80mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:6mm !important;padding-right:6mm !important}\n.rm-o table,.print-format table{width:100% !important}\n/* the date+time and the waiter/guest cells sat in the 24% amount column with nowrap and ran past the text edge */\n.rm-r .meta td.am{width:46%}\n.rm-r .am{width:30%}\n.rm-r .it{width:60%}\n.rm-r td{overflow-wrap:anywhere}\n"
 
 s = open(P).read()
 if GUARD in s:
