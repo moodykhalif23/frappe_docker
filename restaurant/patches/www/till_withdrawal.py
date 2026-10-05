@@ -16,6 +16,8 @@ def get_context(context):
 	context.show_sidebar = False
 	context.title = "Till withdrawal"
 	context.can_record = all(frappe.has_permission("Till Withdrawal", p) for p in ("create", "submit"))
+	context.user_id = frappe.session.user
+	context.user_name = frappe.utils.get_fullname(frappe.session.user) or frappe.session.user
 	context.has_bank = bool(frappe.db.get_value(settings, settings, "rm_tw_bank_account"))
 	context.now_local = now_datetime().strftime("%Y-%m-%dT%H:%M")
 	context.csrf = frappe.sessions.get_csrf_token()

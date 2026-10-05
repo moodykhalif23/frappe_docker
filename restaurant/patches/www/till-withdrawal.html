@@ -3,7 +3,19 @@
 {% block page_content %}
 <style>
   .tw { max-width: 460px; margin: 0 auto; padding: 4px 2px 40px; font-size: 16px }
-  .tw h2 { font-size: 22px; margin: 4px 0 4px } .tw .lead { color: #555; font-size: 14px; margin-bottom: 14px }
+  .tw h2 { font-size: 22px; line-height: 1.25; margin: 6px 0 6px }
+  /* not "lead": frappe's website CSS gives .lead margin-top: -16px, which pulled this line up into the heading */
+  .tw .tw-intro { color: #555; font-size: 14px; line-height: 1.5; margin: 0 0 14px }
+  .tw .tw-card { margin-top: 18px; padding: 22px 20px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fafafa; text-align: center }
+  .tw .tw-card .tw-icon { width: 48px; height: 48px; margin: 0 auto 10px; border-radius: 50%; background: #fef3c7; color: #b45309;
+    display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700 }
+  .tw .tw-card h3 { font-size: 18px; line-height: 1.3; margin: 0 0 8px }
+  .tw .tw-card p { color: #4b5563; font-size: 15px; line-height: 1.5; margin: 0 0 6px }
+  .tw .tw-card .tw-who { color: #111827; font-weight: 600 }
+  .tw .tw-card .tw-hint { color: #6b7280; font-size: 13px; margin-top: 14px }
+  .tw .tw-card button { margin-top: 14px }
+  /* two dropdowns side by side cut "Owner withdrawal" short on a phone: stack them */
+  @media (max-width: 440px) { .tw .tw-sel { flex-direction: column; gap: 0 } }
   .tw label { display: block; font-weight: 600; font-size: 14px; margin: 12px 0 4px }
   .tw input, .tw select, .tw textarea { width: 100%; font-size: 16px; padding: 10px; border: 1px solid #c8ccd0; border-radius: 8px; background: #fff }
   .tw textarea { min-height: 110px } .tw .row2 { display: flex; gap: 10px } .tw .row2 > div { flex: 1 }
@@ -14,9 +26,16 @@
 </style>
 <div class="tw" data-csrf="{{ csrf }}">
   <h2>Record a till withdrawal</h2>
-  <div class="lead">Took money out of the M-Pesa till? Paste the Safaricom SMS here so tonight's close comes out right.</div>
+  <p class="tw-intro">Took money out of the M-Pesa till? Paste the Safaricom SMS here so tonight's close comes out right.</p>
   {% if not can_record %}
-  <p class="err">Your login can't record withdrawals. Ask the manager to give you the Accounts User role.</p>
+  <div class="tw-card">
+    <div class="tw-icon">!</div>
+    <h3>Only the owners and the cashier can record withdrawals</h3>
+    <p>You're signed in as <span class="tw-who">{{ user_name }}</span>{% if user_name != user_id %} ({{ user_id }}){% endif %}.</p>
+    <p>This login can't record till withdrawals.</p>
+    <button id="tw-switch">Sign in as someone else</button>
+    <p class="tw-hint">Managers: to let this login record withdrawals, give it the Accounts User role.</p>
+  </div>
   {% else %}
   <label for="tw-sms">Paste the M-Pesa SMS</label>
   <textarea id="tw-sms" placeholder="UJ5AB12CD3 Confirmed. Ksh20,000.00 ..."></textarea>
@@ -28,7 +47,7 @@
   <label for="tw-ref">M-Pesa code</label>
   <input id="tw-ref" type="text" maxlength="12" autocapitalize="characters" style="text-transform: uppercase">
   <label for="tw-at">When</label><input id="tw-at" type="datetime-local" value="{{ now_local }}">
-  <div class="row2">
+  <div class="row2 tw-sel">
     <div><label for="tw-purpose">What for</label>
       <select id="tw-purpose"><option>Owner withdrawal</option>{% if has_bank %}<option>Bank settlement</option>{% endif %}</select></div>
     <div><label for="tw-mode">From</label>
@@ -53,8 +72,17 @@
 {% block script %}
 <script>
 (function () {
-  const box = document.querySelector(".tw"); if (!box || !document.getElementById("tw-go")) return;
+  const box = document.querySelector(".tw"); if (!box) return;
   const $ = (id) => document.getElementById(id);
+  // sign out, then come straight back here once the owner has signed in
+  const sw = $("tw-switch");
+  if (sw) sw.addEventListener("click", () => {
+    sw.disabled = true; sw.textContent = "Signing out…";
+    fetch("/api/method/logout", { method: "POST", credentials: "same-origin",
+      headers: { Accept: "application/json", "X-Frappe-CSRF-Token": box.dataset.csrf } })
+      .finally(() => { window.location.href = "/login?redirect-to=/till-withdrawal"; });
+  });
+  if (!$("tw-go")) return;
   const M = "/api/method/restaurant_management.restaurant_management.doctype.till_withdrawal.till_withdrawal.";
   const errText = (j) => {
     try { return JSON.parse(j._server_messages || "[]").map((s) => JSON.parse(s).message).join(" ").replace(/<[^>]+>/g, ""); }
