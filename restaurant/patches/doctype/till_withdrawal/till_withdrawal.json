@@ -1,0 +1,227 @@
+{
+ "actions": [],
+ "autoname": "TW-.YYYY.-.#####",
+ "creation": "2026-10-05 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "sms_text",
+  "section_break_amount",
+  "mode_of_payment",
+  "amount",
+  "transaction_cost",
+  "reference",
+  "column_break_when",
+  "withdrawn_at",
+  "purpose",
+  "account",
+  "balance_after",
+  "section_break_who",
+  "withdrawn_by",
+  "recorded_by",
+  "note",
+  "column_break_links",
+  "company",
+  "pos_opening_entry",
+  "journal_entry",
+  "amended_from"
+ ],
+ "fields": [
+  {
+   "description": "Paste the Safaricom message: the code, amount, time and charge are read from it.",
+   "fieldname": "sms_text",
+   "fieldtype": "Small Text",
+   "label": "M-Pesa SMS"
+  },
+  {
+   "fieldname": "section_break_amount",
+   "fieldtype": "Section Break"
+  },
+  {
+   "default": "M-Pesa",
+   "fieldname": "mode_of_payment",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Till",
+   "options": "Mode of Payment",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Currency",
+   "in_list_view": 1,
+   "label": "Amount withdrawn",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "description": "What Safaricom charged for the withdrawal. It also left the till.",
+   "fieldname": "transaction_cost",
+   "fieldtype": "Currency",
+   "label": "Safaricom charge"
+  },
+  {
+   "description": "The 10-character code at the start of the SMS. A code can be recorded once.",
+   "fieldname": "reference",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "M-Pesa code",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_when",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Now",
+   "fieldname": "withdrawn_at",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Withdrawn at",
+   "reqd": 1,
+   "search_index": 1
+  },
+  {
+   "default": "Owner withdrawal",
+   "fieldname": "purpose",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "What for",
+   "options": "Owner withdrawal\nBank settlement\nOther",
+   "reqd": 1
+  },
+  {
+   "description": "Filled from Restaurant Settings for the purpose. Change it only if your accountant says so.",
+   "fieldname": "account",
+   "fieldtype": "Link",
+   "label": "Moved to (account)",
+   "options": "Account"
+  },
+  {
+   "fieldname": "balance_after",
+   "fieldtype": "Currency",
+   "label": "Till balance after (from the SMS)"
+  },
+  {
+   "fieldname": "section_break_who",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "withdrawn_by",
+   "fieldtype": "Data",
+   "label": "Withdrawn by"
+  },
+  {
+   "default": "__user",
+   "fieldname": "recorded_by",
+   "fieldtype": "Link",
+   "label": "Recorded by",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "note",
+   "fieldtype": "Small Text",
+   "label": "Note"
+  },
+  {
+   "fieldname": "column_break_links",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "description": "The shift the withdrawal fell in.",
+   "fieldname": "pos_opening_entry",
+   "fieldtype": "Link",
+   "label": "Shift",
+   "options": "POS Opening Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "no_copy": 1,
+   "options": "Journal Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "Till Withdrawal",
+   "print_hide": 1,
+   "read_only": 1
+  }
+ ],
+ "is_submittable": 1,
+ "links": [],
+ "modified": "2026-10-05 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Restaurant Management",
+ "name": "Till Withdrawal",
+ "naming_rule": "Expression (old style)",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Accounts User",
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Restaurant Manager"
+  }
+ ],
+ "search_fields": "reference,amount,withdrawn_by",
+ "sort_field": "withdrawn_at",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "reference",
+ "track_changes": 1
+}

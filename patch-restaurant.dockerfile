@@ -525,6 +525,16 @@ RUN python3 /tmp/receipt_80mm_auto.py \
  && grep -q rm_receipt_80mm_auto apps/restaurant_management/restaurant_management/house.py \
  && grep -q rm_printable_72mm apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json
 
+# rm_till_withdrawals: money an owner takes out of a till mid-shift, recorded on
+# the phone page /till-withdrawal or from the till's Day dialog. It posts a
+# journal entry, and the close takes it off the expected balance.
+COPY --chown=frappe:frappe restaurant/patches/doctype/till_withdrawal apps/restaurant_management/restaurant_management/restaurant_management/doctype/till_withdrawal
+COPY --chown=frappe:frappe restaurant/patches/www/ apps/restaurant_management/restaurant_management/www/
+RUN python3 -c "import ast, json; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/till_withdrawal/till_withdrawal.py').read()); ast.parse(open('apps/restaurant_management/restaurant_management/www/till_withdrawal.py').read()); json.load(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/till_withdrawal/till_withdrawal.json'))" \
+ && python3 /tmp/check_globals.py apps/restaurant_management/restaurant_management/restaurant_management/doctype/till_withdrawal/till_withdrawal.py apps/restaurant_management/restaurant_management/www/till_withdrawal.py apps/restaurant_management/restaurant_management/house.py \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/doctype/till_withdrawal/till_withdrawal.js \
+ && test "$(grep -c 'window.RM_close_day = {' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js)" = 1
+
 # LAST STEP, ON PURPOSE: a patch guard that matches the wrong thing skips
 # silently and the bake still goes green. This asserts the end state instead.
 COPY restaurant/PATCH_MANIFEST /tmp/PATCH_MANIFEST

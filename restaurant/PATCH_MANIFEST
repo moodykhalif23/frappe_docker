@@ -76,3 +76,11 @@ apps/restaurant_management/restaurant_management/public/restaurant/js/order-mana
 # --- receipt and bill as proven on the till's paper ---
 apps/restaurant_management/restaurant_management/house.py :: rm_receipt_80mm_auto
 apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_printable_72mm
+
+# --- till withdrawals: owners record what they take out of a till (rm_till_withdrawals) ---
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/till_withdrawal/till_withdrawal.py :: rm_till_withdrawal
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/till_withdrawal/till_withdrawal.json :: "is_submittable": 1
+apps/restaurant_management/restaurant_management/www/till-withdrawal.html :: tw-go
+apps/restaurant_management/restaurant_management/house.py :: rm_till_withdrawals
+apps/restaurant_management/restaurant_management/house.py :: def _overnight_gaps
+apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js :: rm_till_withdrawals

@@ -248,6 +248,35 @@ KOT_ROUNDS_FIELD = {"fieldname": "kot_rounds", "fieldtype": "Check", "default": 
 					"label": "A ticket per fired round",
 					"description": "Each trip to the kitchen appears as its own ticket on this board."}
 
+# Made on the live site first (29 Sep 2026) and kept here so a fresh site has them.
+COMMISSION_FIELD = {"fieldname": "rm_waiter_commission_pct", "fieldtype": "Percent",
+					"label": "Waiter Commission (%)",
+					"description": ("Printed on the daily (closing) report as each waiter's share of their "
+									"sales. Set 0 to hide the column.")}
+KITCHEN_PRINT_FIELD = {"fieldname": "rm_print_kitchen_on_send", "fieldtype": "Check", "default": "1",
+					   "label": "Print kitchen ticket on Send",
+					   "description": ("When a waiter presses Order, print the kitchen ticket for that round on "
+									   "the station that sent it (the till). Untick to stop auto-printing "
+									   "without a redeploy.")}
+
+# rm_till_withdrawals: where a withdrawal's journal entry sends the money. The
+# till side is the Mode of Payment's own account; these are the other side.
+TW_SECTION = {"fieldname": "rm_tw_section", "fieldtype": "Section Break", "label": "Till withdrawals",
+			  "description": ("Money an owner takes out of the M-Pesa till or the cash drawer, recorded at "
+							  "/till-withdrawal or with the till's Withdrawal button.")}
+TW_DRAWINGS_FIELD = {"fieldname": "rm_tw_drawings_account", "fieldtype": "Link", "options": "Account",
+					 "label": "Owner withdrawals go to",
+					 "description": "Usually an equity account such as Owner's Drawings."}
+TW_BANK_FIELD = {"fieldname": "rm_tw_bank_account", "fieldtype": "Link", "options": "Account",
+				 "label": "Bank settlements go to",
+				 "description": "The bank account a till is swept into. Blank hides Bank settlement."}
+TW_CHARGES_FIELD = {"fieldname": "rm_tw_charges_account", "fieldtype": "Link", "options": "Account",
+					"label": "Safaricom charges go to", "description": "An expense account, e.g. Bank Charges."}
+# on each closing row: what was recorded as withdrawn, already off Expected Amount
+WITHDRAWN_FIELD = {"fieldname": "rm_withdrawn", "fieldtype": "Currency", "label": "Withdrawn",
+				   "read_only": 1, "in_list_view": 1,
+				   "description": "Till Withdrawals recorded in the shift, already taken off Expected Amount."}
+
 
 def _ensure_procurement():
 	"""Reordering out of the box: supplier shelves ready to fill, and stock that
@@ -408,14 +437,27 @@ def _shift_floats(shift):
 			for r in (shift.get("balance_details") or [])}
 
 
+def _till_withdrawn(company, mode, start, end=None):
+	"""rm_till_withdrawals: recorded withdrawals from one till in a window, (total, rows)."""
+	try:
+		from restaurant_management.restaurant_management.doctype.till_withdrawal.till_withdrawal import (
+			withdrawn_between,
+		)
+	except ImportError:
+		return 0.0, []
+	return withdrawn_between(company, mode, start, end)
+
+
 def _record_counted_drawer(closing, counted):
 	"""Write what the drawer actually held, so the difference means something."""
 	if isinstance(counted, str):
 		counted = frappe.parse_json(counted or "{}")
-	counted = {str(k): frappe.utils.flt(v) for k, v in (counted or {}).items()}
+	# a blank is "not counted", never zero: zero would assert a shortfall nobody measured
+	counted = {str(k): frappe.utils.flt(v) for k, v in (counted or {}).items() if v not in (None, "")}
 	if not counted:
 		return
-	floats = _shift_floats(frappe.get_doc("POS Opening Entry", closing.pos_opening_entry))
+	shift = frappe.get_doc("POS Opening Entry", closing.pos_opening_entry)
+	floats = _shift_floats(shift)
 	rows = {r.mode_of_payment: r for r in closing.get("payment_reconciliation") or []}
 	# a mode with a float but no sales gets no row from erpnext, so nobody counts it
 	for mode in counted:
@@ -427,7 +469,10 @@ def _record_counted_drawer(closing, counted):
 			continue
 		sales = frappe.utils.flt(row.expected_amount)
 		row.opening_amount = floats.get(mode, 0.0)
-		row.expected_amount = sales + row.opening_amount
+		# rm_till_withdrawals: money an owner recorded taking out is not a shortfall
+		withdrawn = _till_withdrawn(closing.company, mode, shift.period_start_date)[0]
+		row.rm_withdrawn = withdrawn
+		row.expected_amount = sales + row.opening_amount - withdrawn
 		row.closing_amount = counted[mode]
 		row.difference = frappe.utils.flt(row.closing_amount) - frappe.utils.flt(row.expected_amount)
 
@@ -446,8 +491,18 @@ def day_float(pos_profile=None):
 			 for r in (draft.get("payment_reconciliation") or [])}
 	floats = _shift_floats(shift)
 	modes = list(floats) + [m for m in sales if m not in floats]
-	return [{"mode_of_payment": m, "opening": floats.get(m, 0.0), "sales": sales.get(m, 0.0),
-			 "expected": floats.get(m, 0.0) + sales.get(m, 0.0)} for m in modes]
+	cash = {m.name for m in frappe.get_all("Mode of Payment", filters={"type": "Cash"}, fields=["name"])}
+	out = []
+	for m in modes:
+		# rm_till_withdrawals: the dialog asks against what the till should hold NOW
+		withdrawn, rows = _till_withdrawn(shift.company, m, shift.period_start_date)
+		opening, sold = floats.get(m, 0.0), sales.get(m, 0.0)
+		out.append({"mode_of_payment": m, "opening": opening, "sales": sold, "withdrawn": withdrawn,
+					"withdrawals": [{"reference": r.reference, "purpose": r.purpose,
+									 "amount": frappe.utils.flt(r.amount) + frappe.utils.flt(r.transaction_cost),
+									 "at": frappe.utils.format_datetime(r.withdrawn_at, "HH:mm")} for r in rows],
+					"expected": opening + sold - withdrawn, "is_cash": m in cash})
+	return out
 
 
 @frappe.whitelist()
@@ -536,7 +591,7 @@ def _receipt_with_payment_rows(html):
 # Item left, qty centre, amount right, and nothing that costs paper. The marker is
 # versioned so a later bake replaces the previous bake's receipt instead of keeping it.
 _RECEIPT_BUILD = "rm_receipt_v5"
-# rm_receipt_80mm_auto: page `80mm auto` + 72mm printable width, proven on the
+# rm_receipt_80mm_auto: page `80mm auto` + text centred under the 72mm head, proven on the
 # till's CT-S300 (see restaurant/patches/receipt_80mm_auto.py). The note inside
 # the template that Chrome ignores `auto` does not hold on the till: under kiosk
 # Chrome the CITIZEN driver has no media matching a computed height, so Chrome
@@ -572,9 +627,16 @@ _COMPACT_RECEIPT = """<!-- rm_receipt_v5 -->
   .rm-r .ft { text-align: center; font-size: 8pt; margin-top: 1.5mm }
   @media screen { .print-format { margin: 0 auto } }
 
-/* rm_printable_72mm: CT-S300 prints only ~72mm of the 80mm roll; keep all content inside the print head so the right-edge amount column cannot clip */
-.print-format{width:72mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:2mm !important;padding-right:2mm !important}
+/* rm_printable_72mm (v2, centred): the CT-S300's 72mm print head sits in the MIDDLE of the 80mm roll, about 4-76mm,
+   so text is kept to 6-74mm: centred under the head with 2mm to spare each side. v1 pinned a 72mm box to the paper's
+   left edge, which put the first letter of every line outside the head. Text width is still 68mm, so nothing reflows. */
+.print-format{width:80mm !important;max-width:80mm !important;box-sizing:border-box !important;margin:0 !important;padding-left:6mm !important;padding-right:6mm !important}
 .rm-o table,.print-format table{width:100% !important}
+/* the date+time and the waiter/guest cells sat in the 24% amount column with nowrap and ran past the text edge */
+.rm-r .meta td.am{width:46%}
+.rm-r .am{width:30%}
+.rm-r .it{width:60%}
+.rm-r td{overflow-wrap:anywhere}
 </style>
 {#- an explicit page height: Chrome ignores `auto` and would feed a Letter page per
     bill. Fitted across eight bill shapes, 1 to 25 dishes: 4.49mm a printed row over
@@ -828,6 +890,36 @@ def _ensure_order_account_template():
 	return "Order Account"
 
 
+def _ensure_till_withdrawal_accounts():
+	"""rm_till_withdrawals: give each purpose an account the first time, never again.
+
+	Only an EMPTY setting is filled, so an account the accountant has chosen is
+	never overwritten by a deploy. Owner withdrawals go to an equity "Owner's
+	Drawings" account (made under the company's Equity root if missing);
+	Safaricom's charges to Bank Charges. Bank settlements stay blank until a real
+	bank account is chosen, which also keeps that option off the phone page."""
+	settings = "Restaurant Settings"
+	company = (frappe.defaults.get_global_default("company")
+			   or frappe.db.get_value("Company", {}, "name"))
+	if not company:
+		return
+	abbr = frappe.get_cached_value("Company", company, "abbr")
+	if not frappe.db.get_value(settings, settings, "rm_tw_drawings_account"):
+		name = frappe.db.get_value("Account", {"company": company, "account_name": "Owner's Drawings"}, "name")
+		equity = frappe.db.get_value("Account", {"company": company, "root_type": "Equity", "is_group": 1,
+												 "parent_account": ["is", "not set"]}, "name")
+		if not name and equity:
+			name = frappe.get_doc({"doctype": "Account", "account_name": "Owner's Drawings", "company": company,
+								   "parent_account": equity, "root_type": "Equity", "account_type": "Equity",
+								   "is_group": 0}).insert(ignore_permissions=True).name
+		if name:
+			frappe.db.set_single_value(settings, "rm_tw_drawings_account", name)
+	if not frappe.db.get_value(settings, settings, "rm_tw_charges_account"):
+		charges = frappe.db.exists("Account", "Bank Charges - %s" % abbr)
+		if charges:
+			frappe.db.set_single_value(settings, "rm_tw_charges_account", charges)
+
+
 def _ensure_default_print_formats():
 	"""rm_default_print_formats: name the 80mm format on the doctype itself.
 
@@ -926,7 +1018,14 @@ def ensure_custom_fields():
 								dict(RECHECK_FIELD, insert_after="delivery_room"),
 								dict(UNSENT_AT_PAYMENT_FIELD, insert_after="waiter_recheck_seconds"),  # rm_unsent_at_payment
 								dict(BILL_TILL_FIELD, insert_after="rm_unsent_at_payment"),  # rm_bill_payment
-								dict(BILL_PAYMENT_FIELD, insert_after="rm_bill_till_number")],  # rm_bill_payment
+								dict(BILL_PAYMENT_FIELD, insert_after="rm_bill_till_number"),  # rm_bill_payment
+								dict(COMMISSION_FIELD, insert_after="rm_bill_payment_details"),
+								dict(KITCHEN_PRINT_FIELD, insert_after="rm_waiter_commission_pct"),
+								dict(TW_SECTION, insert_after="rm_print_kitchen_on_send"),  # rm_till_withdrawals
+								dict(TW_DRAWINGS_FIELD, insert_after="rm_tw_section"),
+								dict(TW_BANK_FIELD, insert_after="rm_tw_drawings_account"),
+								dict(TW_CHARGES_FIELD, insert_after="rm_tw_bank_account")],
+		"POS Closing Entry Detail": [dict(WITHDRAWN_FIELD, insert_after="expected_amount")],  # rm_till_withdrawals
 		"Order Entry Item": [dict(WAITER_FIELD, insert_after="item_name", read_only=1),
 							  dict(KOT_ROUND_FIELD, insert_after="ordered_time")],  # rm_kot_rounds
 	}, ignore_validate=True)
@@ -1012,6 +1111,10 @@ def ensure_custom_fields():
 	_ensure_bill_format()
 	_ensure_day_report_format()
 	_ensure_default_print_formats()
+	try:
+		_ensure_till_withdrawal_accounts()  # rm_till_withdrawals
+	except Exception:
+		frappe.log_error(title="till withdrawal accounts")
 	try:
 		_ensure_delivery()
 	except Exception:
@@ -1721,6 +1824,17 @@ def close_day(pos_profile=None, force=0, counted=None):
         frappe.throw(frappe._("{0} check(s) are still open. Settle them first, or close anyway.")
                      .format(summary["open_checks"]))
 
+    # rm_till_withdrawals: a till with activity must be read off the phone, not
+    # assumed. The dialog marks it required; this refuses a blank that got past it.
+    if counted is not None:
+        given = frappe.parse_json(counted) if isinstance(counted, str) else (counted or {})
+        missing = [r["mode_of_payment"] for r in day_float(pos_profile)
+                   if not r["is_cash"] and (r["opening"] or r["sales"] or r["withdrawn"])
+                   and given.get(r["mode_of_payment"]) in (None, "")]
+        if missing:
+            frappe.throw(frappe._("Type the {0} balance shown on the till before closing the day.")
+                         .format(", ".join(missing)), title=frappe._("Balance needed"))
+
     _heal_series("POS Closing Entry", "POS-CLO%")
     healed = _heal_waiter_links()
     closing = make_closing_entry_from_opening(shift)
@@ -2190,9 +2304,41 @@ def open_day(pos_profile=None, balances=None):
     doc.submit()
     frappe.db.commit()
 
-    return {"opened": doc.name, "shift": doc.name, "profile": prof.name,
+    try:
+        gaps = _overnight_gaps(doc)  # rm_till_withdrawals
+    except Exception:
+        frappe.log_error(title="overnight till gaps")
+        gaps = []
+
+    return {"opened": doc.name, "shift": doc.name, "profile": prof.name, "gaps": gaps,
             "float": sum(frappe.utils.flt(balances.get(m) or 0) for m in modes),
             "currency": frappe.db.get_value("Company", prof.company, "default_currency")}
+
+
+def _overnight_gaps(shift):
+    """rm_till_withdrawals: a till that opens lower than it last closed lost money
+    in between. Withdrawals recorded for that window explain it; whatever they do
+    not is reported, so the owner can record it while the SMS is still at hand.
+    Cash is left out: the drawer float is reset by hand every morning."""
+    cash = {m.name for m in frappe.get_all("Mode of Payment", filters={"type": "Cash"}, fields=["name"])}
+    last = frappe.get_all("POS Closing Entry", filters={"docstatus": 1, "pos_profile": shift.pos_profile,
+                                                       "period_end_date": ["<=", shift.period_start_date]},
+                          fields=["name", "period_end_date"], order_by="period_end_date desc", limit=1)
+    if not last:
+        return []
+    closed = {r.mode_of_payment: frappe.utils.flt(r.closing_amount) for r in frappe.get_all(
+        "POS Closing Entry Detail", filters={"parent": last[0].name}, fields=["mode_of_payment", "closing_amount"])}
+    gaps = []
+    for row in shift.get("balance_details") or []:
+        m = row.mode_of_payment
+        if m in cash or m not in closed:
+            continue
+        recorded = _till_withdrawn(shift.company, m, last[0].period_end_date, shift.period_start_date)[0]
+        unexplained = round(frappe.utils.flt(row.opening_amount) - (closed[m] - recorded), 2)
+        if abs(unexplained) >= 1:
+            gaps.append({"mode_of_payment": m, "closed_at": closed[m], "opening": frappe.utils.flt(row.opening_amount),
+                         "recorded": recorded, "unexplained": unexplained})
+    return gaps
 
 
 def _end_of_day_sweep():
