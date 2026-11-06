@@ -535,6 +535,38 @@ RUN python3 -c "import ast, json; ast.parse(open('apps/restaurant_management/res
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/doctype/till_withdrawal/till_withdrawal.js \
  && test "$(grep -c 'window.RM_close_day = {' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js)" = 1
 
+# rm_closing_once: one POS Closing Entry per shift. erpnext queued the job that
+# posts a closing's books inside the closing's own transaction; since the daily
+# report email (10 Oct) the job usually started before the commit, failed with
+# "Could not find POS Closing Entry" and left the shift open, so the next close
+# banked the same shift again. The job now waits for the commit, a second closing
+# of a shift is refused (before_submit), and close/open day finish a stuck one.
+COPY restaurant/patches/_patchlib.py /tmp/_patchlib.py
+COPY restaurant/patches/closing_once.py /tmp/closing_once.py
+RUN python3 /tmp/closing_once.py \
+ && python3 -c "import ast; [ast.parse(open(p).read()) for p in ('apps/erpnext/erpnext/accounts/doctype/pos_invoice_merge_log/pos_invoice_merge_log.py', 'apps/restaurant_management/restaurant_management/hooks.py', 'apps/restaurant_management/restaurant_management/house.py')]" \
+ && python3 /tmp/check_globals.py apps/restaurant_management/restaurant_management/house.py \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && grep -q 'enqueue_after_commit=True' apps/erpnext/erpnext/accounts/doctype/pos_invoice_merge_log/pos_invoice_merge_log.py \
+ && grep -q 'restaurant_management.house.refuse_second_closing' apps/restaurant_management/restaurant_management/hooks.py \
+ && grep -q rm_closing_once apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+
+# rm_kitchen_stock: the kitchen's own paper sheet (Opening, Add, Sold, Staff, Discard,
+# Closing) kept by the system, in portions. A paid bill issues its portions in the
+# background just after it commits; purchases are recorded at the till and come off
+# what the drawer should hold; inventory.py and house.py are copied in earlier steps.
+COPY restaurant/patches/_patchlib.py /tmp/_patchlib.py
+# the dish -> stock table every dish carries (Item > Kitchen stock used)
+COPY --chown=frappe:frappe restaurant/patches/doctype/dish_stock_use apps/restaurant_management/restaurant_management/restaurant_management/doctype/dish_stock_use
+COPY restaurant/patches/kitchen_stock.py /tmp/kitchen_stock.py
+RUN python3 /tmp/kitchen_stock.py \
+ && python3 -c "import json, ast; json.load(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/dish_stock_use/dish_stock_use.json')); ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/dish_stock_use/dish_stock_use.py').read())" \
+ && python3 -c "import ast; [ast.parse(open(p).read()) for p in ('apps/restaurant_management/restaurant_management/hooks.py', 'apps/restaurant_management/restaurant_management/inventory.py', 'apps/restaurant_management/restaurant_management/house.py')]" \
+ && python3 /tmp/check_globals.py apps/restaurant_management/restaurant_management/inventory.py apps/restaurant_management/restaurant_management/house.py \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && grep -q 'restaurant_management.inventory.queue_consumption' apps/restaurant_management/restaurant_management/hooks.py \
+ && grep -q 'window.RM_kitchen = {' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+
 # a bill printed straight after a +/- carried the new line under the old total
 # (470 printed, 620 owed): the line was committed before the total was redone,
 # and the Account button did not wait for the tap to land. The template half

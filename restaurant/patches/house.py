@@ -448,6 +448,17 @@ def _till_withdrawn(company, mode, start, end=None):
 	return withdrawn_between(company, mode, start, end)
 
 
+def _till_spent(company, mode, start, end=None):
+	"""rm_kitchen_stock: purchases paid from one till since start, (total, rows)."""
+	if not frappe.db.has_column("Purchase Invoice", "rm_till_purchase"):
+		return 0.0, []
+	when = ["between", [start, end]] if end else [">=", start]
+	rows = frappe.get_all("Purchase Invoice", filters={"docstatus": 1, "company": company, "rm_till_purchase": 1,
+													   "mode_of_payment": mode, "creation": when},
+						  fields=["name", "grand_total", "creation", "remarks"], order_by="creation")
+	return sum(frappe.utils.flt(r.grand_total) for r in rows), rows
+
+
 def _record_counted_drawer(closing, counted):
 	"""Write what the drawer actually held, so the difference means something."""
 	if isinstance(counted, str):
@@ -472,7 +483,10 @@ def _record_counted_drawer(closing, counted):
 		# rm_till_withdrawals: money an owner recorded taking out is not a shortfall
 		withdrawn = _till_withdrawn(closing.company, mode, shift.period_start_date)[0]
 		row.rm_withdrawn = withdrawn
-		row.expected_amount = sales + row.opening_amount - withdrawn
+		# rm_kitchen_stock: so is what was paid out of it for the kitchen
+		spent = _till_spent(closing.company, mode, shift.period_start_date)[0]
+		row.rm_spent = spent
+		row.expected_amount = sales + row.opening_amount - withdrawn - spent
 		row.closing_amount = counted[mode]
 		row.difference = frappe.utils.flt(row.closing_amount) - frappe.utils.flt(row.expected_amount)
 
@@ -496,12 +510,16 @@ def day_float(pos_profile=None):
 	for m in modes:
 		# rm_till_withdrawals: the dialog asks against what the till should hold NOW
 		withdrawn, rows = _till_withdrawn(shift.company, m, shift.period_start_date)
+		spent, bought = _till_spent(shift.company, m, shift.period_start_date)  # rm_kitchen_stock
 		opening, sold = floats.get(m, 0.0), sales.get(m, 0.0)
 		out.append({"mode_of_payment": m, "opening": opening, "sales": sold, "withdrawn": withdrawn,
 					"withdrawals": [{"reference": r.reference, "purpose": r.purpose,
 									 "amount": frappe.utils.flt(r.amount) + frappe.utils.flt(r.transaction_cost),
 									 "at": frappe.utils.format_datetime(r.withdrawn_at, "HH:mm")} for r in rows],
-					"expected": opening + sold - withdrawn, "is_cash": m in cash})
+					"spent": spent,
+					"purchases": [{"name": r.name, "amount": frappe.utils.flt(r.grand_total), "note": r.remarks or "",
+								   "at": frappe.utils.format_datetime(r.creation, "HH:mm")} for r in bought],
+					"expected": opening + sold - withdrawn - spent, "is_cash": m in cash})
 	return out
 
 
@@ -986,6 +1004,11 @@ def ensure_custom_fields():
 		_ensure_readable_merge_log_names()
 	except Exception:
 		pass
+	try:
+		from restaurant_management.inventory import ensure_kitchen_stock  # rm_kitchen_stock
+		ensure_kitchen_stock()
+	except Exception:
+		frappe.log_error(title="kitchen stock setup")
 	from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 	# rm_kot_rounds: has the switch ever existed before this deploy? Captured
@@ -1741,6 +1764,77 @@ def _open_shift_doc(pos_profile=None):
     return frappe.get_doc("POS Opening Entry", name) if name else None
 
 
+# rm_closing_once: one closing per shift. erpnext posts a closing's books in a
+# background job, and when that job lost its race with the closing's own commit
+# the shift stayed "Open" — so the next close (or the next morning's open) banked
+# the same shift again and emailed the report again. A shift that already has a
+# submitted closing is now finished, never banked twice.
+
+
+def _shift_closing(shift_name):
+    """The submitted closing that already banked this shift, if any."""
+    return frappe.db.get_value("POS Closing Entry", {"pos_opening_entry": shift_name, "docstatus": 1},
+                               "name", order_by="creation asc")
+
+
+def _finish_closing(name):
+    """Post the books of a closing that is still Queued or Failed, here and now.
+
+    Runs erpnext's own merge in this request. Returns False while the background
+    job still holds it, so the two never post the same invoices."""
+    from erpnext.accounts.doctype.pos_invoice_merge_log.pos_invoice_merge_log import (
+        create_merge_logs,
+        get_invoice_customer_map,
+    )
+    from frappe.utils.background_jobs import is_job_enqueued
+
+    if is_job_enqueued("pos_invoice_merge::" + name):
+        return False
+    status = frappe.db.get_value("POS Closing Entry", name, "status", for_update=True)
+    if status in ("Queued", "Failed"):
+        closing = frappe.get_doc("POS Closing Entry", name)
+        create_merge_logs(get_invoice_customer_map(closing.get("pos_invoices")), closing)
+    return True
+
+
+def _close_banked(name, shift):
+    """close_day/open_day for a shift that already has a closing: finish that one."""
+    try:
+        finished = _finish_closing(name)
+    except Exception:
+        frappe.log_error(title="close_day could not finish " + name)
+        frappe.throw(frappe._("{0} already banked this day, but its books could not be posted. The reason"
+                              " is in Error Log under 'close_day could not finish {0}'.").format(name))
+    if not finished:
+        frappe.throw(frappe._("{0} is still being posted. Try again in a minute.").format(name),
+                     title=frappe._("Closing in progress"))
+    closing = frappe.get_doc("POS Closing Entry", name)
+    return {"closed": name, "shift": shift.name, "already": 1, "waiters_restored": [],
+            "open_checks_detail": [], "invoices": len(closing.get("pos_invoices") or []),
+            "sales": frappe.utils.flt(closing.grand_total), "open_checks_left": 0,
+            "parties_closed": 0, "sections_cleared": 0,
+            "variance": [{"mode_of_payment": r.mode_of_payment,
+                          "expected": frappe.utils.flt(r.expected_amount),
+                          "counted": frappe.utils.flt(r.closing_amount),
+                          "difference": frappe.utils.flt(r.difference)}
+                         for r in closing.get("payment_reconciliation") or []]}
+
+
+def refuse_second_closing(doc, method=None):
+    """POS Closing Entry before_submit: one closing per shift, from any screen.
+
+    The opening entry's row is locked first, so two closes at the same moment
+    queue up and the second one sees the first."""
+    if not doc.pos_opening_entry:
+        return
+    frappe.db.get_value("POS Opening Entry", doc.pos_opening_entry, "name", for_update=True)
+    other = frappe.db.get_value("POS Closing Entry", {"pos_opening_entry": doc.pos_opening_entry,
+                                                      "docstatus": 1, "name": ["!=", doc.name]}, "name")
+    if other:
+        frappe.throw(frappe._("This shift was already closed by {0}. Nothing was banked twice.").format(other),
+                     title=frappe._("Already closed"))
+
+
 @frappe.whitelist()
 def day_summary(pos_profile=None):
     """What closing would sweep up, so nobody closes a day blind."""
@@ -1819,6 +1913,10 @@ def close_day(pos_profile=None, force=0, counted=None):
     if not shift:
         return {"closed": None, "message": frappe._("The counter is already closed")}
 
+    banked = _shift_closing(shift.name)  # rm_closing_once
+    if banked:
+        return _close_banked(banked, shift)
+
     summary = day_summary(pos_profile)
     if summary["open_checks"] and not int(force or 0):
         frappe.throw(frappe._("{0} check(s) are still open. Settle them first, or close anyway.")
@@ -1852,6 +1950,14 @@ def close_day(pos_profile=None, force=0, counted=None):
             "The day could not be banked. Nothing was changed — the reason is in"
             " Error Log under 'close_day could not bank the shift'."))
     frappe.db.commit()
+
+    # rm_kitchen_stock: every bill of the day has its stock issued, in the background
+    # (all of them in "at the day's close" mode; any the per-bill job missed, otherwise)
+    try:
+        frappe.enqueue("restaurant_management.inventory.issue_at_close", queue="long",
+                       enqueue_after_commit=True, job_id="rm_issue_at_close", deduplicate=True)
+    except Exception:
+        frappe.log_error(title="kitchen stock at close")
 
     swept = _end_of_day_sweep()
 
@@ -2272,6 +2378,9 @@ def open_day(pos_profile=None, balances=None):
         frappe.throw(frappe._("No POS Profile is set up"))
 
     standing = _open_shift_doc(profile)
+    if standing and _shift_closing(standing.name):  # rm_closing_once
+        _close_banked(_shift_closing(standing.name), standing)
+        standing = _open_shift_doc(profile)
     if standing:
         if frappe.utils.getdate(standing.period_start_date) < frappe.utils.getdate():
             frappe.throw(frappe._("A shift from {0} is still open. Close the day first.").format(

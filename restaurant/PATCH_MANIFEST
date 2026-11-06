@@ -85,6 +85,25 @@ apps/restaurant_management/restaurant_management/house.py :: rm_till_withdrawals
 apps/restaurant_management/restaurant_management/house.py :: def _overnight_gaps
 apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js :: rm_till_withdrawals
 
+# --- one closing per shift: no more duplicate closings (rm_closing_once) ---
+apps/erpnext/erpnext/accounts/doctype/pos_invoice_merge_log/pos_invoice_merge_log.py :: enqueue_after_commit=True
+apps/restaurant_management/restaurant_management/hooks.py :: restaurant_management.house.refuse_second_closing
+apps/restaurant_management/restaurant_management/house.py :: def refuse_second_closing
+apps/restaurant_management/restaurant_management/house.py :: banked = _shift_closing(shift.name)  # rm_closing_once
+apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js :: rm_closing_once
+
+# --- kitchen stock: the kitchen's daily sheet, kept by the system (rm_kitchen_stock) ---
+apps/restaurant_management/restaurant_management/inventory.py :: def consume_invoice
+apps/restaurant_management/restaurant_management/inventory.py :: def ensure_kitchen_stock
+apps/restaurant_management/restaurant_management/hooks.py :: restaurant_management.inventory.queue_consumption
+apps/restaurant_management/restaurant_management/hooks.py :: restaurant_management.inventory.sweep
+apps/restaurant_management/restaurant_management/house.py :: def _till_spent
+apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js :: window.RM_kitchen = {
+apps/restaurant_management/restaurant_management/restaurant_management/doctype/dish_stock_use/dish_stock_use.json :: "istable": 1
+apps/restaurant_management/restaurant_management/inventory.py :: def kitchen_setup
+apps/restaurant_management/restaurant_management/inventory.py :: def save_dish_uses
+apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js :: kitchen_setup
+
 # --- a printed bill adds up -------------------------------------------------
 # a bill printed straight after a +/- showed the new line under the old total
 apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py :: rm_atomic_item_write
