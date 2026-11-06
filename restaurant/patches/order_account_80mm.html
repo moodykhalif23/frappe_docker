@@ -195,11 +195,19 @@
     {%- endfor %}
   </table>
   <hr>
+  {#- rm_bill_total_from_lines: the Total is the sum of the lines printed above
+      whenever nothing else goes into it - no tax, no delivery fee (booked as a
+      tax), no check discount - which is every check that has none of those.
+      The stored total is a second copy of the same number, and a copy can be
+      read a moment stale: on 6 Nov 2026 a bill printed 470 under lines adding
+      to 620. With tax or a discount in play the stored total stays, because
+      only the server knows how they apply. -#}
+  {%- set _own_total = not (doc.get("tax") | float) and not (doc.get("discount") | float) -%}
   <table class="tt">
     {%- if doc.get("tax") | float %}
     <tr><td class="tl">{{ _("Tax") }}</td><td class="am">{{ doc.get_formatted("tax") }}</td></tr>
     {%- endif %}
-    <tr class="tot"><td class="tl">{{ _("Total") }}</td><td class="am">{{ doc.get_formatted("amount") }}</td></tr>
+    <tr class="tot"><td class="tl">{{ _("Total") }}</td><td class="am">{% if _own_total %}{{ frappe.format_value(rows | sum(attribute="a"), doc.meta.get_field("amount"), doc) }}{% else %}{{ doc.get_formatted("amount") }}{% endif %}</td></tr>
   </table>
   <hr>
   {#- HOW TO PAY. The text is Restaurant Settings > "How to pay", so the owner

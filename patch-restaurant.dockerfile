@@ -535,6 +535,21 @@ RUN python3 -c "import ast, json; ast.parse(open('apps/restaurant_management/res
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/doctype/till_withdrawal/till_withdrawal.js \
  && test "$(grep -c 'window.RM_close_day = {' apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js)" = 1
 
+# a bill printed straight after a +/- carried the new line under the old total
+# (470 printed, 620 owed): the line was committed before the total was redone,
+# and the Account button did not wait for the tap to land. The template half
+# (rm_bill_total_from_lines) ships in order_account_80mm.html above.
+COPY restaurant/patches/bill_matches_lines.py /tmp/bill_matches_lines.py
+RUN python3 /tmp/bill_matches_lines.py \
+ && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())" \
+ && python3 /tmp/check_globals.py apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/order-item-class.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
+ && grep -q rm_atomic_item_write apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py \
+ && grep -q rm_bill_waits_for_writes apps/restaurant_management/restaurant_management/public/restaurant/js/order-item-class.js \
+ && grep -q rm_bill_waits_for_writes apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js \
+ && grep -q rm_bill_total_from_lines apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json
+
 # LAST STEP, ON PURPOSE: a patch guard that matches the wrong thing skips
 # silently and the bake still goes green. This asserts the end state instead.
 COPY restaurant/PATCH_MANIFEST /tmp/PATCH_MANIFEST
