@@ -139,7 +139,12 @@ def pos_profile():
 
 
 def room():
-    r = frappe.db.get_value("Restaurant Object", {"type": "Room"}, "name")
+    # never the delivery room: deploy.sh creates it before simulate() runs, and a
+    # demo service seated on delivery slots is a demo of nothing
+    delivery = frappe.db.get_single_value("Restaurant Settings", "delivery_room") \
+        if frappe.get_meta("Restaurant Settings").has_field("delivery_room") else None
+    r = frappe.db.get_value("Restaurant Object", {"type": "Room", "name": ["!=", delivery or ""]},
+                            "name", order_by="creation asc")
     if r:
         return r
     doc = frappe.new_doc("Restaurant Object")
@@ -388,6 +393,18 @@ def _pc_for(item_code):
                                {"type": "Production Center", "description": target}, "name")
 
 
+def _board_keys(pc, order_name, entries):
+    """What the chef's button sends for this check on this centre's board.
+
+    A centre that groups by order shows one card per check — per fired round of
+    it when kitchen-ticket rounds are on ("<order>::<n>") — and its button sends
+    that card's key; pushing a line's identifier there reads no status and throws
+    "the process is complete". Otherwise each line is its own card."""
+    if pc.group_items_by_order == 1:
+        return [k for k in pc.commands_food() if k == order_name or k.startswith(order_name + "::")]
+    return [e["identifier"] for e in entries if _pc_for(e["item_code"]) == pc.name]
+
+
 def _run_order(table_name, cust_name, dishes, final, pay_mode):
     customer = frappe.db.get_value("Customer", {"customer_name": cust_name})
     frappe.db.set_value("Restaurant Object", table_name, "customer", customer)
@@ -404,10 +421,11 @@ def _run_order(table_name, cust_name, dishes, final, pay_mode):
     if steps_target >= 1:
         cls.send.fget(order)  # .send is a @property in the app; access fires dispatch
         order.reload()
-    for e in entries:
-        pc = frappe.get_doc("Restaurant Object", _pc_for(e["item_code"]))
+    for pc_name in dict.fromkeys(_pc_for(e["item_code"]) for e in entries):
+        pc = frappe.get_doc("Restaurant Object", pc_name)
         for _ in range(max(0, steps_target - 1)):
-            pc.set_status_command(e["identifier"])
+            for key in _board_keys(pc, order.name, entries):
+                pc.set_status_command(key)
 
     invoice = None
     if pay_mode:

@@ -44,19 +44,27 @@ async function roomTrash(p) {
   await editMode(p);
   await p.locator('.floor-map-editor.right button:has(.fa-trash)').first().click();
 }
-// a tile's trash shows on the selected tile; it is an overlay, so click it in the DOM
-async function tableTrash(p, label) {
+// a tile's trash shows on the selected tile. Find the tile through the floor's own
+// object for that record — matching on text found "Table 10" for "Table 1" — click
+// it to select it, then click its trash in the DOM (it is an overlay)
+async function tableTrash(p, name) {
   await editMode(p);
-  const tile = p.locator('.d-table:visible').filter({ hasText: new RegExp(`^\\s*${label}\\s*$|\\b${label}\\b`) }).first();
-  await tile.click({ force: true }); await p.waitForTimeout(800);
-  return p.evaluate((l) => {
-    const t = Array.from(document.querySelectorAll('.d-table')).find(e => e.innerText.includes(l));
-    const btn = t && t.querySelector('.fa-trash') && t.querySelector('.fa-trash').closest('button');
+  const tile = await p.evaluateHandle(n => { const t = RM.current_room && RM.current_room.get_child(n); return t ? t.obj.JQ()[0] : null; }, name);
+  if (!tile.asElement()) return 'no tile';
+  await tile.asElement().click({ force: true }); await p.waitForTimeout(800);
+  return p.evaluate((n) => {
+    const el = RM.current_room.get_child(n).obj.JQ()[0];
+    const btn = el.querySelector('.fa-trash') && el.querySelector('.fa-trash').closest('button');
     if (!btn) return 'no trash';
     btn.click(); return 'clicked';
-  }, label);
+  }, name);
 }
 const dialog = async (p) => { const d = p.locator('.modal.show').last(); await d.waitFor({ timeout: 10000 }); return d; };
+// frappe's msgprint ignores Escape here, and its backdrop would eat the next click
+async function closeDialog(p, d) {
+  await d.locator('.btn-modal-close').first().click();
+  await p.waitForFunction(() => !document.querySelector('.modal.show'), null, { timeout: 10000 });
+}
 const text = async (d) => (await d.innerText()).replace(/\s+/g, ' ');
 
 const p = await screen();
@@ -100,12 +108,12 @@ const soldAt = await p.evaluate(() => frappe.db.get_value('Table Order', { statu
 if (soldAt && soldAt.table) {
   const tLabel = await labelOf(p, soldAt.table);
   await openRoom(p, await labelOf(p, soldAt.room));
-  check(`${tLabel} (sold) has a trash`, (await tableTrash(p, tLabel)) === 'clicked');
+  check(`${tLabel} (sold) has a trash`, (await tableTrash(p, soldAt.table)) === 'clicked');
   d = await dialog(p);
   said = await text(d);
-  check(`${tLabel} says it can't be deleted, and why`, said.includes("can't be deleted") && said.includes('check(s) on record') && said.includes('part of the books'), said.slice(0, 200));
+  check(`${tLabel} says it can't be deleted, and why`, said.includes(`${tLabel} can't be deleted`) && said.includes('check(s) on record') && said.includes('part of the books'), said.slice(0, 200));
   check('without offering to delete it', (await d.getByRole('button', { name: /^Yes$/ }).count()) === 0);
-  await p.keyboard.press('Escape'); await p.waitForTimeout(500);
+  await closeDialog(p, d);
   check('and it is still there', await exists(p, soldAt.table));
 } else console.log('SKIP  no invoiced check on this site (deploy.sh SIMULATE=1 seeds some)');
 
@@ -122,7 +130,7 @@ if (kept) {
   check(`${label} says it can't be deleted, and why (${why})`, said.includes("can't be deleted") && said.includes(why), said.slice(0, 200));
   check('the books explanation shows only when checks are the reason', said.includes('part of the books') === !!sold);
   check('without offering to delete it', (await d.getByRole('button', { name: /^Yes$/ }).count()) === 0);
-  await p.keyboard.press('Escape');
+  await closeDialog(p, d);
   check('and it is still there', await exists(p, kept));
 } else console.log('SKIP  no room with sales and no delivery room on this site');
 

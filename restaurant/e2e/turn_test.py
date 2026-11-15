@@ -8,6 +8,8 @@ from restaurant_management import house
 GUEST = "Turn Test Party"
 QGUEST = "Turn Test Queue"
 BGUEST = "Turn Test Booking"
+# the e2e waiter fixture (mirror_stations.py): since 041ecad every seating is a named waiter's
+WAITER, PIN = "Amina Test", "1111"
 
 
 def _cleanup():
@@ -39,7 +41,7 @@ def run():
 		return _report(results)
 
 	table = free_before[0]["name"]
-	seat = house.seat_walkin(GUEST, 2, table)
+	seat = house.seat_walkin(GUEST, 2, table, waiter=WAITER, pin=PIN)
 	booking = seat["booking"]
 
 	b = frappe.get_doc("Restaurant Booking", booking)
@@ -131,7 +133,7 @@ def run():
 	         if not frappe.db.count("Table Order", {"table": x["name"], "status": "Invoiced"})]
 	if spare:
 		t = spare[0]["name"]
-		house.seat_walkin(GUEST, 2, t)
+		house.seat_walkin(GUEST, 2, t, waiter=WAITER, pin=PIN)
 		blockers = house.table_blockers(t)
 		check("a seated table reports what holds it", blockers["open_bookings"] >= 1, str(blockers["open_bookings"]))
 		check("and is not deletable: the seating is on record", not blockers["deletable"] and blockers["on_record"],

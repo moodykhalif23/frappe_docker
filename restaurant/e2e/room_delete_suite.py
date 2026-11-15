@@ -85,7 +85,9 @@ def run():
 		before = frappe.db.count("Restaurant Object", {"room": dr})
 		b = house.room_blockers(dr)
 		ok("the delivery room says why it stays", any("delivery room" in r for r in b["reasons"]), b["reasons"])
-		ok("which is a setting, not history", not b["on_record"])
+		# a live delivery room has deliveries on record; the books note follows the checks
+		checks = frappe.db.count("Table Order", {"room": dr})
+		ok("and calls it history exactly when it has checks", b["on_record"] == bool(checks), "%d check(s)" % checks)
 		ok("and deleting it is refused", _refused(lambda: house.delete_room(dr)))
 		ok("with nothing taken", _exists(dr) and frappe.db.count("Restaurant Object", {"room": dr}) == before)
 	else:
