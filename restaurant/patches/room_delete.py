@@ -39,10 +39,13 @@ METHOD = """
         if (!b) return;
         if (b.reasons.length) {
           const items = b.reasons.map((x) => `<li>${frappe.utils.escape_html(x)}</li>`).join("");
+          const why = b.on_record
+            ? `<p>${__("A check or a seating is part of the books, so the room and table it belongs to stay. Rename the room instead, or delete the tables in it that have nothing on record.")}</p>`
+            : "";
           frappe.msgprint({
             title: __("{0} can't be deleted", [b.label]),
             indicator: "orange",
-            message: `<ul>${items}</ul><p>${__("A check or a seating is part of the books, so the room and table it belongs to stay. Rename the room instead, or delete the tables in it that have nothing on record.")}</p>`
+            message: `<ul>${items}</ul>${why}`
           });
           return;
         }

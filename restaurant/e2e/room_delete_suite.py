@@ -50,6 +50,16 @@ def _build():
 	frappe.db.commit()
 
 
+def _voided_check(table, room):
+	"""A cancelled check on `table`, written straight to the table: no shift or
+	waiter needed, and frappe's link check counts it like any real one."""
+	doc = frappe.new_doc("Table Order")
+	doc.update({"table": table, "room": room, "status": "Cancelled", "show_in_pos": 0})
+	doc.set_new_name()
+	doc.db_insert()
+	return doc.name
+
+
 def run():
 	frappe.set_user("Administrator")
 	_clear()
@@ -73,10 +83,29 @@ def run():
 		before = frappe.db.count("Restaurant Object", {"room": dr})
 		b = house.room_blockers(dr)
 		ok("the delivery room says why it stays", any("delivery room" in r for r in b["reasons"]), b["reasons"])
+		ok("which is a setting, not history", not b["on_record"])
 		ok("and deleting it is refused", _refused(lambda: house.delete_room(dr)))
 		ok("with nothing taken", _exists(dr) and frappe.db.count("Restaurant Object", {"room": dr}) == before)
 	else:
 		print("SKIP  no delivery room on this site")
+
+	# --- a voided check keeps the room: frappe counts every linked row ----------
+	_build()
+	check = _voided_check(T2, ROOM)
+	frappe.db.commit()
+	b = house.room_blockers(ROOM)
+	ok("a voided check on one table keeps the room", any(r.startswith(T2 + ":") and "check(s) on record" in r
+	                                                     for r in b["reasons"]), b["reasons"])
+	ok("and it is flagged as history, not a setting", b["on_record"])
+	ok("and deleting it is refused", _refused(lambda: house.delete_room(ROOM)))
+	frappe.db.rollback()
+	ok("with nothing taken — not even the clean table or the screen", len(_exists(ROOM, T1, T2, PC)) == 4,
+	   _exists(ROOM, T1, T2, PC))
+	frappe.db.delete("Table Order", check)
+	frappe.db.commit()
+	ok("once the check is gone the room goes", not house.room_blockers(ROOM)["reasons"]
+	   and house.delete_room(ROOM) and not _exists(ROOM, T1, T2, PC))
+	frappe.db.commit()
 
 	# --- a room with sales on record stays, whole ------------------------------
 	sold = frappe.db.get_value("Table Order", {"room": ["is", "set"], "status": "Invoiced"}, "room")

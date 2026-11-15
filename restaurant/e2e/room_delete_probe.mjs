@@ -30,7 +30,12 @@ async function openRoom(p, label) {
   await p.getByText(label, { exact: true }).first().click();
   await p.waitForFunction(l => RM.current_room && (RM.current_room.data.description || RM.current_room.data.name) === l, label, { timeout: 15000 });
 }
-const deleteButton = p => p.locator('button.btn-flat:has(.fa-trash)').filter({ hasText: 'Delete' }).first();
+// the room's Edit/Delete sit in the floor editor, shown once the pencil turns edit mode on
+async function deleteButton(p) {
+  if (!(await p.evaluate(() => RM.editing))) await p.locator('.general-editor-button').first().click();
+  await p.waitForFunction(() => RM.editing, null, { timeout: 5000 });
+  return p.locator('.floor-map-editor.right button:has(.fa-trash)').first();
+}
 
 const p = await screen();
 // fresh room with two tables, made before either floor loads
@@ -43,7 +48,7 @@ await floor(watcher); await openRoom(watcher, ROOM);
 await floor(p); await openRoom(p, ROOM);
 
 // --- the clean room --------------------------------------------------------
-await deleteButton(p).click();
+await (await deleteButton(p)).click();
 const confirm = p.locator('.modal.show').last();
 await confirm.waitFor({ timeout: 10000 });
 const asked = (await confirm.innerText()).replace(/\s+/g, ' ');
@@ -59,20 +64,23 @@ check('the status bar reads Ready', (await p.locator('.restaurant-manage-status'
 await watcher.waitForTimeout(3000);
 check('a second screen on that room lost its tab', (await watcher.getByText(ROOM, { exact: true }).count()) === 0);
 
-// --- a room with sales stays ---------------------------------------------
+// --- a room that must stay: one with sales, else the delivery room ----------
 const sold = await p.evaluate(() => frappe.db.get_value('Table Order', { status: 'Invoiced', room: ['is', 'set'] }, 'room').then(r => r.message && r.message.room));
-if (sold) {
-  const label = await p.evaluate(n => frappe.db.get_value('Restaurant Object', n, 'description').then(r => r.message.description || n), sold);
+const delivery = await p.evaluate(() => frappe.db.get_single_value('Restaurant Settings', 'delivery_room'));
+const kept = sold || delivery, why = sold ? 'check(s) on record' : 'delivery room';
+if (kept) {
+  const label = await p.evaluate(n => frappe.db.get_value('Restaurant Object', n, 'description').then(r => r.message.description || n), kept);
   await openRoom(p, label);
-  await deleteButton(p).click();
+  await (await deleteButton(p)).click();
   const msg = p.locator('.modal.show').last();
   await msg.waitFor({ timeout: 10000 });
   const said = (await msg.innerText()).replace(/\s+/g, ' ');
-  check("a room with sales says it can't be deleted, and why", said.includes("can't be deleted") && said.includes('check(s) on record'), said.slice(0, 200));
+  check(`${label} says it can't be deleted, and why (${why})`, said.includes("can't be deleted") && said.includes(why), said.slice(0, 200));
+  check('the books explanation shows only when checks are the reason', said.includes('part of the books') === !!sold);
   check('without offering to delete it', (await msg.getByRole('button', { name: /^Yes$/ }).count()) === 0);
   await p.keyboard.press('Escape');
-  check('and it is still there', await exists(p, sold));
-} else console.log('SKIP  no invoiced check on this site');
+  check('and it is still there', await exists(p, kept));
+} else console.log('SKIP  no room with sales and no delivery room on this site');
 
 check('no page errors on either screen', errors.length === 0, errors.join(' | '));
 console.log(`RESULT ${results.filter(Boolean).length}/${results.length}`);

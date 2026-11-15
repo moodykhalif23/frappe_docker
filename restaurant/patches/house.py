@@ -1827,6 +1827,8 @@ def room_blockers(room):
 		"label": label[room],
 		"contents": [{"name": o.name, "label": label[o.name], "type": o.type} for o in contents],
 		"reasons": [_describe_hold(label[n], held[n]) for n in names if n in held],
+		# checks or seatings, as opposed to a setting that can be changed
+		"on_record": any({"Table Order", "Restaurant Booking"} & set(by_dt) for by_dt in held.values()),
 	}
 
 
