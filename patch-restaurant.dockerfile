@@ -205,12 +205,13 @@ RUN python3 /tmp/fix_table_delete.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/restaurant_object/restaurant_object.py').read())" \
  && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
 
-# the table trash was bound to a double-click and gave no feedback on a single tap
-COPY restaurant/patches/table_delete_single_click.py /tmp/table_delete_single_click.py
-RUN python3 /tmp/table_delete_single_click.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
-# deleting a room never ran: delete() fetched `_delete` without calling it. It now
-# names what goes with the room and deletes it all, or says what keeps it.
+# Deleting from the floor: frappe refuses while ANY row links a record, cancelled
+# checks and released seatings included. The table trash said "deletable" over a
+# voided check and then threw the raw link error; the room's delete never ran at
+# all. Both now name what goes, or say plainly what keeps it.
 COPY restaurant/patches/_patchlib.py /tmp/_patchlib.py
+COPY restaurant/patches/table_delete.py /tmp/table_delete.py
+RUN python3 /tmp/table_delete.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
 COPY restaurant/patches/room_delete.py /tmp/room_delete.py
 RUN python3 /tmp/room_delete.py \
  && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
@@ -231,11 +232,6 @@ COPY --chown=frappe:frappe restaurant/patches/report/table_turns apps/restaurant
 COPY restaurant/patches/free_table_on_payment.py /tmp/free_table_on_payment.py
 RUN python3 /tmp/free_table_on_payment.py \
  && python3 -c "import ast; ast.parse(open('apps/restaurant_management/restaurant_management/restaurant_management/doctype/table_order/table_order.py').read())"
-
-# deleting a table: say what is holding it, and offer to clear an unpaid check
-COPY restaurant/patches/table_delete_explains.py /tmp/table_delete_explains.py
-RUN python3 /tmp/table_delete_explains.py \
- && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
 
 # the reports and the waiter list had no way in but search
 COPY restaurant/patches/workspace_reports.py /tmp/workspace_reports.py

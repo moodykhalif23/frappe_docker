@@ -110,12 +110,14 @@ what is shipped and what is deliberately not. Read it before touching anything.
 - `TableOrder.send` is a **@property** — attribute access fires kitchen dispatch; calling it throws `'dict' object is not callable` (a sync payload also lands on the instance as `.send`).
 - **`api.call` calls the method only when `args` is sent.** Without `args`,
   `restaurant_management.api.call` returns `getattr(doc, method)` *uncalled* — upstream leaned on
-  `@property` for that. A `frappeHelper.api.call` to a real method must pass `args: {}`. The room's
-  Delete left it out and never deleted anything, silently (`room_delete.py`; tables: `fix_table_delete.py`).
-- **frappe's delete counts every linked row, whatever its status** — cancelled checks and closed
-  seatings included. A room therefore goes only together with its tables, and only when nothing
-  on record points at any of it: `house.room_blockers`/`delete_room` ask frappe's own
-  `get_linked_docs` first, so it is all or nothing, and the reason is given in plain words.
+  `@property` for that. A `frappeHelper.api.call` to a real method must pass `args: {}`. When
+  `fix_table_delete.py` made `_delete` a method it fixed only the table's caller, and the room's
+  Delete silently stopped deleting. Turning a property into a method: find every caller.
+- **frappe's delete counts every linked row, whatever its status** — cancelled checks and released
+  seatings included, so "release it, then delete it" can never work. A table or room with anything
+  on record stays (rename it); a room goes only together with its tables. `house.table_blockers`/
+  `delete_table` and `room_blockers`/`delete_room` ask frappe's own `get_linked_docs` first
+  (`_floor_links`), so the trash never calls something deletable and then throws the raw link error.
 - POS Settings must be in "POS Invoice" mode (v16 defaults to Sales Invoice mode, blocking the app's billing); UOM `Nos` allows fractions for by-the-glass recipes (production: use a dedicated fractional UOM instead).
 - The order pad's catalog comes from **`POS Profile.restaurant_menu`** (app custom field) — unset means an empty menu no matter what the Restaurant Menu contains. The Veg/Non-Veg tabs filter on `Item.item_type`. `seed()` sets both.
 - v16 renamed `get_item_details`' kwarg `args`→`ctx` — unpatched, every add-to-cart 500s and the cart silently stays at 0.

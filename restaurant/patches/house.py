@@ -995,6 +995,12 @@ def _ensure_bill_format():
 
 def ensure_custom_fields():
 	"""Idempotent: hangs the waiter link on the table, its orders and its invoices."""
+	# rm_lang_fallback: frappe's get_locale_value() reads an unbound name when the
+	# session has no language — any console before the setup wizard. Inserting a
+	# print format validates its jinja and lands there, so a fresh deploy died at
+	# the receipt format and never made the delivery room or the later fields.
+	if not getattr(frappe.local, "lang", None):
+		frappe.local.lang = "en"
 	# and sweeps the menu: a dish left as a stock item cannot be sold at the till
 	try:
 		menu_sells_without_stock()
@@ -1685,12 +1691,20 @@ def link_employee(waiter, employee):
 OPEN_ORDER_STATES = ["not in", ["Invoiced", "Cancelled"]]
 
 
+# rm_table_delete: this used to count only *invoiced* checks, while frappe refuses
+# a delete over ANY linked row — a cancelled check, a released seating — so it
+# called such a table deletable and the trash then threw the raw link error.
+# "Close them and delete it?" could never work for the same reason: releasing
+# cancels the checks and seatings but keeps them on record. Both now ask frappe's
+# own link check (_floor_links, shared with deleting a room).
 @frappe.whitelist()
 def table_blockers(table):
     """What is stopping this table from being deleted, in plain terms."""
     obj = frappe.db.get_value("Restaurant Object", table, ["name", "description"], as_dict=True)
     if not obj:
         frappe.throw(frappe._("That table no longer exists"))
+    if not frappe.has_permission("Restaurant Object", "delete"):
+        frappe.throw(frappe._("Deleting a table is a manager's job."), frappe.PermissionError)
 
     open_orders = frappe.get_all(
         "Table Order", filters={"table": table, "status": OPEN_ORDER_STATES},
@@ -1699,16 +1713,32 @@ def table_blockers(table):
         "Table Order", filters={"table": table, "status": "Invoiced"}, fields=["name"])
     bookings = frappe.get_all(
         "Restaurant Booking", filters={"table": table, "status": "Open"}, fields=["name"])
+    label = obj.description or table
+    held = _floor_links([table]).get(table, {})
 
     return {
         "table": table,
-        "label": obj.description or table,
+        "label": label,
         "open_orders": open_orders,
         "invoiced_orders": len(invoiced),
         "open_bookings": len(bookings),
-        # Invoiced orders are the books; the table has to stay for them to make sense.
-        "deletable": not invoiced,
+        "reasons": [_describe_hold(label, held)] if held else [],
+        # checks or seatings, as opposed to a screen restricted to it
+        "on_record": bool({"Table Order", "Restaurant Booking"} & set(held)),
+        "deletable": not held,
     }
+
+
+@frappe.whitelist(methods=["POST"])
+def delete_table(table):
+    """Delete a table (or a screen) on the floor, or say plainly what keeps it."""
+    b = table_blockers(table)
+    if b["reasons"]:
+        frappe.throw("<br>".join(frappe.utils.escape_html(r) for r in b["reasons"]),
+                     title=frappe._("{0} can't be deleted").format(b["label"]))
+    frappe.db.delete("Restaurant Permission", {"object_name": table})
+    frappe.delete_doc("Restaurant Object", table)
+    return {"table": table}
 
 
 @frappe.whitelist()

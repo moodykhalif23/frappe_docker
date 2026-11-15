@@ -1,6 +1,8 @@
-"""Deleting a room: a clean room goes in one go with everything standing in it;
-a room with anything on record stays whole and says why. Test sites only — it
-creates and deletes ZZ Test rooms."""
+"""Deleting from the floor. A clean room goes in one go with everything standing
+in it; a room with anything on record stays whole and says why. A table follows
+the same rule: frappe counts every linked row, cancelled ones too, so the trash
+must never call a table deletable and then fail. Test sites only — it creates
+and deletes ZZ Test rooms."""
 import frappe
 from restaurant_management import house
 
@@ -106,6 +108,30 @@ def run():
 	ok("once the check is gone the room goes", not house.room_blockers(ROOM)["reasons"]
 	   and house.delete_room(ROOM) and not _exists(ROOM, T1, T2, PC))
 	frappe.db.commit()
+
+	# --- a table: the trash tells the truth -------------------------------------
+	_build()
+	check = _voided_check(T2, ROOM)
+	frappe.db.commit()
+	b = house.table_blockers(T2)
+	ok("a table with only a voided check is not called deletable", not b["deletable"] and b["on_record"], b["reasons"])
+	ok("and says why", b["reasons"] and "check(s) on record" in b["reasons"][0], b["reasons"])
+	ok("delete_table refuses it in plain words", _refused(lambda: house.delete_table(T2)) == "ValidationError")
+	frappe.db.rollback()
+	ok("and it is still there", _exists(T2))
+	b = house.table_blockers(T1)
+	ok("a table a screen takes orders from is held by the screen, not the books",
+	   not b["deletable"] and not b["on_record"] and PC in b["reasons"][0], b["reasons"])
+	house.delete_table(PC)
+	frappe.db.commit()
+	ok("the screen itself deletes through the same trash", not _exists(PC))
+	ok("and then the table is clean", house.table_blockers(T1)["deletable"])
+	house.delete_table(T1)
+	frappe.db.commit()
+	ok("delete_table removes a clean table", not _exists(T1))
+	frappe.db.delete("Table Order", check)
+	frappe.db.commit()
+	_clear()
 
 	# --- a room with sales on record stays, whole ------------------------------
 	sold = frappe.db.get_value("Table Order", {"room": ["is", "set"], "status": "Invoiced"}, "room")

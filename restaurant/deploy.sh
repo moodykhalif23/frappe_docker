@@ -73,33 +73,61 @@ else
   docker compose exec -T backend bench --site "$SITE" migrate
 fi
 
-log "custom fields the floor hangs on stock doctypes (waiter, seating stamps)"
-docker compose exec -T backend bench --site "$SITE" console <<'PY'
+# bench console exits 0 whatever happens inside it, so a failed step used to
+# scroll past and the deploy still said "done". Each step ends its LAST line with
+# a sentinel — an exception aborts the rest of that line — and a missing sentinel
+# stops the deploy here. The sentinel is built at runtime ("X" + "-OK"): a
+# traceback quotes the failing source line, and a literal would match there.
+console_step() {   # console_step <sentinel>   (the python comes on stdin)
+  local out
+  out="$(docker compose exec -T backend bench --site "$SITE" console 2>&1 | sed 's/\x1b\[[0-9;]*m//g')" || true
+  if printf '%s\n' "$out" | grep -q "$1"; then
+    printf '%s\n' "$out" | grep -E "$1" | sed 's/^In \[[0-9]*\]: //' | tail -3
+  else
+    printf '%s\n' "$out" | tail -40
+    log "FAILED: that step did not finish (its output is above)"; exit 1
+  fi
+}
+
+ensure_fields() {
+  log "custom fields the floor hangs on stock doctypes (waiter, seating stamps)${1:-}"
+  console_step ENSURE-OK <<'PY'
 from restaurant_management.house import ensure_custom_fields
 from restaurant_management.inventory import ensure_fields
-print(ensure_custom_fields(), ensure_fields())
+print("ENSURE" + "-OK", ensure_custom_fields(), ensure_fields())
 PY
+}
+
+seed_step() {   # seed_step "<demo_seed calls>"
+  console_step SEED-STEP-OK <<PY
+exec(open("/home/frappe/frappe-bench/apps/restaurant_management/restaurant_management/demo_seed.py").read(), globals())
+$1; print("SEED-STEP" + "-OK")
+PY
+}
+
+ensure_fields
 
 log "site configuration the restaurant app needs on v16"
 [ -n "${SITE_URL:-}" ] && docker compose exec -T backend bench --site "$SITE" set-config host_name "$SITE_URL"
 docker compose exec -T backend bench --site "$SITE" enable-scheduler
-docker compose exec -T backend bench --site "$SITE" console <<'PY'
-frappe.db.set_value("POS Settings", None, "invoice_type", "POS Invoice")
-frappe.db.set_value("UOM", "Nos", "must_be_whole_number", 0)
-frappe.db.commit()
-print("POS Settings -> POS Invoice mode; UOM Nos allows fractions (wine by the glass)")
+console_step CONFIG-OK <<'PY'
+frappe.db.set_value("POS Settings", None, "invoice_type", "POS Invoice"); frappe.db.set_value("UOM", "Nos", "must_be_whole_number", 0); frappe.db.commit(); print("CONFIG" + "-OK POS Settings -> POS Invoice mode; UOM Nos allows fractions (wine by the glass)")
 PY
 
 if [ "${SIMULATE:-0}" = "1" ]; then SEED_DEMO=1; fi
 if [ "${SEED_DEMO:-0}" = "1" ]; then
   log "seeding demo restaurant"
   docker cp restaurant/demo_seed.py "$(docker compose ps -q backend)":/home/frappe/frappe-bench/apps/restaurant_management/restaurant_management/demo_seed.py
-  SEED_CALLS="bootstrap(); seed(); seed_inventory()"
-  [ "${SIMULATE:-0}" = "1" ] && SEED_CALLS="$SEED_CALLS; simulate(); backflush()"
-  docker compose exec -T backend bench --site "$SITE" console <<PY
-exec(open("/home/frappe/frappe-bench/apps/restaurant_management/restaurant_management/demo_seed.py").read(), globals())
-${SEED_CALLS}
-PY
+  seed_step "bootstrap(); seed(); seed_inventory()"
+  # the delivery room, its income account and fee record need a company, and
+  # bootstrap() has only just made one
+  ensure_fields " — again, now that the company exists"
+  if [ "${SIMULATE:-0}" = "1" ]; then
+    log "simulating a service"
+    seed_step "simulate(); backflush()"
+  fi
+else
+  log "after the setup wizard, run restaurant/redeploy.sh once: the delivery room needs the company it creates"
 fi
 
 log "done — login: Administrator / ${ADMIN_PASSWORD}"

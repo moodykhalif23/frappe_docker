@@ -414,7 +414,10 @@ def _run_order(table_name, cust_name, dishes, final, pay_mode):
         order.reload()
         draft_entries = {i.identifier: i.as_dict() for i in order.entry_items}
         draft = cls.get_invoice(order, draft_entries, False)
-        res = cls.make_invoice(order, {pay_mode: draft.grand_total})
+        # the till refuses an M-Pesa row without the customer's 10-character
+        # confirmation code, never used before (mpesa_reference.py)
+        refs = {pay_mode: "SIM" + uuid.uuid4().hex[:7].upper()} if "pesa" in pay_mode.lower() else None
+        res = cls.make_invoice(order, {pay_mode: draft.grand_total}, refs)
         invoice = res.get("invoice_name")
         frappe.db.set_value("Restaurant Object", table_name, "customer", None)
     frappe.db.commit()

@@ -134,11 +134,15 @@ def run():
 		house.seat_walkin(GUEST, 2, t)
 		blockers = house.table_blockers(t)
 		check("a seated table reports what holds it", blockers["open_bookings"] >= 1, str(blockers["open_bookings"]))
-		check("but it is still deletable", blockers["deletable"], str(blockers))
+		check("and is not deletable: the seating is on record", not blockers["deletable"] and blockers["on_record"],
+			str(blockers["reasons"]))
 		freed = house.release_table(t)
 		check("releasing closes the seating", freed["bookings"], str(freed))
 		check("the released table is free again", t in [x["name"] for x in house.free_tables()])
-		check("and nothing holds it now", house.table_blockers(t)["open_bookings"] == 0)
+		after = house.table_blockers(t)
+		check("and nothing holds it now", after["open_bookings"] == 0)
+		# releasing cancels the seating but keeps it, and frappe counts cancelled rows
+		check("but the released seating still keeps it", not after["deletable"], str(after["reasons"]))
 
 	# a table carrying an invoiced order is history and must refuse deletion
 	invoiced = frappe.get_all("Table Order", filters={"status": "Invoiced"},
