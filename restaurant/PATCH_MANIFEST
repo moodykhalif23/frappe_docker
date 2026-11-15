@@ -110,3 +110,11 @@ apps/restaurant_management/restaurant_management/restaurant_management/doctype/t
 apps/restaurant_management/restaurant_management/public/restaurant/js/order-item-class.js :: rm_bill_waits_for_writes
 apps/restaurant_management/restaurant_management/public/restaurant/js/table-order-class.js :: rm_bill_waits_for_writes
 apps/restaurant_management/restaurant_management/restaurant_management/print_format/order_account/order_account.json :: rm_bill_total_from_lines
+
+# --- deleting a room (room_delete.py) ---------------------------------------
+# delete() fetched `_delete` without calling it, so a room never went
+apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js :: rm_room_delete_button_
+apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-room-class.js :: restaurant_management.house.delete_room
+apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-room-class.js :: restaurant_management.house.room_blockers
+apps/restaurant_management/restaurant_management/house.py :: def delete_room(
+apps/restaurant_management/restaurant_management/house.py :: def room_blockers(

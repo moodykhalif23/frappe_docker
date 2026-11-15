@@ -58,6 +58,8 @@ whether the page runs.
 | `mpesa_split_probe.mjs` | the till's "+ another M-Pesa payment": two amounts, two codes, two payment rows on the invoice; a missing second code is refused | browser |
 | `mpesa_probe.mjs` | the till asks for the M-Pesa code, refuses without it, pays with it and stores it as the payment's reference | browser |
 | `bill_total_suite.py` | server: a +/- commits the line and the check's total together (a second connection never sees one without the other); the bill's Total is the sum of its lines even over a stale stored total; a split that fails halfway leaves the check whole | server |
+| `room_delete_suite.py` | server: a clean room is deleted with its tables and screens in one go (screens first — one restricted to a table links it); the delivery room and a room with sales on record are refused with nothing taken; a Restaurant User is told it is a manager's job | server |
+| `room_delete_probe.mjs` | the floor's Delete: one tap names the room and its tables, Yes removes them and opens another room, a second screen loses the tab; a room with sales says why it stays and offers no Yes | browser |
 | `bill_print_probe.mjs` | Account pressed straight after a + (held 3 s in transit) waits for it: the bill carries the tap and matches the pad; a + that never lands refuses the bill instead of printing without it | browser |
 | `attribution_probe.mjs` | a bare tablet asks who seats; after the grace window Order asks again; the check is the seater's, every fired line the firer's, the timeline says so | browser |
 | `perf_live2.mjs` | where the time goes on a live site: cold and warm floor, a room switch, a pad open, with each API call's time | browser |

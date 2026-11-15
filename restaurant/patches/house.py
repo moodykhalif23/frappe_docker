@@ -1753,6 +1753,99 @@ def release_table(table):
     return {"table": table, "orders": closed_orders, "bookings": closed_bookings}
 
 
+# ---- deleting a room -------------------------------------------------------
+# rm_room_delete: upstream's Delete Room fetched `_delete` without calling it
+# (api.call only invokes a method when args are sent), so nothing ever went.
+# Called properly, frappe still refuses while ANY row links the room — its own
+# tables first, then every check or seating ever made in it, cancelled ones too.
+# So a room goes together with what stands in it, and only when nothing on
+# record points at any of it: Table Order is never deleted, and a check whose
+# table had vanished would be a dead link in the books.
+
+# Child rows that only describe the floor, and go with it.
+_ROOM_CASCADE_PARENTS = {"Restaurant Permission Manage"}
+
+
+def _floor_links(names):
+	"""Records outside `names` that link any of them: {name: {doctype: {docname}}}.
+
+	Asks the same two questions frappe.delete_doc asks before it deletes."""
+	from frappe.model.delete_doc import get_dynamic_linked_docs, get_linked_docs
+
+	held = {}
+	for name in names:
+		doc = frappe.get_doc("Restaurant Object", name)
+		for link in get_linked_docs(doc) + get_dynamic_linked_docs(doc):
+			dt, dn = link["reference_doctype"], link["reference_docname"]
+			if dt == "Restaurant Object" and dn in names:
+				continue  # the room's own tables, or a screen in it restricted to them
+			if dt in _ROOM_CASCADE_PARENTS:
+				continue
+			held.setdefault(name, {}).setdefault(dt, set()).add(dn)
+	return held
+
+
+def _describe_hold(label, by_doctype):
+	_ = frappe._
+	parts = []
+	for dt in sorted(by_doctype):
+		found = by_doctype[dt]
+		if dt == "Table Order":
+			parts.append(_("{0} check(s) on record").format(len(found)))
+		elif dt == "Restaurant Booking":
+			parts.append(_("{0} seating(s) or booking(s) on record").format(len(found)))
+		elif dt == "Restaurant Settings":
+			parts.append(_("it is the delivery room in Restaurant Settings"))
+		elif dt == "Restaurant Object":
+			parts.append(_("{0} only take(s) orders from it").format(", ".join(sorted(found))))
+		else:
+			parts.append(_("{0} {1} record(s) point at it").format(len(found), _(dt)))
+	return "{0}: {1}".format(label, "; ".join(parts))
+
+
+@frappe.whitelist()
+def room_blockers(room):
+	"""What deleting this room takes with it, and what stops it, in plain terms."""
+	obj = frappe.db.get_value("Restaurant Object", room, ["name", "description", "type"], as_dict=True)
+	if not obj or obj.type != "Room":
+		frappe.throw(frappe._("That room no longer exists"))
+	if not frappe.has_permission("Restaurant Object", "delete"):
+		frappe.throw(frappe._("Deleting a room is a manager's job."), frappe.PermissionError)
+
+	# Screens before tables: a production center restricted to a table in this
+	# room links that table, so it has to go first.
+	contents = frappe.get_all("Restaurant Object", filters={"room": room},
+	                          fields=["name", "description", "type"], order_by="description asc")
+	contents.sort(key=lambda o: o.type == "Table")
+	label = {room: obj.description or room}
+	label.update({o.name: o.description or o.name for o in contents})
+	names = [room] + [o.name for o in contents]
+	held = _floor_links(names)
+
+	return {
+		"room": room,
+		"label": label[room],
+		"contents": [{"name": o.name, "label": label[o.name], "type": o.type} for o in contents],
+		"reasons": [_describe_hold(label[n], held[n]) for n in names if n in held],
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def delete_room(room):
+	"""Delete a room and everything standing in it — all of it, or none."""
+	b = room_blockers(room)
+	if b["reasons"]:
+		frappe.throw("<br>".join(frappe.utils.escape_html(r) for r in b["reasons"]),
+		             title=frappe._("{0} can't be deleted").format(b["label"]))
+
+	contents = [o["name"] for o in b["contents"]]
+	frappe.db.delete("Restaurant Permission", {"object_name": ("in", contents + [room])})
+	for name in contents:
+		frappe.delete_doc("Restaurant Object", name)
+	frappe.delete_doc("Restaurant Object", room)
+	return {"room": room, "deleted": contents}
+
+
 # ---- closing the day -------------------------------------------------------
 
 

@@ -208,9 +208,13 @@ RUN python3 /tmp/fix_table_delete.py \
 # the table trash was bound to a double-click and gave no feedback on a single tap
 COPY restaurant/patches/table_delete_single_click.py /tmp/table_delete_single_click.py
 RUN python3 /tmp/table_delete_single_click.py && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-object-class.js
-COPY restaurant/patches/room_delete_single_click.py /tmp/room_delete_single_click.py
-RUN python3 /tmp/room_delete_single_click.py \
- && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js
+# deleting a room never ran: delete() fetched `_delete` without calling it. It now
+# names what goes with the room and deletes it all, or says what keeps it.
+COPY restaurant/patches/_patchlib.py /tmp/_patchlib.py
+COPY restaurant/patches/room_delete.py /tmp/room_delete.py
+RUN python3 /tmp/room_delete.py \
+ && node --check apps/restaurant_management/restaurant_management/restaurant_management/page/restaurant_manage/restaurant_manage.js \
+ && node --check apps/restaurant_management/restaurant_management/public/restaurant/js/restaurant-room-class.js
 
 # the pay form read this.actions before make() created it, so checkout threw
 COPY restaurant/patches/fix_pay_form_init.py /tmp/fix_pay_form_init.py

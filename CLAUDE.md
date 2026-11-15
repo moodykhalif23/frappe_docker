@@ -108,6 +108,14 @@ what is shipped and what is deliberately not. Read it before touching anything.
 - **v16 validates link fields before any doc hook fires** (both insert and save paths, see `frappe/model/document.py`) — `before_insert` is too late to fix up a link. Intercept by overriding the controller's `insert()`/`save()` (see `restaurant/patches/restaurant_booking_append.py`).
 - `Restaurant Booking`/`Table Order` grant only `Restaurant Manager`/`Restaurant User` roles — System Manager alone gets Permission Error, which also aborts the floor/order-pad JS init. `seed()` grants the roles to staff users.
 - `TableOrder.send` is a **@property** — attribute access fires kitchen dispatch; calling it throws `'dict' object is not callable` (a sync payload also lands on the instance as `.send`).
+- **`api.call` calls the method only when `args` is sent.** Without `args`,
+  `restaurant_management.api.call` returns `getattr(doc, method)` *uncalled* — upstream leaned on
+  `@property` for that. A `frappeHelper.api.call` to a real method must pass `args: {}`. The room's
+  Delete left it out and never deleted anything, silently (`room_delete.py`; tables: `fix_table_delete.py`).
+- **frappe's delete counts every linked row, whatever its status** — cancelled checks and closed
+  seatings included. A room therefore goes only together with its tables, and only when nothing
+  on record points at any of it: `house.room_blockers`/`delete_room` ask frappe's own
+  `get_linked_docs` first, so it is all or nothing, and the reason is given in plain words.
 - POS Settings must be in "POS Invoice" mode (v16 defaults to Sales Invoice mode, blocking the app's billing); UOM `Nos` allows fractions for by-the-glass recipes (production: use a dedicated fractional UOM instead).
 - The order pad's catalog comes from **`POS Profile.restaurant_menu`** (app custom field) — unset means an empty menu no matter what the Restaurant Menu contains. The Veg/Non-Veg tabs filter on `Item.item_type`. `seed()` sets both.
 - v16 renamed `get_item_details`' kwarg `args`→`ctx` — unpatched, every add-to-cart 500s and the cart silently stays at 0.
